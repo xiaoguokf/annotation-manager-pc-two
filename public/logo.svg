@@ -1,0 +1,60 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 电脑管理端logo -->
+  <defs>
+    <!-- 主渐变 -->
+    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FB923C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EA580C;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 屏幕渐变 -->
+    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FED7AA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FCD34D;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 阴影滤镜 -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.2"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆角矩形 -->
+  <rect x="8" y="8" width="48" height="48" rx="16" fill="url(#orangeGradient)" filter="url(#shadow)"/>
+  
+  <!-- 电脑显示器 -->
+  <g transform="translate(32, 32)">
+    <!-- 显示器外框 -->
+    <rect x="-14" y="-10" width="28" height="18" rx="2" fill="white" stroke="white" stroke-width="1"/>
+    
+    <!-- 屏幕 -->
+    <rect x="-12" y="-8" width="24" height="14" rx="1" fill="url(#screenGradient)"/>
+    
+    <!-- 屏幕内容 - 数据图表 -->
+    <g opacity="0.7">
+      <!-- 柱状图 -->
+      <rect x="-9" y="2" width="3" height="4" fill="#EA580C"/>
+      <rect x="-5" y="-1" width="3" height="7" fill="#FB923C"/>
+      <rect x="-1" y="0" width="3" height="6" fill="#EA580C"/>
+      <rect x="3" y="-2" width="3" height="8" fill="#FB923C"/>
+      <rect x="7" y="1" width="3" height="5" fill="#EA580C"/>
+    </g>
+    
+    <!-- 显示器底座 -->
+    <rect x="-2" y="8" width="4" height="3" fill="white"/>
+    <rect x="-6" y="11" width="12" height="2" rx="1" fill="white"/>
+    
+    <!-- 顶部装饰点 - 状态指示灯 -->
+    <circle cx="10" cy="-8" r="1.5" fill="#10B981"/>
+  </g>
+  
+  <!-- 顶部高光 -->
+  <ellipse cx="32" cy="16" rx="12" ry="4" fill="white" opacity="0.2"/>
+</svg>

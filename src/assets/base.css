@@ -1,0 +1,267 @@
+/* color palette from <https://github.com/vuejs/theme> */
+:root {
+  --vt-c-white: #ffffff;
+  --vt-c-white-soft: #f8f8f8;
+  --vt-c-white-mute: #f2f2f2;
+
+  --vt-c-black: #181818;
+  --vt-c-black-soft: #222222;
+  --vt-c-black-mute: #282828;
+
+  --vt-c-indigo: #2c3e50;
+
+  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
+  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
+  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
+  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+
+  --vt-c-text-light-1: var(--vt-c-indigo);
+  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
+  --vt-c-text-dark-1: var(--vt-c-white);
+  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+}
+
+/* semantic color variables for this project */
+:root {
+  --color-background: var(--vt-c-white);
+  --color-background-soft: var(--vt-c-white-soft);
+  --color-background-mute: var(--vt-c-white-mute);
+
+  --color-border: var(--vt-c-divider-light-2);
+  --color-border-hover: var(--vt-c-divider-light-1);
+
+  --color-heading: var(--vt-c-text-light-1);
+  --color-text: var(--vt-c-text-light-1);
+
+  --section-gap: 160px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: var(--vt-c-black);
+    --color-background-soft: var(--vt-c-black-soft);
+    --color-background-mute: var(--vt-c-black-mute);
+
+    --color-border: var(--vt-c-divider-dark-2);
+    --color-border-hover: var(--vt-c-divider-dark-1);
+
+    --color-heading: var(--vt-c-text-dark-1);
+    --color-text: var(--vt-c-text-dark-2);
+  }
+}
+
+/* 深色模式样式 */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: var(--theme-content-bg);
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-card {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+}
+
+.dark .el-card__header {
+  border-bottom-color: var(--theme-border-color);
+}
+
+.dark .el-form-item__label {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-dialog {
+  background-color: var(--theme-header-bg);
+}
+
+.dark .el-dialog__header {
+  border-bottom-color: var(--theme-border-color);
+}
+
+.dark .el-dropdown-menu {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+}
+
+.dark .el-dropdown-menu__item {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-dropdown-menu__item:hover {
+  background-color: var(--theme-sidebar-menu-hover);
+}
+
+/* 深色模式 - 表格 */
+.dark .el-table {
+  --el-table-bg-color: var(--theme-header-bg);
+  --el-table-tr-bg-color: var(--theme-header-bg);
+  --el-table-header-bg-color: var(--theme-content-bg);
+  --el-table-row-hover-bg-color: var(--theme-sidebar-menu-hover);
+  --el-table-border-color: var(--theme-border-color);
+  --el-table-text-color: var(--theme-sidebar-menu-text);
+  --el-table-header-text-color: var(--theme-sidebar-menu-text);
+}
+
+/* 深色模式 - 输入框 */
+.dark .el-input__wrapper {
+  background-color: var(--theme-content-bg);
+  box-shadow: 0 0 0 1px var(--theme-border-color) inset;
+}
+
+.dark .el-input__inner {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-textarea__inner {
+  background-color: var(--theme-content-bg);
+  color: var(--theme-sidebar-menu-text);
+}
+
+/* 深色模式 - 选择器 */
+.dark .el-select .el-input__wrapper {
+  background-color: var(--theme-content-bg);
+}
+
+.dark .el-select-dropdown {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+}
+
+.dark .el-select-dropdown__item {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-select-dropdown__item.hover,
+.dark .el-select-dropdown__item:hover {
+  background-color: var(--theme-sidebar-menu-hover);
+}
+
+/* 深色模式 - 分页 */
+.dark .el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: var(--theme-sidebar-menu-text);
+  --el-pagination-button-bg-color: var(--theme-content-bg);
+  --el-pagination-hover-color: var(--theme-primary);
+}
+
+/* 深色模式 - 标签 */
+.dark .el-tag {
+  border-color: var(--theme-border-color);
+}
+
+/* 深色模式 - 面包屑 */
+.dark .el-breadcrumb__inner,
+.dark .el-breadcrumb__separator {
+  color: var(--theme-sidebar-menu-text);
+}
+
+/* 深色模式 - 颜色选择器弹窗 */
+.dark .el-color-dropdown {
+  background-color: var(--theme-header-bg);
+}
+
+/* 深色模式 - 对话框底部 */
+.dark .el-dialog__footer {
+  border-top-color: var(--theme-border-color);
+}
+
+/* 深色模式 - loading */
+.dark .el-loading-mask {
+  background-color: rgba(26, 26, 46, 0.8);
+}
+
+/* 深色模式 - 按钮颜色降亮
+   深色模式下 light-N 变量实际是更暗的版本（混黑），
+   默认 light-3，hover light-1，active light-5 */
+.dark .el-button--primary {
+  --el-button-bg-color: var(--el-color-primary-light-3);
+  --el-button-border-color: var(--el-color-primary-light-3);
+  --el-button-hover-bg-color: var(--el-color-primary-light-1);
+  --el-button-hover-border-color: var(--el-color-primary-light-1);
+  --el-button-active-bg-color: var(--el-color-primary-light-5);
+  --el-button-active-border-color: var(--el-color-primary-light-5);
+}
+
+.dark .el-button--success {
+  --el-button-bg-color: var(--el-color-success-light-3);
+  --el-button-border-color: var(--el-color-success-light-3);
+  --el-button-hover-bg-color: var(--el-color-success-light-1);
+  --el-button-hover-border-color: var(--el-color-success-light-1);
+  --el-button-active-bg-color: var(--el-color-success-light-5);
+  --el-button-active-border-color: var(--el-color-success-light-5);
+}
+
+.dark .el-button--warning {
+  --el-button-bg-color: var(--el-color-warning-light-3);
+  --el-button-border-color: var(--el-color-warning-light-3);
+  --el-button-hover-bg-color: var(--el-color-warning-light-1);
+  --el-button-hover-border-color: var(--el-color-warning-light-1);
+  --el-button-active-bg-color: var(--el-color-warning-light-5);
+  --el-button-active-border-color: var(--el-color-warning-light-5);
+}
+
+.dark .el-button--danger {
+  --el-button-bg-color: var(--el-color-danger-light-3);
+  --el-button-border-color: var(--el-color-danger-light-3);
+  --el-button-hover-bg-color: var(--el-color-danger-light-1);
+  --el-button-hover-border-color: var(--el-color-danger-light-1);
+  --el-button-active-bg-color: var(--el-color-danger-light-5);
+  --el-button-active-border-color: var(--el-color-danger-light-5);
+}
+
+.dark .el-button--info {
+  --el-button-bg-color: var(--el-color-info-light-3);
+  --el-button-border-color: var(--el-color-info-light-3);
+  --el-button-hover-bg-color: var(--el-color-info-light-1);
+  --el-button-hover-border-color: var(--el-color-info-light-1);
+  --el-button-active-bg-color: var(--el-color-info-light-5);
+  --el-button-active-border-color: var(--el-color-info-light-5);
+}
+
+/* 深色模式 - 默认按钮（无 type 的 el-button） */
+.dark .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info) {
+  --el-button-bg-color: var(--theme-content-bg);
+  --el-button-border-color: var(--theme-border-color);
+  --el-button-text-color: var(--theme-sidebar-menu-text);
+  --el-button-hover-bg-color: var(--theme-sidebar-menu-hover);
+  --el-button-hover-border-color: var(--theme-primary);
+  --el-button-hover-text-color: var(--theme-primary);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+  transition:
+    color 0.5s,
+    background-color 0.5s;
+  line-height: 1.6;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

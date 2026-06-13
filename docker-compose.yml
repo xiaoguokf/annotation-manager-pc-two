@@ -1,0 +1,22 @@
+services:
+  ts-frontend:
+    image: docker.cnb.cool/sshinelt/ts-manager-org/ts-manager-front:${FRONTEND_VERSION:-latest}
+    ports:
+      - "80:80"
+    depends_on:
+      - ts-backend
+    networks:
+      - ts-manager-net
+    restart: unless-stopped
+
+  ts-backend:
+    image: docker.cnb.cool/sshinelt/ts-manager-org/ts-manager:${BACKEND_VERSION:-latest}
+    volumes:
+      - ./backend:/workspace
+    networks:
+      - ts-manager-net
+    restart: unless-stopped
+
+networks:
+  ts-manager-net:
+    driver: bridge

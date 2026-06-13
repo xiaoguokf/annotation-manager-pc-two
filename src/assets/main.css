@@ -1,0 +1,13 @@
+@import './base.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* 隐藏滚动条 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox 64 */
+}

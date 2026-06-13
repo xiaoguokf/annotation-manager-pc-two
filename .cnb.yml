@@ -1,0 +1,60 @@
+# .cnb.yml
+$:
+  vscode:
+    - runner:
+        cpus: 8
+      docker:
+        image: docker.cnb.cool/sshinelt/ide/idea-maven-ide
+      services:
+        - vscode
+        - docker
+      stages:
+        - name: config-npm
+          script: npm config set registry https://mirrors.cloud.tencent.com/npm
+        - name: install-package
+          script: npm install -g pnpm && pnpm config set store-dir ~/.pnpm-store && pnpm i
+        - name: install-vscode-codebuddy
+          script: code-server --install-extension tencent-cloud.coding-copilot
+        - name: install-idea-plugin
+          script: /ide_cnb/idea-IU-**/bin/idea.sh installPlugins com.tencent.cloud.codingcopilot
+master:
+  push:
+    - docker:
+        image: node:22
+      env:
+        BACKEND_NAME: ts-admin-fornt
+        PROJECT_PATH: /opt/1panel/www/sites/petalgrid.cn/index
+      services:
+        - docker
+      imports:
+        - https://cnb.cool/sshinelt/secret/-/blob/main/154.219.103.129.yml
+      stages:
+        - name: 安装依赖
+          script: |
+            npm config set registry https://mirrors.cloud.tencent.com/npm
+            npm install -g pnpm && pnpm i
+        - name: 构建
+          script: |
+            pnpm build
+            tar -vczf dist.tar.gz dist/**
+        - name: 上传附件
+          image: docker.cnb.cool/sshinelt/cnb-tool/sftp-tool
+          settings:
+            ssh_host: $SEC_HOST
+            ssh_user: $SEC_USERNAME
+            ssh_password: $SEC_PASSWORD
+            local_file_path: dist.tar.gz
+            remote_file_path: /tmp/dist.tar.gz
+        - name: 远程部署
+          image: cnbcool/ssh
+          settings:
+            host: $SEC_HOST
+            port: 22
+            username: $SEC_USERNAME
+            password: $SEC_PASSWORD
+            script: |
+              sudo rm -rf ${PROJECT_PATH}/**
+              sudo tar -vxzf /tmp/dist.tar.gz -C ${PROJECT_PATH}/
+              sudo mv ${PROJECT_PATH}/dist/** ${PROJECT_PATH}/
+              sudo rm -rf ${PROJECT_PATH}/dist
+              sudo rm -rf /tmp/dist.tar.gz

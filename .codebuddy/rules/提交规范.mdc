@@ -1,0 +1,9 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-02-26T15:15:51.135Z
+provider: 
+---
+
+若提交代码，先进行类型检查，类型检查通过后才能进行代码提交

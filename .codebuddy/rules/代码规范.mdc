@@ -1,0 +1,13 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-02-26T05:28:15.867Z
+provider: 
+---
+
+开发前仔细阅读README.md开发规范和开发框架，使其严格按照规范开发，开发完成后仔细检测代码，不满足规范的代码要重写和修改。
+
+gen内的文件是生成的，一定不要修改src/api/gen文件夹内的内容
+
+编写页面时要兼容深色模式，使用 CSS 变量或 Tailwind dark: 变体适配深色主题，确保深色模式下颜色不刺眼、对比度适中
