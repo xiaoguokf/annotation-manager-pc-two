@@ -1,4 +1,4 @@
-# ShortClip-admin
+# sshine-admin
 
 基于 Vue 3 + Element Plus + TailwindCSS 的后台管理系统
 
@@ -65,10 +65,13 @@ pnpm type-check
 ```
 src/
 ├── api/           # API 接口定义
-│   └── gen/       # 自动生成的 API 接口
+│   └── gen/       # 自动生成的 API 接口（勿手动修改）
 ├── assets/        # 静态资源
 ├── components/    # 公共组件
+├── config/        # 项目配置
+├── layout/        # 布局组件
 ├── router/        # 路由配置
+├── services/      # 业务服务
 ├── stores/        # Pinia 状态管理
 ├── utils/         # 工具函数
 ├── views/         # 页面组件
@@ -207,3 +210,91 @@ TailwindCSS 提供了丰富的原子化 CSS 类名：
 <!-- 圆角和阴影 -->
 <div class="rounded-lg shadow-md">...</div> <!-- 圆角，阴影 -->
 ```
+
+### 深色模式适配
+
+项目使用 TailwindCSS 的 `class` 策略实现深色模式（在 `tailwind.config.js` 中配置 `darkMode: 'class'`），切换深色模式时会在 `<html>` 上添加/移除 `dark` 类名。开发组件时**必须**兼容深色模式。
+
+#### 方式一：Tailwind `dark:` 变体（推荐）
+
+在 TailwindCSS 类名前添加 `dark:` 前缀，定义深色模式下的样式：
+
+```vue
+<template>
+  <!-- 背景色 -->
+  <div class="bg-white dark:bg-gray-800">...</div>
+
+  <!-- 文字颜色 -->
+  <span class="text-gray-800 dark:text-gray-200">...</span>
+
+  <!-- 边框 -->
+  <div class="border border-gray-200 dark:border-gray-700">...</div>
+
+  <!-- 悬停状态 -->
+  <div class="hover:bg-gray-50 dark:hover:bg-gray-700">...</div>
+
+  <!-- 组合使用 -->
+  <div class="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600">
+    ...
+  </div>
+</template>
+```
+
+#### 方式二：CSS 变量
+
+项目通过 `useThemeStore` 管理主题变量，所有变量在深色模式下会自动切换值。可在内联样式或 CSS 中使用：
+
+```vue
+<template>
+  <!-- 内联样式使用 CSS 变量 -->
+  <div :style="{ backgroundColor: 'var(--theme-header-bg)', color: 'var(--theme-sidebar-menu-text)' }">
+    ...
+  </div>
+</template>
+
+<style scoped>
+/* CSS 中使用变量 */
+.my-card {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+  color: var(--theme-sidebar-menu-text);
+}
+</style>
+```
+
+可用的主题 CSS 变量（在 `src/stores/theme.ts` 中定义）：
+
+| 变量名 | 用途 |
+|--------|------|
+| `--theme-primary` | 主色调 |
+| `--theme-primary-light` | 主色调浅色 |
+| `--theme-primary-dark` | 主色调深色 |
+| `--theme-header-bg` | 头部背景色 |
+| `--theme-content-bg` | 内容区背景色 |
+| `--theme-border-color` | 边框颜色 |
+| `--theme-border-color-light` | 浅色边框 |
+| `--theme-sidebar-menu-text` | 菜单文字颜色 |
+| `--theme-sidebar-menu-hover` | 菜单悬停背景 |
+
+#### 方式三：Tailwind 主题色类名
+
+项目在 `tailwind.config.js` 中注册了主题变量映射，可直接使用 `bg-theme-*`、`text-theme-*` 等类名：
+
+```vue
+<template>
+  <div class="bg-theme-content-bg text-theme-sidebar-menu-text border border-theme-border-color">
+    ...
+  </div>
+</template>
+```
+
+#### Element Plus 深色模式
+
+项目已在 `main.ts` 中引入了 `element-plus/theme-chalk/dark/css-vars.css`，并在 `base.css` 中对 Element Plus 组件做了深色模式全局样式覆盖（表格、输入框、对话框、按钮等）。使用 Element Plus 组件时通常无需额外处理深色适配。
+
+#### 适配原则
+
+1. **禁止硬编码颜色**：避免使用 `color="#333"`、`style="background: #fff"` 等硬编码值，改用 CSS 变量或 `dark:` 变体
+2. **确保对比度**：深色模式下文字和背景之间需保持足够对比度，文字颜色使用 `gray-200`/`gray-300` 而非纯白
+3. **成对编写样式**：写浅色样式时同步写 `dark:` 对应样式，避免遗漏
+4. **测试验证**：开发完成后切换到深色模式检查页面效果，确保无刺眼、不可读内容
