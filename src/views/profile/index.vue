@@ -75,19 +75,97 @@
         </el-form>
       </div>
     </el-card>
+
+    <!-- 修改密码卡片 -->
+    <el-card class="mt-4">
+      <template #header>
+        <div class="card-header">
+          <span>安全设置</span>
+        </div>
+      </template>
+
+      <div class="security-content">
+        <div class="security-item">
+          <div class="security-info">
+            <div class="security-title">
+              <Icon icon="ep:lock" class="mr-2" />
+              登录密码
+            </div>
+            <div class="security-desc text-gray-500 dark:text-gray-400">
+              定期更换密码有助于保护账户安全
+            </div>
+          </div>
+          <el-button type="primary" link @click="openChangePwdDialog">
+            修改密码
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 修改密码弹窗 -->
+    <el-dialog
+      v-model="changePwdDialogVisible"
+      title="修改密码"
+      width="460px"
+      :close-on-click-modal="false"
+      @closed="resetChangePwdForm"
+    >
+      <el-form
+        ref="changePwdFormRef"
+        :model="changePwdForm"
+        :rules="changePwdRules"
+        label-width="80px"
+      >
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input
+            v-model="changePwdForm.oldPassword"
+            type="password"
+            placeholder="请输入原密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="新密码" prop="password">
+          <el-input
+            v-model="changePwdForm.password"
+            type="password"
+            placeholder="请输入新密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input
+            v-model="changePwdForm.confirmPassword"
+            type="password"
+            placeholder="请再次输入新密码"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="changePwdDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="changePwdLoading" @click="handleChangePwd">
+          确认修改
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import {  computed, reactive, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { Icon } from '@iconify/vue'
+import type { FormInstance, FormRules } from 'element-plus'
+import { postUserChangePasswordApi } from '@/api/gen/userController'
 import defaultAvatar from '@/assets/user.png'
 
 defineOptions({
   name: 'ShortClipProfile'
 })
 
+const router = useRouter()
 const userStore = useUserStore()
 
 // 用户信息
@@ -125,6 +203,76 @@ const refreshUserInfo = async () => {
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+// ==================== 修改密码 ====================
+const changePwdDialogVisible = ref(false)
+const changePwdLoading = ref(false)
+const changePwdFormRef = ref<FormInstance>()
+
+const changePwdForm = reactive({
+  oldPassword: '',
+  password: '',
+  confirmPassword: ''
+})
+
+const validateConfirmPassword = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+  if (value !== changePwdForm.password) {
+    callback(new Error('两次输入的密码不一致'))
+  } else {
+    callback()
+  }
+}
+
+const changePwdRules: FormRules = {
+  oldPassword: [
+    { required: true, message: '请输入原密码', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' }
+  ]
+}
+
+const openChangePwdDialog = () => {
+  changePwdDialogVisible.value = true
+}
+
+const resetChangePwdForm = () => {
+  changePwdForm.oldPassword = ''
+  changePwdForm.password = ''
+  changePwdForm.confirmPassword = ''
+  changePwdFormRef.value?.clearValidate()
+}
+
+const handleChangePwd = async () => {
+  const valid = await changePwdFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  changePwdLoading.value = true
+  try {
+    const res = await postUserChangePasswordApi({
+      oldPassword: changePwdForm.oldPassword,
+      password: changePwdForm.password
+    })
+    if (res.data?.code === 200) {
+      ElMessage.success('密码修改成功，请重新登录')
+      changePwdDialogVisible.value = false
+      // 修改密码成功后退出登录并跳转登录页
+      await userStore.logout()
+      router.push('/login')
+    } else {
+      ElMessage.error(res.data?.msg || '修改密码失败')
+    }
+  } catch {
+    // HTTP 层错误已由拦截器处理
+  } finally {
+    changePwdLoading.value = false
+  }
 }
 
 onMounted(() => {
@@ -173,5 +321,37 @@ onMounted(() => {
 
 .role-tag {
   margin: 0;
+}
+
+.security-content {
+  max-width: 600px;
+}
+
+.security-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+}
+
+.security-item + .security-item {
+  border-top: 1px solid var(--theme-border-color);
+}
+
+.security-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.security-title {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.security-desc {
+  font-size: 13px;
 }
 </style>
