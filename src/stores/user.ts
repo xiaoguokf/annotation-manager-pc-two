@@ -103,9 +103,15 @@ export const useUserStore = defineStore('user', () => {
         console.log('应用启动时初始化用户信息...')
         await fetchUserInfo()
         console.log('用户信息初始化成功')
-      } catch (error) {
+      } catch (error: any) {
         console.warn('初始化用户信息失败:', error)
-        // 如果获取用户信息失败，清理无效token
+        // 502/503 服务不可用时，不清除 token，保留登录状态
+        const status = error?.response?.status || error?.status
+        if (status === 502 || status === 503) {
+          console.warn('服务暂不可用，保留当前登录状态')
+          return
+        }
+        // 其他错误，清理无效 token
         await logout()
       }
     }

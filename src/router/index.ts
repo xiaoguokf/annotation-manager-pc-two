@@ -102,8 +102,15 @@ router.beforeEach(async (to, _from, next) => {
         next('/login')
         return
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取用户信息失败:', error)
+      // 502/503 服务不可用时，不强制跳登录，允许使用缓存信息继续访问
+      const status = error?.response?.status || error?.status
+      if (status === 502 || status === 503) {
+        console.warn('服务暂不可用，允许继续访问')
+        next()
+        return
+      }
       next('/login')
       return
     }

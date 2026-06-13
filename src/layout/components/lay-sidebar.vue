@@ -8,7 +8,7 @@
       :style="{ height: `var(--theme-sidebar-logo-height)`, background: 'var(--theme-sidebar-logo-bg)' }"
       :class="{ 'justify-center px-0': isCollapse }">
       <div class="flex items-center justify-center" :style="{ width: `var(--theme-sidebar-logo-icon-size)`, height: `var(--theme-sidebar-logo-icon-size)` }">
-        <img src="/logo-shortclip.svg" alt="logo" class="w-full h-full" />
+        <img src="/logo.svg" alt="logo" class="w-full h-full" />
       </div>
       <span v-show="!isCollapse" class="ml-3 text-lg font-semibold whitespace-nowrap" style="color: var(--theme-sidebar-logo-text);">{{ appName }}</span>
     </div>

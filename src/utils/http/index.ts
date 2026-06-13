@@ -6,6 +6,7 @@ import { getToken, getRefreshToken, setToken, setRefreshToken } from '../auth'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { postAuthRefreshTokenApi } from '@/api/gen/baseAuthController'
+import { debounce, throttle } from '@/utils/debounce'
 import router from '@/router'
 
 const config: AxiosRequestConfig = {
@@ -20,6 +21,10 @@ const config: AxiosRequestConfig = {
 const whiteList = ['**/login']
 let isRefreshing = false
 let refreshSubscribers: ((token: string) => void)[] = []
+
+const showServiceDownMessage = throttle(() => {
+  ElMessage.warning('系统更新重启中，请稍等')
+}, 3000)
 
 // URL 路径风格匹配函数
 function isUrlMatch(url: string | undefined, pattern: string): boolean {
@@ -119,6 +124,10 @@ class ShortClipHttp {
           case 500:
             ElMessage.error('服务器异常,请联系管理员')
             break
+          case 502:
+          case 503:
+            showServiceDownMessage()
+            return Promise.reject(error)
           default:
             break
         }
