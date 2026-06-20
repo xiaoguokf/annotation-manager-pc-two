@@ -1,13 +1,11 @@
 <template>
-  <div class="h-full overflow-y-scroll no-scrollbar" :style="{ padding: `var(--theme-content-padding)`, backgroundColor: 'var(--theme-content-bg)' }">
+  <div class="h-full relative overflow-y-scroll no-scrollbar" :style="{ padding: `var(--theme-content-padding)`, backgroundColor: 'var(--theme-content-bg)' }">
     <router-view v-slot="{ Component, route }">
-      <div class="h-full relative">
-        <transition name="fade-transform" mode="out-in">
-          <keep-alive :include="cachedViews">
-            <component :is="Component" :key="route.path" />
-          </keep-alive>
-        </transition>
-      </div>
+      <transition name="fade-transform">
+        <keep-alive :include="cachedViews">
+          <component :is="Component" :key="route.path" />
+        </keep-alive>
+      </transition>
     </router-view>
   </div>
 </template>
