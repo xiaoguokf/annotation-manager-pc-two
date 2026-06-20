@@ -2,7 +2,7 @@
   <div class="h-full overflow-y-scroll no-scrollbar" :style="{ padding: `var(--theme-content-padding)`, backgroundColor: 'var(--theme-content-bg)' }">
     <router-view v-slot="{ Component, route }">
       <div class="h-full relative">
-        <transition name="page-fade">
+        <transition name="fade-transform" mode="out-in">
           <keep-alive :include="cachedViews">
             <component :is="Component" :key="route.path" />
           </keep-alive>
@@ -27,14 +27,19 @@ const cachedViews = computed(() => {
 </script>
 
 <style scoped>
-/* 页面切换淡入淡出，不使用 mode="out-in"，避免快速切换时状态机卡死 */
-.page-fade-enter-active,
-.page-fade-leave-active {
-  transition: opacity 0.2s ease;
+/* 页面切换动画 */
+.fade-transform-enter-active,
+.fade-transform-leave-active {
+  transition: all 0.3s;
 }
 
-.page-fade-enter-from,
-.page-fade-leave-to {
+.fade-transform-enter-from {
   opacity: 0;
+  transform: translateX(30px);
+}
+
+.fade-transform-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
 }
 </style>
