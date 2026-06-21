@@ -1,6 +1,5 @@
 <template>
-  <div class="h-full">
-    <ViewLayout title="角色管理">
+  <ViewLayout title="角色管理">
     <template #header-actions>
       <el-button type="primary" @click="handleAdd">
         <el-icon>
@@ -30,7 +29,7 @@
     </template>
 
     <template #default>
-      <el-table :data="tableData" v-loading="loading" row-key="id">
+      <el-table :data="tableData" v-loading="loading" row-key="id" height="100%">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="角色名称" min-width="120" />
 
@@ -46,7 +45,26 @@
           </template>
         </el-table-column>
       </el-table>
-    </template>
+
+    <!-- 角色编辑对话框 -->
+    <el-dialog v-model="dialogVisible" title="编辑角色" width="600px">
+      <el-form :model="roleForm" :rules="rules" label-width="80px">
+        <el-form-item label="角色名称" prop="name">
+          <el-input v-model="roleForm.name" />
+        </el-form-item>
+
+        <el-form-item label="描述">
+          <el-input v-model="roleForm.remark" type="textarea" :rows="3" />
+        </el-form-item>
+
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSave">确定</el-button>
+      </template>
+    </el-dialog>
+  </template>
 
     <template #footer>
       <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
@@ -54,26 +72,6 @@
         @current-change="handleCurrentChange" :prev-text="'上一页'" :next-text="'下一页'" />
     </template>
   </ViewLayout>
-
-  <!-- 角色编辑对话框 -->
-  <el-dialog v-model="dialogVisible" title="编辑角色" width="600px">
-    <el-form :model="roleForm" :rules="rules" label-width="80px">
-      <el-form-item label="角色名称" prop="name">
-        <el-input v-model="roleForm.name" />
-      </el-form-item>
-
-      <el-form-item label="描述">
-        <el-input v-model="roleForm.remark" type="textarea" :rows="3" />
-      </el-form-item>
-
-    </el-form>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">确定</el-button>
-    </template>
-  </el-dialog>
-  </div>
 </template>
 
 <script setup lang="ts">

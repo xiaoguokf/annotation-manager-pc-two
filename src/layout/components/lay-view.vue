@@ -49,9 +49,15 @@ defineProps<{
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
-.view-card::deep(.el-card__body) {
+/* el-card__header 固定高度，不被压缩 */
+.view-card :deep(.el-card__header) {
+  flex-shrink: 0;
+}
+
+.view-card :deep(.el-card__body) {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -79,8 +85,6 @@ defineProps<{
   background: var(--theme-content-bg);
   border: 1px solid var(--theme-border-color-light);
   border-radius: 8px;
-  display: flex;
-  align-items: center;
 }
 
 .view-search:empty {
@@ -88,7 +92,15 @@ defineProps<{
   margin-bottom: 0;
 }
 
-/* 搜索区内表单项去掉默认下边距，实现垂直居中 */
+/* 搜索区表单：flex 换行 + 行间距，避免窄屏时多行黏在一起 */
+.view-search :deep(.el-form) {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 12px;
+  align-items: center;
+}
+
+/* 搜索区内表单项去掉默认下边距 */
 .view-search :deep(.el-form-item) {
   margin-bottom: 0;
 }
@@ -96,7 +108,7 @@ defineProps<{
 .view-content {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 
 /* 底部分页栏 - 参照 el-footer 风格：flex-shrink:0，固定在底部 */
