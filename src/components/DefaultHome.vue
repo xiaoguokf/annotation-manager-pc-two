@@ -1,19 +1,50 @@
 <template>
   <div class="dashboard" :style="{ padding: sizeConfig.cardPadding }">
     <!-- 欢迎横幅 -->
-    <div class="welcome-banner rounded-xl text-white shadow-lg"
+    <div class="welcome-banner rounded-xl text-white shadow-lg relative overflow-hidden"
       :style="{ padding: sizeConfig.cardPadding, marginBottom: sizeConfig.sectionGap, background: `linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%)` }">
-      <div class="flex items-center justify-between flex-wrap" :style="{ gap: sizeConfig.gridGap }">
-        <div>
-          <h1 class="font-bold" :style="{ fontSize: sizeConfig.headingLarge, marginBottom: sizeConfig.itemGap }">
-            {{ greeting }}，{{ userName }}
+      <!-- 装饰圆 -->
+      <div class="banner-deco-circle banner-deco-1"></div>
+      <div class="banner-deco-circle banner-deco-2"></div>
+
+      <div class="relative flex items-start justify-between flex-wrap" :style="{ gap: sizeConfig.gridGap }">
+        <div class="min-w-0 flex-1" :style="{ minWidth: '260px' }">
+          <!-- 主标题 - 跟随选中节日 -->
+          <h1 class="font-bold tracking-tight" :style="{ fontSize: sizeConfig.headingLarge, marginBottom: sizeConfig.itemGap, lineHeight: '1.3' }">
+            {{ activeFestival ? activeFestival.greeting : greeting }}
+            <span class="text-white/80 font-medium">，{{ userName }}</span>
           </h1>
-          <p class="text-white/70" :style="{ fontSize: sizeConfig.fontSizeBase }">{{ currentTime }} · 欢迎回来</p>
+
+          <!-- 时间 + 节日徽章组（可点击切换） -->
+          <div class="flex items-center flex-wrap" :style="{ gap: sizeConfig.elementGap, fontSize: sizeConfig.fontSizeBase, marginBottom: activeFestival ? sizeConfig.elementGap : 0 }">
+            <span class="text-white/70">{{ currentTime }}</span>
+            <template v-if="festivals.length">
+              <span class="text-white/40">·</span>
+              <button
+                v-for="(f, i) in festivals"
+                :key="f.name"
+                type="button"
+                class="banner-badge"
+                :class="{ 'banner-badge-active': i === activeFestivalIndex, 'banner-badge-ghost': i !== activeFestivalIndex }"
+                @click="activeFestivalIndex = i"
+              >
+                {{ f.name }}
+              </button>
+            </template>
+          </div>
+
+          <!-- 节日介绍 - 引用块（跟随选中节日，带淡入动画） -->
+          <transition name="desc-fade" mode="out-in">
+            <div v-if="activeFestival" :key="activeFestival.name" class="banner-desc" :style="{ fontSize: sizeConfig.fontSizeSm, maxWidth: '640px' }">
+              {{ activeFestival.description }}
+            </div>
+          </transition>
         </div>
+
+        <!-- 右侧角色卡 -->
         <div class="flex items-center" :style="{ gap: sizeConfig.elementGap }">
-          <div class="bg-white/20 rounded-lg text-center backdrop-blur-sm"
-            :style="{ paddingLeft: sizeConfig.innerPaddingX, paddingRight: sizeConfig.innerPaddingX, paddingTop: sizeConfig.elementGap, paddingBottom: sizeConfig.elementGap }">
-            <div class="text-white/70" :style="{ fontSize: sizeConfig.fontSizeXs }">当前角色</div>
+          <div class="banner-role-card">
+            <div class="text-white/60" :style="{ fontSize: sizeConfig.fontSizeXs, marginBottom: '2px' }">当前角色</div>
             <div class="font-semibold" :style="{ fontSize: sizeConfig.fontSizeBase }">{{ userRoleName }}</div>
           </div>
         </div>
@@ -109,6 +140,7 @@ import { UserService } from '@/services/userService'
 import { RoleService } from '@/services/roleService'
 import { hasAnyRole } from '@/utils/auth'
 import dayjs from 'dayjs'
+import { FestivalService } from '@/utils/festival'
 
 defineOptions({
   name: 'DefaultHome'
@@ -212,8 +244,16 @@ const greeting = computed(() => {
 const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
 const currentTime = computed(() => {
-  return `${dayjs().format('YYYY年MM月DD日')} ${weekDays[dayjs().day()]}`
+  const d = dayjs()
+  return `${d.format('YYYY年MM月DD日')} ${weekDays[d.day()]}`
 })
+
+// 今日命中的所有节日（按优先级倒序）
+const festivals = computed(() => FestivalService.getFestivals())
+// 当前选中的节日索引（默认 0，即最高优先级节日）
+const activeFestivalIndex = ref(0)
+// 当前选中的节日
+const activeFestival = computed(() => festivals.value[activeFestivalIndex.value] || null)
 
 const formatTime = (time?: string) => {
   if (!time) return '-'
@@ -312,6 +352,98 @@ onMounted(() => {
   min-height: 100px;
 }
 
+/* 装饰圆 - 营造氛围感 */
+.banner-deco-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.banner-deco-1 {
+  width: 220px;
+  height: 220px;
+  top: -110px;
+  right: -60px;
+}
+
+.banner-deco-2 {
+  width: 140px;
+  height: 140px;
+  bottom: -70px;
+  right: 120px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 节日徽章 - 默认（未选中）描边幽灵态 */
+.banner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85em;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.banner-badge:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* 节日徽章 - 选中态：实心高亮 */
+.banner-badge-active {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.95);
+  color: var(--theme-primary);
+  font-weight: 600;
+}
+
+.banner-badge-active:hover {
+  background: rgba(255, 255, 255, 1);
+  color: var(--theme-primary-dark);
+}
+
+/* 兼容旧 class（已弃用，但保留避免其他地方引用报错） */
+.banner-badge-ghost {
+  /* 默认即幽灵态 */
+}
+
+/* 节日介绍 - 左侧引用线 */
+.banner-desc {
+  position: relative;
+  padding-left: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-style: italic;
+  line-height: 1.7;
+}
+
+.banner-desc::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 右侧角色卡 */
+.banner-role-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  text-align: center;
+  padding: 10px 18px;
+}
+
 .stat-card {
   transition: all 0.3s ease;
 }
@@ -327,5 +459,21 @@ onMounted(() => {
 .quick-card:hover {
   transform: translateY(-2px);
   border-color: var(--theme-primary);
+}
+
+/* 节日介绍切换淡入动画 */
+.desc-fade-enter-active,
+.desc-fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.desc-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.desc-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 </style>
