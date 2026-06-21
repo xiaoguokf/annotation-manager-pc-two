@@ -1,6 +1,5 @@
 <template>
-  <div class="h-full">
-    <ViewLayout title="用户管理">
+  <ViewLayout title="用户管理">
     <template #header-actions>
       <el-button type="primary" @click="handleAdd">
         <el-icon>
@@ -35,7 +34,7 @@
     </template>
 
     <template #default>
-      <el-table :data="tableData" v-loading="loading" row-key="id">
+      <el-table :data="tableData" v-loading="loading" row-key="id" height="100%">
         <el-table-column type="selection" width="55" :reserve-selection="true" />
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="nickname" label="昵称" min-width="120" />
@@ -81,7 +80,78 @@
           </template>
         </el-table-column>
       </el-table>
-    </template>
+
+    <!-- 用户表单对话框 -->
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="600px">
+      <el-form :model="userForm" :rules="rules" label-width="80px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="userForm.username" :disabled="isEdit" />
+        </el-form-item>
+        <el-form-item v-if="!isEdit" label="密码" prop="password">
+          <el-input v-model="userForm.password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="userForm.nickname" />
+        </el-form-item>
+        <el-form-item v-if="!isEdit" label="状态">
+          <el-switch v-model="userForm.enable" active-text="启用" inactive-text="禁用" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="userForm.remark" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSave">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 分配角色对话框 -->
+    <el-dialog v-model="roleDialogVisible" title="分配角色" width="450px" :close-on-click-modal="false">
+      <el-form label-width="100px" size="large">
+        <el-form-item label="当前用户">
+          <el-text type="primary" size="large">
+            {{ currentUserForRole?.username }}
+          </el-text>
+        </el-form-item>
+        <el-form-item label="选择角色" required>
+          <el-select v-model="selectedRoleIds" placeholder="请选择角色" style="width: 100%" size="large" multiple clearable>
+            <el-option v-for="role in roleList" :key="role.id" :label="role.name" :value="role.id!" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="roleDialogVisible = false" size="large">取消</el-button>
+        <el-button type="primary" @click="handleSaveRoleAssignment" size="large">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 重置密码对话框 -->
+    <el-dialog v-model="passwordDialogVisible" title="重置密码" width="450px" :close-on-click-modal="false">
+      <el-form :model="passwordForm" :rules="passwordRules" label-width="100px" size="large">
+        <el-form-item label="当前用户">
+          <el-text type="primary" size="large">
+            {{ currentUserForPassword?.username }}
+          </el-text>
+        </el-form-item>
+        <el-form-item label="新密码" prop="password">
+          <el-input v-model="passwordForm.password" type="password" show-password placeholder="请输入新密码"
+            style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码"
+            style="width: 100%" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false" size="large">取消</el-button>
+        <el-button type="primary" @click="handleSavePassword" size="large">确定</el-button>
+      </template>
+    </el-dialog>
+  </template>
 
     <template #footer>
       <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
@@ -89,78 +159,6 @@
         @current-change="handleCurrentChange" :prev-text="'上一页'" :next-text="'下一页'" />
     </template>
   </ViewLayout>
-
-  <!-- 用户表单对话框 -->
-  <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="600px">
-    <el-form :model="userForm" :rules="rules" label-width="80px">
-      <el-form-item label="用户名" prop="username">
-        <el-input v-model="userForm.username" :disabled="isEdit" />
-      </el-form-item>
-      <el-form-item v-if="!isEdit" label="密码" prop="password">
-        <el-input v-model="userForm.password" type="password" show-password />
-      </el-form-item>
-      <el-form-item label="昵称">
-        <el-input v-model="userForm.nickname" />
-      </el-form-item>
-      <el-form-item v-if="!isEdit" label="状态">
-        <el-switch v-model="userForm.enable" active-text="启用" inactive-text="禁用" />
-      </el-form-item>
-      <el-form-item label="备注">
-        <el-input v-model="userForm.remark" type="textarea" :rows="3" />
-      </el-form-item>
-    </el-form>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleSave">确定</el-button>
-    </template>
-  </el-dialog>
-
-  <!-- 分配角色对话框 -->
-  <el-dialog v-model="roleDialogVisible" title="分配角色" width="450px" :close-on-click-modal="false">
-    <el-form label-width="100px" size="large">
-      <el-form-item label="当前用户">
-        <el-text type="primary" size="large">
-          {{ currentUserForRole?.username }}
-        </el-text>
-      </el-form-item>
-      <el-form-item label="选择角色" required>
-        <el-select v-model="selectedRoleIds" placeholder="请选择角色" style="width: 100%" size="large" multiple clearable>
-          <el-option v-for="role in roleList" :key="role.id" :label="role.name" :value="role.id!" />
-        </el-select>
-      </el-form-item>
-    </el-form>
-
-    <template #footer>
-      <el-button @click="roleDialogVisible = false" size="large">取消</el-button>
-      <el-button type="primary" @click="handleSaveRoleAssignment" size="large">确定</el-button>
-    </template>
-  </el-dialog>
-
-  <!-- 重置密码对话框 -->
-  <el-dialog v-model="passwordDialogVisible" title="重置密码" width="450px" :close-on-click-modal="false">
-    <el-form :model="passwordForm" :rules="passwordRules" label-width="100px" size="large">
-      <el-form-item label="当前用户">
-        <el-text type="primary" size="large">
-          {{ currentUserForPassword?.username }}
-        </el-text>
-      </el-form-item>
-      <el-form-item label="新密码" prop="password">
-        <el-input v-model="passwordForm.password" type="password" show-password placeholder="请输入新密码"
-          style="width: 100%" />
-      </el-form-item>
-      <el-form-item label="确认密码" prop="confirmPassword">
-        <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码"
-          style="width: 100%" />
-      </el-form-item>
-    </el-form>
-
-    <template #footer>
-      <el-button @click="passwordDialogVisible = false" size="large">取消</el-button>
-      <el-button type="primary" @click="handleSavePassword" size="large">确定</el-button>
-    </template>
-  </el-dialog>
-  </div>
 </template>
 
 <script setup lang="ts">

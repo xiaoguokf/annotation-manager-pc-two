@@ -209,8 +209,10 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
+const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
 const currentTime = computed(() => {
-  return dayjs().format('YYYY年MM月DD日 dddd')
+  return `${dayjs().format('YYYY年MM月DD日')} ${weekDays[dayjs().day()]}`
 })
 
 const formatTime = (time?: string) => {
