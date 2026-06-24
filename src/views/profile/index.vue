@@ -226,15 +226,15 @@ const validateConfirmPassword = (_rule: unknown, value: string, callback: (error
 
 const changePwdRules: FormRules = {
   oldPassword: [
-    { required: true, message: '请输入原密码', trigger: 'blur' }
+    { required: true, message: '请输入原密码', trigger: 'blur-sm' }
   ],
   password: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    { required: true, message: '请输入新密码', trigger: 'blur-sm' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur-sm' }
   ],
   confirmPassword: [
-    { required: true, message: '请再次输入新密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' }
+    { required: true, message: '请再次输入新密码', trigger: 'blur-sm' },
+    { validator: validateConfirmPassword, trigger: 'blur-sm' }
   ]
 }
 

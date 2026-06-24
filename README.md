@@ -6,7 +6,7 @@
 
 - **框架**: Vue 3.5.22
 - **UI 库**: Element Plus 2.11.8
-- **样式**: TailwindCSS 3.4.18
+- **样式**: TailwindCSS 4.3.1
 - **状态管理**: Pinia 3.0.3
 - **路由**: Vue Router 4.6.3
 - **HTTP 客户端**: Axios 1.13.2
@@ -184,6 +184,12 @@ import { Icon } from '@iconify/vue'
 
 ### TailwindCSS 使用
 
+项目使用 TailwindCSS v4。与 v3 的主要区别：
+
+- **不再需要** `tailwind.config.js` 配置文件，主题和暗色模式通过 CSS 配置（`src/assets/main.css`）
+- 插件通过 Vite 插件 `@tailwindcss/vite` 加载
+- 自定义主题色通过 `@theme` 指令注册，自定义变体通过 `@custom-variant` 注册
+
 #### 类名规范
 
 TailwindCSS 提供了丰富的原子化 CSS 类名：
@@ -213,7 +219,7 @@ TailwindCSS 提供了丰富的原子化 CSS 类名：
 
 ### 深色模式适配
 
-项目使用 TailwindCSS 的 `class` 策略实现深色模式（在 `tailwind.config.js` 中配置 `darkMode: 'class'`），切换深色模式时会在 `<html>` 上添加/移除 `dark` 类名。开发组件时**必须**兼容深色模式。
+项目通过 TailwindCSS v4 的 `@custom-variant` + class 策略实现深色模式（在 `src/assets/main.css` 中配置 `@custom-variant dark (&:where(.dark, .dark *))`），切换深色模式时会在 `<html>` 和 `<body>` 上添加/移除 `dark` 类名。开发组件时**必须**兼容深色模式。
 
 #### 方式一：Tailwind `dark:` 变体（推荐）
 
@@ -278,7 +284,7 @@ TailwindCSS 提供了丰富的原子化 CSS 类名：
 
 #### 方式三：Tailwind 主题色类名
 
-项目在 `tailwind.config.js` 中注册了主题变量映射，可直接使用 `bg-theme-*`、`text-theme-*` 等类名：
+通过 `src/assets/main.css` 中的 `@theme` 指令，将主题 CSS 变量注册为 Tailwind 颜色 token，可直接使用 `bg-theme-*`、`text-theme-*` 等类名：
 
 ```vue
 <template>
@@ -290,7 +296,7 @@ TailwindCSS 提供了丰富的原子化 CSS 类名：
 
 #### Element Plus 深色模式
 
-项目已在 `main.ts` 中引入了 `element-plus/theme-chalk/dark/css-vars.css`，并在 `base.css` 中对 Element Plus 组件做了深色模式全局样式覆盖（表格、输入框、对话框、按钮等）。使用 Element Plus 组件时通常无需额外处理深色适配。
+项目已在 `main.ts` 中引入了 `element-plus/theme-chalk/dark/css-vars.css`，并在 `src/assets/main.css` 中对 Element Plus 组件做了深色模式全局样式覆盖（表格、输入框、对话框、按钮等）。由于 TailwindCSS v4 的 CSS 层级机制，覆盖样式放在 `main.css` 无层级（unlayered）位置以确保能正常覆盖 Element Plus 默认样式。使用 Element Plus 组件时通常无需额外处理深色适配。
 
 #### 适配原则
 

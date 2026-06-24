@@ -51,7 +51,7 @@
             <button
               v-for="size in sizeOptions"
               :key="size.value"
-              class="flex-1 py-1.5 px-3 text-xs rounded border transition-all duration-200"
+              class="flex-1 py-1.5 px-3 text-xs rounded-sm border transition-all duration-200"
               :class="themeSize === size.value
                 ? 'bg-theme-primary text-white border-theme-primary'
                 : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-theme-primary hover:text-theme-primary'"
@@ -66,11 +66,11 @@
           <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">预设主题</div>
           <div class="grid grid-cols-4 gap-2 mb-2">
             <div v-for="preset in presetThemes" :key="preset.name"
-                 class="cursor-pointer p-2 rounded border hover:border-theme-primary transition-colors"
+                 class="cursor-pointer p-2 rounded-sm border hover:border-theme-primary transition-colors"
                  :class="{ 'border-theme-primary ring-2 ring-theme-primary ring-opacity-50': isCurrentPreset(preset) }"
                  @click.stop="applyPresetTheme(preset)">
               <el-tooltip :content="preset.name" placement="top">
-                <div class="w-6 h-6 rounded" :style="{ backgroundColor: preset.primaryColor }"></div>
+                <div class="w-6 h-6 rounded-sm" :style="{ backgroundColor: preset.primaryColor }"></div>
               </el-tooltip>
             </div>
           </div>

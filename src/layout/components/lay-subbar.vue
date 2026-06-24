@@ -1,6 +1,6 @@
 <template>
   <!-- 水平菜单区域 - 与内容区域背景一致 -->
-  <div v-if="showSubSidebar" class="flex-shrink-0" :style="{ height: `var(--theme-subheader-height)` }">
+  <div v-if="showSubSidebar" class="shrink-0" :style="{ height: `var(--theme-subheader-height)` }">
     <div class="flex items-center justify-center pl-5 pr-5 pt-5 h-full">
       <el-radio-group v-model="activeMenu" class="flex-1" @change="handleMenuChange">
         <div class="flex items-center space-x-3">
@@ -10,7 +10,7 @@
               <div
                 class="flex items-center justify-center rounded-lg transition-colors duration-200"
                 :style="{ paddingLeft: `var(--theme-submenu-item-padding-x)`, paddingRight: `var(--theme-submenu-item-padding-x)`, paddingTop: `var(--theme-submenu-item-padding-y)`, paddingBottom: `var(--theme-submenu-item-padding-y)`, borderRadius: `var(--theme-border-radius)` }">
-                <el-icon class="flex-shrink-0 mr-2" style="color: var(--theme-submenu-item-text);"
+                <el-icon class="shrink-0 mr-2" style="color: var(--theme-submenu-item-text);"
                   :class="{ 'submenu-item-active-icon': activeMenu === route.path }">
                   <Icon v-if="route.icon" :icon="route.icon" />
                 </el-icon>

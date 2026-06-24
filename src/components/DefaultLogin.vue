@@ -122,14 +122,14 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+  <div class="min-h-screen flex bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
     <!-- 左侧介绍区域 -->
     <div class="hidden lg:flex lg:w-1/2 items-center justify-center p-12">
       <div class="max-w-lg">
         <!-- Logo和大标题 -->
         <div class="mb-10">
           <div class="flex items-center space-x-4 mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div class="w-16 h-16 bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
               <img src="/logo.svg" alt="Logo" class="w-10 h-10" />
             </div>
             <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">{{ appName }}</h1>
@@ -141,15 +141,15 @@ const handleLogin = async () => {
 
         <!-- 核心数据展示 -->
         <div class="grid grid-cols-3 gap-6 mb-10">
-          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-xs border border-gray-100 dark:border-gray-700 text-center">
             <div class="text-3xl font-bold text-blue-600 mb-1">100+</div>
             <div class="text-sm text-gray-500 dark:text-gray-400">功能模块</div>
           </div>
-          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-xs border border-gray-100 dark:border-gray-700 text-center">
             <div class="text-3xl font-bold text-indigo-600 mb-1">99.9%</div>
             <div class="text-sm text-gray-500 dark:text-gray-400">系统可用性</div>
           </div>
-          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-xs border border-gray-100 dark:border-gray-700 text-center">
             <div class="text-3xl font-bold text-purple-600 mb-1">7×24h</div>
             <div class="text-sm text-gray-500 dark:text-gray-400">稳定运行</div>
           </div>
@@ -158,7 +158,7 @@ const handleLogin = async () => {
         <!-- 功能特性 -->
         <div class="space-y-4">
           <div class="flex items-start space-x-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+            <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
               <Icon icon="ep:setting" class="text-blue-600 dark:text-blue-400 text-xl" />
             </div>
             <div>
@@ -167,7 +167,7 @@ const handleLogin = async () => {
             </div>
           </div>
           <div class="flex items-start space-x-4">
-            <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
+            <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
               <Icon icon="ep:lock" class="text-indigo-600 dark:text-indigo-400 text-xl" />
             </div>
             <div>
@@ -176,7 +176,7 @@ const handleLogin = async () => {
             </div>
           </div>
           <div class="flex items-start space-x-4">
-            <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
+            <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center shrink-0">
               <Icon icon="ep:brush" class="text-purple-600 dark:text-purple-400 text-xl" />
             </div>
             <div>
@@ -195,7 +195,7 @@ const handleLogin = async () => {
           <!-- Logo和标题（移动端显示） -->
           <div class="lg:hidden text-center mb-8">
             <div class="inline-flex items-center justify-center w-16 h-16 mb-4">
-              <div class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <div class="w-full h-full bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                 <img src="/logo.svg" alt="Logo" class="w-10 h-10" />
               </div>
             </div>

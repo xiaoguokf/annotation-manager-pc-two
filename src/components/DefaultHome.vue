@@ -56,7 +56,7 @@
       <h2 class="font-bold text-gray-800 dark:text-gray-200" :style="{ fontSize: sizeConfig.headingMedium, marginBottom: sizeConfig.gridGap }">系统概览</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" :style="{ gap: sizeConfig.gridGap }">
         <div v-for="item in statCards" :key="item.label"
-          class="stat-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer"
+          class="stat-card bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer"
           :style="{ padding: sizeConfig.cardPadding }"
           @click="item.link && router.push(item.link)">
           <div class="flex items-center justify-between">
@@ -78,11 +78,11 @@
       <h2 class="font-bold text-gray-800 dark:text-gray-200" :style="{ fontSize: sizeConfig.headingMedium, marginBottom: sizeConfig.gridGap }">快捷入口</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" :style="{ gap: sizeConfig.gridGap }">
         <div v-for="item in quickActions" :key="item.title"
-          class="quick-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer group"
+          class="quick-card bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer group"
           :style="{ padding: sizeConfig.cardPadding }"
           @click="item.link && router.push(item.link)">
           <div class="flex items-start" :style="{ gap: sizeConfig.gridGap }">
-            <div :class="[item.iconBg, 'rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform']"
+            <div :class="[item.iconBg, 'rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform']"
               :style="{ width: sizeConfig.quickIconSize, height: sizeConfig.quickIconSize }">
               <Icon :icon="item.icon" :width="sizeConfig.quickIconInner" :class="item.iconColor" />
             </div>
@@ -96,7 +96,7 @@
     </div>
 
     <!-- 账户信息卡片 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700" :style="{ padding: sizeConfig.cardPadding }">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-100 dark:border-gray-700" :style="{ padding: sizeConfig.cardPadding }">
       <h2 class="font-bold text-gray-800 dark:text-gray-200" :style="{ fontSize: sizeConfig.headingMedium, marginBottom: sizeConfig.gridGap }">账户信息</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" :style="{ gap: sizeConfig.gridGap }">
         <div class="flex flex-col" :style="{ gap: sizeConfig.itemGap }">

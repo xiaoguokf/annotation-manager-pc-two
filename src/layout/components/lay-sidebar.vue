@@ -28,7 +28,7 @@
                   paddingRight: `var(--theme-sidebar-menu-item-px)`,
                   borderRadius: `var(--theme-border-radius)`
                 }">
-                <el-icon class="flex-shrink-0" style="color: var(--theme-sidebar-menu-text);" :class="{ 'sidebar-menu-active-icon': activeMenu === route.path }">
+                <el-icon class="shrink-0" style="color: var(--theme-sidebar-menu-text);" :class="{ 'sidebar-menu-active-icon': activeMenu === route.path }">
                   <Icon v-if="route.icon" :icon="route.icon" />
                 </el-icon>
                 <span v-show="!isCollapse" class="ml-3 font-medium whitespace-nowrap"

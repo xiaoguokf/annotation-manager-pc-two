@@ -1,7 +1,241 @@
-@import './base.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import './base.css' layer(base);
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-primary-light: var(--theme-primary-light);
+  --color-theme-primary-dark: var(--theme-primary-dark);
+  --color-theme-sidebar-bg: var(--theme-sidebar-bg);
+  --color-theme-sidebar-logo-bg: var(--theme-sidebar-logo-bg);
+  --color-theme-sidebar-logo-text: var(--theme-sidebar-logo-text);
+  --color-theme-sidebar-menu-hover: var(--theme-sidebar-menu-hover);
+  --color-theme-sidebar-menu-active: var(--theme-sidebar-menu-active);
+  --color-theme-sidebar-menu-text: var(--theme-sidebar-menu-text);
+  --color-theme-sidebar-menu-active-text: var(--theme-sidebar-menu-active-text);
+  --color-theme-sidebar-footer-bg: var(--theme-sidebar-footer-bg);
+  --color-theme-submenu-bg: var(--theme-submenu-bg);
+  --color-theme-submenu-border: var(--theme-submenu-border);
+  --color-theme-submenu-item-hover: var(--theme-submenu-item-hover);
+  --color-theme-submenu-item-active: var(--theme-submenu-item-active);
+  --color-theme-submenu-item-text: var(--theme-submenu-item-text);
+  --color-theme-submenu-item-active-text: var(--theme-submenu-item-active-text);
+  --color-theme-header-bg: var(--theme-header-bg);
+  --color-theme-content-bg: var(--theme-content-bg);
+  --color-theme-footer-bg: var(--theme-footer-bg);
+  --color-theme-border-color: var(--theme-border-color);
+  --color-theme-border-color-light: var(--theme-border-color-light);
+
+  --background-image-theme-sidebar-logo: var(--theme-sidebar-logo-bg);
+  --background-image-theme-submenu-item-active: var(
+    --theme-submenu-item-active
+  );
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+/* ========== Element Plus 深色模式覆盖 ==========
+   以下样式必须放在无层级（unlayered）位置，
+   否则会被 Element Plus 的无层级样式覆盖。
+   Tailwind v4 中 base.css 通过 layer(base) 导入，
+   其内部样式优先级低于 Element Plus，故移至此。 */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: var(--theme-content-bg);
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-card {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+}
+
+.dark .el-card__header {
+  border-bottom-color: var(--theme-border-color);
+}
+
+.dark .el-form-item__label {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-dialog {
+  background-color: var(--theme-header-bg);
+}
+
+.dark .el-dialog__header {
+  border-bottom-color: var(--theme-border-color);
+}
+
+.dark .el-dropdown-menu {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+}
+
+.dark .el-dropdown-menu__item {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-dropdown-menu__item:hover {
+  background-color: var(--theme-sidebar-menu-hover);
+}
+
+/* 深色模式 - 表格 */
+.dark .el-table {
+  --el-table-bg-color: var(--theme-header-bg);
+  --el-table-tr-bg-color: var(--theme-header-bg);
+  --el-table-header-bg-color: var(--theme-content-bg);
+  --el-table-row-hover-bg-color: var(--theme-sidebar-menu-hover);
+  --el-table-border-color: var(--theme-border-color);
+  --el-table-text-color: var(--theme-sidebar-menu-text);
+  --el-table-header-text-color: var(--theme-sidebar-menu-text);
+}
+
+/* 深色模式 - 输入框 */
+.dark .el-input__wrapper {
+  background-color: var(--theme-content-bg);
+  box-shadow: 0 0 0 1px var(--theme-border-color) inset;
+}
+
+.dark .el-input__inner {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-textarea__inner {
+  background-color: var(--theme-content-bg);
+  color: var(--theme-sidebar-menu-text);
+}
+
+/* 深色模式 - 选择器 */
+.dark .el-select .el-input__wrapper {
+  background-color: var(--theme-content-bg);
+}
+
+.dark .el-select-dropdown {
+  background-color: var(--theme-header-bg);
+  border-color: var(--theme-border-color);
+}
+
+.dark .el-select-dropdown__item {
+  color: var(--theme-sidebar-menu-text);
+}
+
+.dark .el-select-dropdown__item.hover,
+.dark .el-select-dropdown__item:hover {
+  background-color: var(--theme-sidebar-menu-hover);
+}
+
+/* 深色模式 - 分页 */
+.dark .el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: var(--theme-sidebar-menu-text);
+  --el-pagination-button-bg-color: var(--theme-content-bg);
+  --el-pagination-hover-color: var(--theme-primary);
+}
+
+/* 深色模式 - 标签 */
+.dark .el-tag {
+  border-color: var(--theme-border-color);
+}
+
+/* 深色模式 - 面包屑 */
+.dark .el-breadcrumb__inner,
+.dark .el-breadcrumb__separator {
+  color: var(--theme-sidebar-menu-text);
+}
+
+/* 深色模式 - 颜色选择器弹窗 */
+.dark .el-color-dropdown {
+  background-color: var(--theme-header-bg);
+}
+
+/* 深色模式 - 对话框底部 */
+.dark .el-dialog__footer {
+  border-top-color: var(--theme-border-color);
+}
+
+/* 深色模式 - loading */
+.dark .el-loading-mask {
+  background-color: rgba(26, 26, 46, 0.8);
+}
+
+/* 深色模式 - 按钮颜色降亮
+   深色模式下 light-N 变量实际是更暗的版本（混黑），
+   默认 light-3，hover light-1，active light-5 */
+.dark .el-button--primary {
+  --el-button-bg-color: var(--el-color-primary-light-3);
+  --el-button-border-color: var(--el-color-primary-light-3);
+  --el-button-hover-bg-color: var(--el-color-primary-light-1);
+  --el-button-hover-border-color: var(--el-color-primary-light-1);
+  --el-button-active-bg-color: var(--el-color-primary-light-5);
+  --el-button-active-border-color: var(--el-color-primary-light-5);
+}
+
+.dark .el-button--success {
+  --el-button-bg-color: var(--el-color-success-light-3);
+  --el-button-border-color: var(--el-color-success-light-3);
+  --el-button-hover-bg-color: var(--el-color-success-light-1);
+  --el-button-hover-border-color: var(--el-color-success-light-1);
+  --el-button-active-bg-color: var(--el-color-success-light-5);
+  --el-button-active-border-color: var(--el-color-success-light-5);
+}
+
+.dark .el-button--warning {
+  --el-button-bg-color: var(--el-color-warning-light-3);
+  --el-button-border-color: var(--el-color-warning-light-3);
+  --el-button-hover-bg-color: var(--el-color-warning-light-1);
+  --el-button-hover-border-color: var(--el-color-warning-light-1);
+  --el-button-active-bg-color: var(--el-color-warning-light-5);
+  --el-button-active-border-color: var(--el-color-warning-light-5);
+}
+
+.dark .el-button--danger {
+  --el-button-bg-color: var(--el-color-danger-light-3);
+  --el-button-border-color: var(--el-color-danger-light-3);
+  --el-button-hover-bg-color: var(--el-color-danger-light-1);
+  --el-button-hover-border-color: var(--el-color-danger-light-1);
+  --el-button-active-bg-color: var(--el-color-danger-light-5);
+  --el-button-active-border-color: var(--el-color-danger-light-5);
+}
+
+.dark .el-button--info {
+  --el-button-bg-color: var(--el-color-info-light-3);
+  --el-button-border-color: var(--el-color-info-light-3);
+  --el-button-hover-bg-color: var(--el-color-info-light-1);
+  --el-button-hover-border-color: var(--el-color-info-light-1);
+  --el-button-active-bg-color: var(--el-color-info-light-5);
+  --el-button-active-border-color: var(--el-color-info-light-5);
+}
+
+/* 深色模式 - 默认按钮（无 type 的 el-button） */
+.dark .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info) {
+  --el-button-bg-color: var(--theme-content-bg);
+  --el-button-border-color: var(--theme-border-color);
+  --el-button-text-color: var(--theme-sidebar-menu-text);
+  --el-button-hover-bg-color: var(--theme-sidebar-menu-hover);
+  --el-button-hover-border-color: var(--theme-primary);
+  --el-button-hover-text-color: var(--theme-primary);
+}
+
 /* 隐藏滚动条 */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
