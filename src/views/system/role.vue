@@ -117,7 +117,7 @@ const roleForm = ref<RoleForm>({
 // 表单验证规则
 const rules = computed(() => ({
   name: [
-    { required: true, message: '请输入角色名称', trigger: 'blur' as const }
+    { required: true, message: '请输入角色名称', trigger: 'blur-sm' as const }
   ]
 }))
 

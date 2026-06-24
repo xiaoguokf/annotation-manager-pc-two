@@ -6,7 +6,7 @@
     <!-- 主内容区域 -->
     <el-container class="flex-1 flex flex-col">
       <!-- 顶部导航栏 - 固定高度 -->
-      <el-header class="p-0 flex-shrink-0" :style="{
+      <el-header class="p-0 shrink-0" :style="{
         height: `var(--theme-header-height)`,
         backgroundColor: 'var(--theme-header-bg)',
         borderBottom: '1px solid var(--theme-border-color)'
@@ -17,7 +17,7 @@
       <!-- 主要内容区域 - 弹性高度 -->
       <div class="flex-1 flex flex-col overflow-hidden" style="background-color: var(--theme-content-bg);">
         <!-- 水平二级菜单 - 固定高度 -->
-        <div class="flex-shrink-0">
+        <div class="shrink-0">
           <lay-subbar />
         </div>
         
@@ -28,7 +28,7 @@
       </div>
 
       <!-- 底部栏 - 固定高度 -->
-      <el-footer class="p-0 flex-shrink-0" :style="{
+      <el-footer class="p-0 shrink-0" :style="{
         height: `var(--theme-footer-height)`,
         backgroundColor: 'var(--theme-footer-bg)',
         borderTop: '1px solid var(--theme-border-color)'

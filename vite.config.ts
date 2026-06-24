@@ -7,6 +7,7 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { viteMockServe } from 'vite-plugin-mock'
+import tailwindcss from '@tailwindcss/vite'
 import vitePluginRemoveConsole from 'vite-plugin-remove-console'
 
 // 从 package.json 读取应用名称，生成全局常量
@@ -23,7 +24,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'https://sbzj24r8gn-8080.cnb.run/',
+        target: 'https://xiongmao.plus/api',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
@@ -33,6 +34,7 @@ export default defineConfig({
     __APP_NAME__: JSON.stringify(APP_DISPLAY_NAME),
   },
   plugins: [
+    tailwindcss(),
     vue(),
     vueJsx(),
     vueDevTools({

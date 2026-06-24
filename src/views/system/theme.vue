@@ -31,7 +31,7 @@
                       </el-icon>
                       <span>浅色模式</span>
                     </div>
-                    <div class="w-12 h-8 rounded border-2 border-gray-300 bg-white"></div>
+                    <div class="w-12 h-8 rounded-sm border-2 border-gray-300 bg-white"></div>
                   </div>
                 </el-radio>
               </div>
@@ -46,7 +46,7 @@
                       </el-icon>
                       <span>深色模式</span>
                     </div>
-                    <div class="w-12 h-8 rounded border-2 border-gray-300 bg-gray-800"></div>
+                    <div class="w-12 h-8 rounded-sm border-2 border-gray-300 bg-gray-800"></div>
                   </div>
                 </el-radio>
               </div>
@@ -61,7 +61,7 @@
                       </el-icon>
                       <span>跟随系统</span>
                     </div>
-                    <div class="w-12 h-8 rounded border-2 border-gray-300 bg-gradient-to-r from-white to-gray-800"></div>
+                    <div class="w-12 h-8 rounded-sm border-2 border-gray-300 bg-linear-to-r from-white to-gray-800"></div>
                   </div>
                 </el-radio>
               </div>
@@ -85,7 +85,7 @@
               :key="size.value"
               class="flex-1 py-2 px-3 text-sm rounded-lg border transition-all duration-200"
               :class="themeSize === size.value
-                ? 'bg-theme-primary text-white border-theme-primary shadow-sm'
+                ? 'bg-theme-primary text-white border-theme-primary shadow-xs'
                 : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-theme-primary hover:text-theme-primary'"
               @click="handleSizeChange(size.value)">
               <div class="font-medium">{{ size.label }}</div>
@@ -236,9 +236,9 @@
             {{ preset.name }}
           </div>
           <div class="flex gap-2 mb-2">
-            <div class="w-8 h-8 rounded" :style="{ backgroundColor: preset.colors.primary }"></div>
-            <div class="w-8 h-8 rounded" :style="{ backgroundColor: preset.colors.sidebarBg }"></div>
-            <div class="w-8 h-8 rounded" :style="{ backgroundColor: preset.colors.sidebarMenuActive }"></div>
+            <div class="w-8 h-8 rounded-sm" :style="{ backgroundColor: preset.colors.primary }"></div>
+            <div class="w-8 h-8 rounded-sm" :style="{ backgroundColor: preset.colors.sidebarBg }"></div>
+            <div class="w-8 h-8 rounded-sm" :style="{ backgroundColor: preset.colors.sidebarMenuActive }"></div>
           </div>
           <div class="text-xs text-gray-500">{{ preset.description }}</div>
         </div>

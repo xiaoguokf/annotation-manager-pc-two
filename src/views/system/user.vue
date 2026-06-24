@@ -229,22 +229,22 @@ const userForm = ref<UserForm>({
 // 表单验证规则
 const rules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' as const }
+    { required: true, message: '请输入用户名', trigger: 'blur-sm' as const }
   ],
   password: [
-    { required: !isEdit.value, message: '请输入密码', trigger: 'blur' as const },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' as const }
+    { required: !isEdit.value, message: '请输入密码', trigger: 'blur-sm' as const },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur-sm' as const }
   ]
 }))
 
 // 密码表单验证规则
 const passwordRules = computed(() => ({
   password: [
-    { required: true, message: '请输入新密码', trigger: 'blur' as const },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' as const }
+    { required: true, message: '请输入新密码', trigger: 'blur-sm' as const },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur-sm' as const }
   ],
   confirmPassword: [
-    { required: true, message: '请再次输入新密码', trigger: 'blur' as const },
+    { required: true, message: '请再次输入新密码', trigger: 'blur-sm' as const },
     {
       validator: (rule: unknown, value: string, callback: (e?: Error) => void) => {
         if (value !== passwordForm.value.password) {
@@ -253,7 +253,7 @@ const passwordRules = computed(() => ({
           callback()
         }
       },
-      trigger: 'blur' as const
+      trigger: 'blur-sm' as const
     }
   ]
 }))

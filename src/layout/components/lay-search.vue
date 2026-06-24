@@ -17,7 +17,7 @@
     </el-input>
     
     <!-- 搜索结果下拉框 -->
-    <div v-show="showSearchResult && searchResults.length > 0" class="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-[320px] overflow-y-auto z-[1000]">
+    <div v-show="showSearchResult && searchResults.length > 0" class="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-[320px] overflow-y-auto z-1000">
       <div
         v-for="item in searchResults"
         :key="item.path"
