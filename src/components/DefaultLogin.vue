@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import { Icon } from '@iconify/vue'
-import { postAuthLoginApi } from '@/api/gen/baseAuthController'
-import { setToken, setRefreshToken, getToken } from '@/utils/auth'
+import { postAuthLoginApi, getAuthGenSecretApi } from '@/api/gen/baseAuthController'
+import type { SecretVO } from '@/api/gen/baseAuthController'
+import { setToken, setRefreshToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { APP_NAME } from '@/config/app'
+import JSEncrypt from 'jsencrypt'
 
 defineOptions({
   name: 'DefaultLogin'
@@ -25,6 +27,174 @@ const loginForm = ref({
 })
 const loading = ref(false)
 const rememberMe = ref(false)
+
+// RSA 密钥相关状态
+const secretData = ref<SecretVO | null>(null)
+const refreshTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const isFetchingSecret = ref(false)
+
+/**
+ * 计算密钥剩余有效时间（毫秒）
+ */
+function getRemainingTime(): number {
+  if (!secretData.value) return 0
+  const { createTime, expireTime } = secretData.value
+  if (!createTime || !expireTime) return 0
+  // createTime 后端返回为字符串，需显式转为数字，否则 + 会变成字符串拼接
+  const createTimeMs = Number(createTime)
+  return createTimeMs + expireTime * 1000 - Date.now()
+}
+
+/**
+ * 从服务端获取 RSA 公钥
+ */
+async function fetchSecret(): Promise<void> {
+  if (isFetchingSecret.value) return
+  isFetchingSecret.value = true
+  console.log('[RSA密钥] 开始获取公钥...')
+  try {
+    const res = await getAuthGenSecretApi()
+    if (res.data.code === 200 && res.data.data) {
+      secretData.value = res.data.data
+      const { uuid, createTime, expireTime } = res.data.data
+      const remaining = getRemainingTime()
+      const createTimeNum = Number(createTime)
+      console.log(
+        `[RSA密钥] 公钥获取成功 | uuid=${uuid} | 有效期=${expireTime}s | createTime=${createTimeNum}ms | 剩余=${(remaining / 1000).toFixed(1)}s`
+      )
+      scheduleNextRefresh()
+    } else {
+      console.error('[RSA密钥] 获取公钥失败:', res.data.msg)
+    }
+  } catch (error) {
+    console.error('[RSA密钥] 获取公钥异常:', error)
+  } finally {
+    isFetchingSecret.value = false
+  }
+}
+
+/**
+ * 根据有效期安排下一次密钥刷新
+ * 当剩余时间不足总有效期的 20% 时主动刷新
+ */
+function scheduleNextRefresh(): void {
+  // 清除已有定时器
+  if (refreshTimer.value) {
+    clearTimeout(refreshTimer.value)
+    refreshTimer.value = null
+  }
+
+  const remaining = getRemainingTime()
+  if (remaining <= 0) {
+    // 已过期，立即刷新
+    console.log('[RSA密钥] 密钥已过期，立即刷新')
+    fetchSecret()
+    return
+  }
+
+  const expireTimeMs = (secretData.value?.expireTime ?? 0) * 1000
+  const threshold = expireTimeMs * 0.2 // 20% 阈值点
+  const delay = remaining - threshold
+
+  if (delay <= 0) {
+    // 已进入 20% 区间，立即刷新
+    console.log(
+      `[RSA密钥] 剩余=${(remaining / 1000).toFixed(1)}s 已低于20%阈值(${(threshold / 1000).toFixed(1)}s)，立即刷新`
+    )
+    fetchSecret()
+    return
+  }
+
+  console.log(
+    `[RSA密钥] 下次刷新安排在 ${(delay / 1000).toFixed(1)}s 后（剩余${(remaining / 1000).toFixed(1)}s，阈值${(threshold / 1000).toFixed(1)}s）`
+  )
+  refreshTimer.value = setTimeout(() => {
+    console.log('[RSA密钥] 定时器触发，开始刷新')
+    fetchSecret()
+  }, delay)
+}
+
+/**
+ * 浏览器标签页可见性变化处理
+ * 当标签页从后台切回前台时，检查密钥是否过期或接近过期
+ * 浏览器的 setTimeout 在后台标签页中会被严重节流（最低 1s，甚至 1 分钟），
+ * 因此切回前台时需要重新检查并调度
+ */
+function handleVisibilityChange(): void {
+  if (document.visibilityState !== 'visible') {
+    console.log('[RSA密钥] 标签页进入后台')
+    return
+  }
+
+  console.log('[RSA密钥] 标签页切回前台，检查密钥状态...')
+  const remaining = getRemainingTime()
+  console.log(`[RSA密钥] 当前剩余=${(remaining / 1000).toFixed(1)}s`)
+
+  if (!secretData.value || remaining <= 0) {
+    // 后台期间密钥已过期，重新获取
+    console.log('[RSA密钥] 后台期间密钥已过期，重新获取')
+    fetchSecret()
+    return
+  }
+
+  const totalDuration = (secretData.value.expireTime ?? 0) * 1000
+  if (remaining < totalDuration * 0.2) {
+    // 已进入 20% 阈值区间，刷新密钥
+    console.log(`[RSA密钥] 已进入20%阈值区间(<${(totalDuration * 0.2 / 1000).toFixed(1)}s)，刷新密钥`)
+    fetchSecret()
+  } else {
+    // 后台时 setTimeout 被节流，重新按正确延迟调度
+    console.log('[RSA密钥] 密钥仍有效，重新调度定时器')
+    scheduleNextRefresh()
+  }
+}
+
+/**
+ * 使用 RSA 公钥加密明文密码
+ */
+function encryptPassword(password: string): string {
+  if (!secretData.value?.pubKey) {
+    throw new Error('公钥未获取')
+  }
+  const encrypt = new JSEncrypt()
+  encrypt.setPublicKey(secretData.value.pubKey)
+  const encrypted = encrypt.encrypt(password)
+  if (!encrypted) {
+    throw new Error('密码加密失败，请重试')
+  }
+  return encrypted
+}
+
+/**
+ * 登录前确保密钥有效
+ * 无密钥时获取，在 20% 阈值内时刷新
+ */
+async function ensureValidSecret(): Promise<boolean> {
+  if (!secretData.value?.pubKey) {
+    console.log('[RSA密钥] 尚未获取公钥，先获取...')
+    await fetchSecret()
+    if (!secretData.value?.pubKey) {
+      ElMessage.error('获取加密公钥失败，请检查网络后重试')
+      return false
+    }
+  }
+
+  const remaining = getRemainingTime()
+  const totalDuration = (secretData.value.expireTime ?? 0) * 1000
+  console.log(
+    `[RSA密钥] 登录前检查 | 剩余=${(remaining / 1000).toFixed(1)}s | 阈值=${(totalDuration * 0.2 / 1000).toFixed(1)}s`
+  )
+  if (remaining < totalDuration * 0.2) {
+    console.log('[RSA密钥] 剩余时间低于20%阈值，登录前刷新密钥')
+    await fetchSecret()
+    if (!secretData.value?.pubKey) {
+      ElMessage.error('加密公钥已失效，请刷新页面后重试')
+      return false
+    }
+  }
+
+  return true
+}
 
 // 初始化时检查是否有记住的用户名
 const initLoginForm = () => {
@@ -51,10 +221,28 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
+    // 确保密钥有效
+    const valid = await ensureValidSecret()
+    if (!valid) {
+      loading.value = false
+      return
+    }
+
+    // RSA 加密密码
+    let encryptedPassword: string
+    try {
+      encryptedPassword = encryptPassword(loginForm.value.password)
+    } catch {
+      ElMessage.error('密码加密失败，请刷新页面后重试')
+      loading.value = false
+      return
+    }
+
     // 调用登录接口
     const res = await postAuthLoginApi({
       username: loginForm.value.username,
-      password: loginForm.value.password
+      password: encryptedPassword,
+      uuid: secretData.value?.uuid
     })
 
     const { data } = res
@@ -115,10 +303,27 @@ const handleLogin = async () => {
     } else {
       ElMessage.error(data.msg || '登录失败')
     }
+  } catch {
+    ElMessage.error('登录请求失败，请检查网络后重试')
   } finally {
     loading.value = false
   }
 }
+
+// 生命周期：组件挂载时获取公钥并监听页面可见性
+onMounted(() => {
+  fetchSecret()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+// 生命周期：组件卸载时清理定时器和事件监听
+onBeforeUnmount(() => {
+  if (refreshTimer.value) {
+    clearTimeout(refreshTimer.value)
+    refreshTimer.value = null
+  }
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 </script>
 
 <template>

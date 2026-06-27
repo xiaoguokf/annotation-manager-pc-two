@@ -18,7 +18,7 @@ const config: AxiosRequestConfig = {
   }
 }
 
-const whiteList = ['**/login']
+const whiteList = ['**/login', '**/genSecret']
 let isRefreshing = false
 let refreshSubscribers: ((token: string) => void)[] = []
 

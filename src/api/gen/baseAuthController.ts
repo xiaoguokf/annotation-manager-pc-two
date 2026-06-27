@@ -54,13 +54,21 @@ export interface ResultVoid {
 export interface LoginCmd {
   /* 用户名 */
   username: string
-  /* 密码 */
+  /* 密码（明文或RSA加密后的密文） */
   password: string
+  /* 密钥UUID，密钥认证时必传 */
+  uuid?: string
 }
 
 export interface SecretVO {
+  /* 公钥 */
   pubKey?: string
+  /* 公钥id */
   uuid?: string
+  /* 创建时间戳（毫秒） */
+  createTime?: number
+  /* 有效时间（秒） */
+  expireTime?: number
 }
 
 export interface ResultSecretVO {
