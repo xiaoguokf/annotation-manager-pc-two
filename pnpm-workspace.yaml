@@ -1,11 +1,6 @@
 allowBuilds:
-  canvas: true
   esbuild: true
   vue-demi: true
 onlyBuiltDependencies:
-  - canvas
   - esbuild
   - vue-demi
-overrides:
-  glob: ^11.0.0
-  rimraf: ^5.0.0

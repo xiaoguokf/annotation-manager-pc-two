@@ -4,10 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  glob: ^11.0.0
-  rimraf: ^5.0.0
-
 importers:
 
   .:
