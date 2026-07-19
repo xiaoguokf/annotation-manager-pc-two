@@ -51,6 +51,20 @@ type ShortClipRequestConfigEnhance = {
 }
 
 export type ShortClipRequestConfig<D> = AxiosRequestConfig<D> & ShortClipRequestConfigEnhance
+// 兼容旧项目业务API的类型别名
+export type OrangeRequestConfig<D> = ShortClipRequestConfig<D>
+
+// SSE 流式请求回调选项
+export type SseOptions<T, D> = {
+  // 每解析到一条 data 事件时触发
+  onMessage: (data: T) => void
+  // 发生错误时触发
+  onError?: (error: any) => void
+  // 流正常结束时触发
+  onDone?: () => void
+  // axios 配置（含 headers、timeout、loading 等）
+  config?: ShortClipRequestConfig<D>
+}
 
 type Result<T> = {
   code: number
@@ -313,6 +327,79 @@ class ShortClipHttp {
         URL.revokeObjectURL(url);
         document.body.removeChild(link);
       });
+  }
+
+  /**
+   * SSE 流式请求（基于 fetch + ReadableStream，支持 POST 与自定义请求头）
+   * 返回 abort 函数，调用可中断流。
+   */
+  sse<T = any, D = any>(
+    url: string,
+    data?: D,
+    options?: SseOptions<T, D>,
+  ): () => void {
+    const { onMessage, onError, onDone, config } = options || {}
+    const controller = new AbortController()
+    const baseURL = this.http.defaults.baseURL || ''
+    const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`
+
+    const init: RequestInit = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getToken(),
+        ...(config?.headers as Record<string, string> | undefined),
+      },
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      signal: controller.signal,
+      credentials: config?.withCredentials ? 'include' : undefined,
+    }
+    fetch(fullUrl, init)
+      .then(async (response) => {
+        if (!response.ok) {
+          onError?.(new Error(`SSE 请求失败，状态码：${response.status}`))
+          return
+        }
+        const reader = response.body?.getReader()
+        if (!reader) {
+          onError?.(new Error('SSE 响应不可读'))
+          return
+        }
+        const decoder = new TextDecoder()
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          // SSE 事件以空行(\n\n)分隔
+          const events = buffer.split('\n\n')
+          buffer = events.pop() || ''
+          for (const event of events) {
+            const lines = event.split('\n')
+            let dataLine = ''
+            let hasData = false
+            for (const line of lines) {
+              if (line.startsWith('data:')) {
+                dataLine += line.slice(5).replace(/^ /, '')
+                hasData = true
+              }
+            }
+            if (!hasData) continue
+            try {
+              onMessage?.(JSON.parse(dataLine) as T)
+            } catch {
+              onMessage?.(dataLine as unknown as T)
+            }
+          }
+        }
+        onDone?.()
+      })
+      .catch((error) => {
+        if (error?.name === 'AbortError') return
+        onError?.(error)
+      })
+
+    return () => controller.abort()
   }
 
 }

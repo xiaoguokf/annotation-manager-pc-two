@@ -583,6 +583,29 @@ class ApiGenerator {
     return deps
   }
 
+  // 检查是否为 SSE 流式接口
+  private isSseApi(operation: OpenAPIOperation): boolean {
+    // 检查描述中是否包含 SSE 关键词
+    const hasSseKeyword =
+      (operation.summary && operation.summary.includes('流式')) ||
+      (operation.description && operation.description.includes('流式')) ||
+      (operation.summary && operation.summary.includes('SSE')) ||
+      (operation.description && operation.description.includes('SSE')) ||
+      (operation.operationId && operation.operationId.includes('stream'))
+
+    // 检查响应类型是否为 text/event-stream
+    const hasSseResponse = Object.values(operation.responses || {}).some(response => {
+      if (!response.content) return false
+      return Object.keys(response.content).some(contentType =>
+        contentType.includes('text/event-stream') ||
+        contentType.includes('application/stream+json') ||
+        contentType.includes('application/x-ndjson')
+      )
+    })
+
+    return hasSseKeyword || hasSseResponse
+  }
+
   // 检查是否为下载接口
   private isDownloadApi(operation: OpenAPIOperation): boolean {
     // 检查描述中是否包含"下载"关键词
@@ -713,6 +736,30 @@ class ApiGenerator {
           }
         }
       } else if (['post', 'put', 'patch'].includes(method)) {
+        // 检查是否为 SSE 流式接口
+        const isSseApi = this.isSseApi(operation)
+
+        if (isSseApi) {
+          // SSE 流式接口使用 sse 方法，通过回调接收实时数据
+          const optionsType = `{\n  onMessage: (data: ${responseType}) => void\n  onError?: (error: any) => void\n  onDone?: () => void\n  config?: ShortClipRequestConfig<any>\n}`
+          if (parameterType && requestBodyType !== 'any') {
+            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, options: ${optionsType}) => {\n`
+            content += `  return http.sse<${responseType}, ${requestBodyType}>(${urlTemplate}, data, { ...options, config: options.config ? { params, ...options.config } : { params } })\n`
+          } else if (requestBodyType !== 'any') {
+            content += `export const ${operationName} = (data: ${requestBodyType}, options: ${optionsType}) => {\n`
+            content += `  return http.sse<${responseType}, ${requestBodyType}>(${urlTemplate}, data, options)\n`
+          } else if (parameterType) {
+            const isParamsRequired = hasPathParams
+            content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, options: ${optionsType}) => {\n`
+            content += `  return http.sse<${responseType}, any>(${urlTemplate}, null, { ...options, config: options.config ? { params, ...options.config } : { params } })\n`
+          } else {
+            content += `export const ${operationName} = (options: ${optionsType}) => {\n`
+            content += `  return http.sse<${responseType}, any>(${urlTemplate}, null, options)\n`
+          }
+          content += `}\n\n`
+          return
+        }
+
         const isFormData = this.isFormDataRequest(operation.requestBody) || isUploadApi
 
         if (isDownloadApi) {
