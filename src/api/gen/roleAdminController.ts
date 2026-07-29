@@ -1,5 +1,5 @@
 import http from '@/utils/http'
-import type { ShortClipRequestConfig } from '@/utils/http'
+import type { SshineAdminRequestConfig } from '@/utils/http'
 
 export interface RoleUpdateCmd {
   id: string
@@ -84,7 +84,7 @@ export interface ResultListRoleInfoVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAdminRoleUpdateApi = (data: RoleUpdateCmd, config?: ShortClipRequestConfig<any>) => {
+export const putAdminRoleUpdateApi = (data: RoleUpdateCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.put<ResultVoid>('/admin/role/update', data, config)
 }
 
@@ -94,7 +94,7 @@ export const putAdminRoleUpdateApi = (data: RoleUpdateCmd, config?: ShortClipReq
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultPageVORoleInfoVO>
  */
-export const getAdminRoleListApi = (params?: RoleQuery, config?: ShortClipRequestConfig<any>) => {
+export const getAdminRoleListApi = (params?: RoleQuery, config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultPageVORoleInfoVO>('/admin/role/list', { params, ...config })
 }
 
@@ -104,7 +104,7 @@ export const getAdminRoleListApi = (params?: RoleQuery, config?: ShortClipReques
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultListRoleInfoVO>
  */
-export const getAdminRoleAllApi = (config?: ShortClipRequestConfig<any>) => {
+export const getAdminRoleAllApi = (config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultListRoleInfoVO>('/admin/role/all', config)
 }
 

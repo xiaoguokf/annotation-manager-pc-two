@@ -19,6 +19,12 @@
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
+    "@tiptap/extension-image": "^2.27.2",
+    "@tiptap/extension-link": "^2.27.2",
+    "@tiptap/extension-placeholder": "^2.27.2",
+    "@tiptap/pm": "^2.27.2",
+    "@tiptap/starter-kit": "^2.27.2",
+    "@tiptap/vue-3": "^2.27.2",
     "axios": "^1.13.2",
     "dayjs": "^1.11.19",
     "element-plus": "^2.11.8",

@@ -1,5 +1,5 @@
 import http from '@/utils/http'
-import type { ShortClipRequestConfig } from '@/utils/http'
+import type { SshineAdminRequestConfig } from '@/utils/http'
 
 export interface UserInfoUpdateCmd {
   id: string
@@ -134,7 +134,7 @@ export interface ResultPageVOUserInfoVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAdminUserUpdateInfoApi = (data: UserInfoUpdateCmd, config?: ShortClipRequestConfig<any>) => {
+export const putAdminUserUpdateInfoApi = (data: UserInfoUpdateCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.put<ResultVoid>('/admin/user/update-info', data, config)
 }
 
@@ -144,7 +144,7 @@ export const putAdminUserUpdateInfoApi = (data: UserInfoUpdateCmd, config?: Shor
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAdminUserDisableApi = (data: DisableUserCmd, config?: ShortClipRequestConfig<any>) => {
+export const putAdminUserDisableApi = (data: DisableUserCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.put<ResultVoid>('/admin/user/disable', data, config)
 }
 
@@ -154,7 +154,7 @@ export const putAdminUserDisableApi = (data: DisableUserCmd, config?: ShortClipR
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAdminUserChangePasswordApi = (data: ChangePwdCmd, config?: ShortClipRequestConfig<any>) => {
+export const putAdminUserChangePasswordApi = (data: ChangePwdCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.put<ResultVoid>('/admin/user/change-password', data, config)
 }
 
@@ -164,7 +164,7 @@ export const putAdminUserChangePasswordApi = (data: ChangePwdCmd, config?: Short
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAdminUserAssignRoleApi = (data: UserRoleAssignCmd, config?: ShortClipRequestConfig<any>) => {
+export const putAdminUserAssignRoleApi = (data: UserRoleAssignCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.put<ResultVoid>('/admin/user/assign-role', data, config)
 }
 
@@ -174,7 +174,7 @@ export const putAdminUserAssignRoleApi = (data: UserRoleAssignCmd, config?: Shor
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postAdminUserAddApi = (data: UserAddCmd, config?: ShortClipRequestConfig<any>) => {
+export const postAdminUserAddApi = (data: UserAddCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/admin/user/add', data, config)
 }
 
@@ -184,7 +184,7 @@ export const postAdminUserAddApi = (data: UserAddCmd, config?: ShortClipRequestC
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultPageVOUserInfoVO>
  */
-export const getAdminUserListApi = (params?: UserQuery, config?: ShortClipRequestConfig<any>) => {
+export const getAdminUserListApi = (params?: UserQuery, config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultPageVOUserInfoVO>('/admin/user/list', { params, ...config })
 }
 
@@ -196,7 +196,7 @@ export const getAdminUserListApi = (params?: UserQuery, config?: ShortClipReques
  */
 export const deleteAdminUserApi = (params?: {
   id: string[]
-}, config?: ShortClipRequestConfig<any>) => {
+}, config?: SshineAdminRequestConfig<any>) => {
   return http.delete<ResultVoid>('/admin/user', { params, ...config })
 }
 

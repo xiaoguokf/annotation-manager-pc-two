@@ -46,13 +46,13 @@ function isUrlMatch(url: string | undefined, pattern: string): boolean {
   return regex.test(url)
 }
 
-type ShortClipRequestConfigEnhance = {
+type SshineAdminRequestConfigEnhance = {
   loading?: boolean
 }
 
-export type ShortClipRequestConfig<D> = AxiosRequestConfig<D> & ShortClipRequestConfigEnhance
+export type SshineAdminRequestConfig<D> = AxiosRequestConfig<D> & SshineAdminRequestConfigEnhance
 // 兼容旧项目业务API的类型别名
-export type OrangeRequestConfig<D> = ShortClipRequestConfig<D>
+export type OrangeRequestConfig<D> = SshineAdminRequestConfig<D>
 
 // SSE 流式请求回调选项
 export type SseOptions<T, D> = {
@@ -63,7 +63,7 @@ export type SseOptions<T, D> = {
   // 流正常结束时触发
   onDone?: () => void
   // axios 配置（含 headers、timeout、loading 等）
-  config?: ShortClipRequestConfig<D>
+  config?: SshineAdminRequestConfig<D>
 }
 
 type Result<T> = {
@@ -81,7 +81,7 @@ class ShortClipHttp {
   init() {
     this.http.interceptors.request.use(
       async (config) => {
-        const cfg = config as ShortClipRequestConfig<any>
+        const cfg = config as SshineAdminRequestConfig<any>
         if (cfg.loading) {
           NProgress.start()
         }
@@ -104,7 +104,7 @@ class ShortClipHttp {
 
     this.http.interceptors.response.use(
       (response) => {
-        if ((response.config as ShortClipRequestConfig<any>).loading) {
+        if ((response.config as SshineAdminRequestConfig<any>).loading) {
           NProgress.done()
         }
         return response
@@ -223,79 +223,79 @@ class ShortClipHttp {
   }
   get<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.get(url, config)
   }
   request<T = any, R = AxiosResponse<Result<T>>, D = any>(
-    config: ShortClipRequestConfig<D>,
+    config: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.request(config)
   }
   delete<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.delete(url, config)
   }
   head<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.head(url, config)
   }
   options<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.options(url, config)
   }
   post<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
     data?: D,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.post(url, data, config)
   }
   put<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
     data?: D,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.put(url, data, config)
   }
   patch<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
     data?: D,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.patch(url, data, config)
   }
   postForm<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
     data?: D,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.postForm(url, data, config)
   }
   putForm<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
     data?: D,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.putForm(url, data, config)
   }
   patchForm<T = any, R = AxiosResponse<T>, D = any>(
     url: string,
     data?: D,
-    config?: ShortClipRequestConfig<D>,
+    config?: SshineAdminRequestConfig<D>,
   ): Promise<R> {
     return this.http.patchForm(url, data, config)
   }
   public download(
     url: string,
     params?: AxiosRequestConfig,
-    config?: ShortClipRequestConfig<any>
+    config?: SshineAdminRequestConfig<any>
   ) {
     this.http
       .get(url, { responseType: "blob", ...params, ...config })

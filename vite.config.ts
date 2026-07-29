@@ -24,7 +24,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'https://mp11st5azn-8080.cnb.run',
+        target: 'https://35ovh0xgt2-8080.cnb.run',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

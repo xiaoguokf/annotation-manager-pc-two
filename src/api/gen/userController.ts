@@ -1,5 +1,5 @@
 import http from '@/utils/http'
-import type { ShortClipRequestConfig } from '@/utils/http'
+import type { SshineAdminRequestConfig } from '@/utils/http'
 
 export interface RegisterCmd {
   /* 用户名 */
@@ -130,7 +130,7 @@ export interface ResultUserAccountVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postUserRegisterApi = (data: RegisterCmd, config?: ShortClipRequestConfig<any>) => {
+export const postUserRegisterApi = (data: RegisterCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/user/register', data, config)
 }
 
@@ -140,7 +140,7 @@ export const postUserRegisterApi = (data: RegisterCmd, config?: ShortClipRequest
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postUserRegisterMailApi = (data: RegisterMailCmd, config?: ShortClipRequestConfig<any>) => {
+export const postUserRegisterMailApi = (data: RegisterMailCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/user/register/mail', data, config)
 }
 
@@ -150,7 +150,7 @@ export const postUserRegisterMailApi = (data: RegisterMailCmd, config?: ShortCli
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postUserForgetApi = (data: ForgetCmd, config?: ShortClipRequestConfig<any>) => {
+export const postUserForgetApi = (data: ForgetCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/user/forget', data, config)
 }
 
@@ -160,7 +160,7 @@ export const postUserForgetApi = (data: ForgetCmd, config?: ShortClipRequestConf
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postUserForgetMailApi = (data: ForgetMailCmd, config?: ShortClipRequestConfig<any>) => {
+export const postUserForgetMailApi = (data: ForgetMailCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/user/forget/mail', data, config)
 }
 
@@ -170,7 +170,7 @@ export const postUserForgetMailApi = (data: ForgetMailCmd, config?: ShortClipReq
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postUserChangePasswordApi = (data: ChangeMyPwdCmd, config?: ShortClipRequestConfig<any>) => {
+export const postUserChangePasswordApi = (data: ChangeMyPwdCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/user/change-password', data, config)
 }
 
@@ -180,7 +180,7 @@ export const postUserChangePasswordApi = (data: ChangeMyPwdCmd, config?: ShortCl
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultListUserSelector>
  */
-export const getUserSelectorApi = (params?: UserSelectorQuery, config?: ShortClipRequestConfig<any>) => {
+export const getUserSelectorApi = (params?: UserSelectorQuery, config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultListUserSelector>('/user/selector', { params, ...config })
 }
 
@@ -190,7 +190,7 @@ export const getUserSelectorApi = (params?: UserSelectorQuery, config?: ShortCli
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultMyUserInfoVO>
  */
-export const getUserInfoApi = (config?: ShortClipRequestConfig<any>) => {
+export const getUserInfoApi = (config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultMyUserInfoVO>('/user/info', config)
 }
 
@@ -200,7 +200,7 @@ export const getUserInfoApi = (config?: ShortClipRequestConfig<any>) => {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultUserAccountVO>
  */
-export const getUserAccountApi = (config?: ShortClipRequestConfig<any>) => {
+export const getUserAccountApi = (config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultUserAccountVO>('/user/account', config)
 }
 

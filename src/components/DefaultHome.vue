@@ -1,5 +1,18 @@
 <template>
   <div class="dashboard" :style="{ padding: sizeConfig.cardPadding }">
+    <!-- 最新公告横幅（置顶显示） -->
+    <div
+      v-if="firstAnnouncement"
+      class="ann-banner"
+      :style="{ marginBottom: sizeConfig.sectionGap }"
+      @click="openAnnouncement()"
+    >
+      <el-icon class="ann-banner__icon"><Icon icon="ep:bell" /></el-icon>
+      <span class="ann-banner__label">最新公告</span>
+      <span class="ann-banner__title">{{ firstAnnouncement.title }}</span>
+      <span class="ann-banner__more">查看详情 ›</span>
+    </div>
+
     <!-- 欢迎横幅 -->
     <div class="welcome-banner rounded-xl text-white shadow-lg relative overflow-hidden"
       :style="{ padding: sizeConfig.cardPadding, marginBottom: sizeConfig.sectionGap, background: `linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%)` }">
@@ -128,16 +141,22 @@
       </div>
     </div>
   </div>
+
+  <!-- 公告查看对话框 -->
+  <AnnouncementDialog v-model="announcementVisible" :initial-id="firstAnnouncement?.id || ''" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { UserService } from '@/services/userService'
 import { RoleService } from '@/services/roleService'
+import { AnnouncementService } from '@/services/announcementService'
+import type { AnnouncementVO } from '@/api/gen/announcementController'
 import { hasAnyRole } from '@/utils/auth'
 import dayjs from 'dayjs'
 import { FestivalService } from '@/utils/festival'
@@ -231,6 +250,25 @@ const userRoleName = computed(() => {
 })
 
 const showAdminStats = computed(() => hasAnyRole(['supper_admin']))
+
+// 公告横幅相关
+const announcementVisible = ref(false)
+const firstAnnouncement = ref<AnnouncementVO | null>(null)
+
+// 打开公告抽屉（定位到首条公告，由 initial-id 控制）
+const openAnnouncement = () => {
+  announcementVisible.value = true
+}
+
+// 加载最新一条启用公告
+const fetchFirstAnnouncement = async () => {
+  try {
+    const res = await AnnouncementService.getUserAnnouncementList({ current: 1, size: 1 })
+    firstAnnouncement.value = res?.records?.[0] || null
+  } catch {
+    // 加载失败静默忽略
+  }
+}
 
 const greeting = computed(() => {
   const hour = dayjs().hour()
@@ -344,6 +382,7 @@ const fetchSystemStats = async () => {
 
 onMounted(() => {
   fetchSystemStats()
+  fetchFirstAnnouncement()
 })
 </script>
 
@@ -450,6 +489,53 @@ onMounted(() => {
 
 .stat-card:hover {
   transform: translateY(-2px);
+}
+
+/* 最新公告横幅 */
+.ann-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  /* 仅以 8% 主题色混入背景，橙色等深色主题下也不刺眼 */
+  background: color-mix(in srgb, var(--el-color-primary) 8%, var(--el-bg-color));
+  border: 1px solid color-mix(in srgb, var(--el-color-primary) 20%, var(--el-border-color));
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--el-text-color-primary);
+  transition: all 0.2s ease;
+}
+
+.ann-banner:hover {
+  background: color-mix(in srgb, var(--el-color-primary) 14%, var(--el-bg-color));
+}
+
+.ann-banner__icon {
+  color: var(--el-color-primary);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ann-banner__label {
+  font-weight: 600;
+  color: var(--el-color-primary);
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.ann-banner__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.ann-banner__more {
+  flex-shrink: 0;
+  color: var(--el-color-primary);
+  font-size: 13px;
 }
 
 .quick-card {

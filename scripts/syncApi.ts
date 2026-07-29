@@ -640,7 +640,7 @@ class ApiGenerator {
     }>,
   ): string {
     let content = `import http from '@/utils/http'\n`
-    content += `import type { ShortClipRequestConfig } from '@/utils/http'\n\n`
+    content += `import type { SshineAdminRequestConfig } from '@/utils/http'\n\n`
 
     // 收集当前文件使用的类型
     const usedTypes = this.collectUsedTypes(operations)
@@ -693,10 +693,10 @@ class ApiGenerator {
         if (isDownloadApi) {
           // 下载接口使用 download 方法
           if (parameterType && requestBodyType !== 'any') {
-            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.download(${urlTemplate}, { data, params, ...config })\n`
           } else if (parameterType) {
-            content += `export const ${operationName} = (params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             if (hasQueryParams) {
               // 有查询参数，需要传递 params
               content += `  return http.download(${urlTemplate}, { params, ...config })\n`
@@ -705,21 +705,21 @@ class ApiGenerator {
               content += `  return http.download(${urlTemplate}, config)\n`
             }
           } else if (requestBodyType !== 'any') {
-            content += `export const ${operationName} = (data: ${requestBodyType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (data: ${requestBodyType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.download(${urlTemplate}, { data, ...config })\n`
           } else {
-            content += `export const ${operationName} = (config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.download(${urlTemplate}, config)\n`
           }
         } else {
           // 普通接口
           if (parameterType && requestBodyType !== 'any') {
-            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.get<${responseType}>(${urlTemplate}, { data, params, ...config })\n`
           } else if (parameterType) {
             // 当有路径参数时，params 是必需的
             const isParamsRequired = hasPathParams
-            content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             if (hasQueryParams) {
               // 有查询参数，需要传递 params
               content += `  return http.get<${responseType}>(${urlTemplate}, { params, ...config })\n`
@@ -728,10 +728,10 @@ class ApiGenerator {
               content += `  return http.get<${responseType}>(${urlTemplate}, config)\n`
             }
           } else if (requestBodyType !== 'any') {
-            content += `export const ${operationName} = (data: ${requestBodyType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (data: ${requestBodyType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.get<${responseType}>(${urlTemplate}, { data, ...config })\n`
           } else {
-            content += `export const ${operationName} = (config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.get<${responseType}>(${urlTemplate}, config)\n`
           }
         }
@@ -741,7 +741,7 @@ class ApiGenerator {
 
         if (isSseApi) {
           // SSE 流式接口使用 sse 方法，通过回调接收实时数据
-          const optionsType = `{\n  onMessage: (data: ${responseType}) => void\n  onError?: (error: any) => void\n  onDone?: () => void\n  config?: ShortClipRequestConfig<any>\n}`
+          const optionsType = `{\n  onMessage: (data: ${responseType}) => void\n  onError?: (error: any) => void\n  onDone?: () => void\n  config?: SshineAdminRequestConfig<any>\n}`
           if (parameterType && requestBodyType !== 'any') {
             content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, options: ${optionsType}) => {\n`
             content += `  return http.sse<${responseType}, ${requestBodyType}>(${urlTemplate}, data, { ...options, config: options.config ? { params, ...options.config } : { params } })\n`
@@ -765,15 +765,15 @@ class ApiGenerator {
         if (isDownloadApi) {
           // 下载接口使用 download 方法
           if (parameterType && requestBodyType !== 'any') {
-            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.download(${urlTemplate}, { data, params, ...config })\n`
           } else if (requestBodyType !== 'any') {
-            content += `export const ${operationName} = (data: ${requestBodyType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (data: ${requestBodyType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.download(${urlTemplate}, { data, ...config })\n`
           } else if (parameterType) {
             // 当有路径参数时，params 是必需的
             const isParamsRequired = hasPathParams
-            content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             if (hasQueryParams) {
               // 有查询参数，需要传递 params
               content += `  return http.download(${urlTemplate}, { params, ...config })\n`
@@ -782,37 +782,37 @@ class ApiGenerator {
               content += `  return http.download(${urlTemplate}, config)\n`
             }
           } else {
-            content += `export const ${operationName} = (config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.download(${urlTemplate}, config)\n`
           }
         } else {
           // 普通接口
           if (parameterType && requestBodyType !== 'any') {
             if (isFormData) {
-              content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.${method}Form<${responseType}>(${urlTemplate}, data, { params, ...config })\n`
             } else {
-              content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (data: ${requestBodyType}, params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.${method}<${responseType}>(${urlTemplate}, data, params ? { params, ...config } : config)\n`
             }
           } else if (requestBodyType !== 'any') {
             if (isFormData) {
-              content += `export const ${operationName} = (data: ${requestBodyType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (data: ${requestBodyType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.${method}Form<${responseType}>(${urlTemplate}, data, config)\n`
             } else {
-              content += `export const ${operationName} = (data: ${requestBodyType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (data: ${requestBodyType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.${method}<${responseType}>(${urlTemplate}, data, config)\n`
             }
           } else if (parameterType) {
             // 只有参数，没有 request body
             if (isFormData) {
               // 对于包含文件字段的 query 参数，使用 Form 方法
-              content += `export const ${operationName} = (params: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (params: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.${method}Form<${responseType}>(${urlTemplate}, params, config)\n`
             } else {
               // 当有路径参数时，params 是必需的
               const isParamsRequired = hasPathParams
-              content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (params${isParamsRequired ? '' : '?'}: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
               if (hasQueryParams) {
                 // 有查询参数，需要传递 params
                 content += `  return http.${method}<${responseType}>(${urlTemplate}, null, { params, ...config })\n`
@@ -822,7 +822,7 @@ class ApiGenerator {
               }
             }
           } else {
-            content += `export const ${operationName} = (config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (config?: SshineAdminRequestConfig<any>) => {\n`
             // 没有 body 也没有参数，传入 null 作为 body
             content += `  return http.${method}<${responseType}>(${urlTemplate}, null, config)\n`
           }
@@ -833,20 +833,20 @@ class ApiGenerator {
             // 有路径参数的情况
             if (hasQueryParams) {
               // 同时有路径参数和查询参数
-              content += `export const ${operationName} = (params: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (params: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.delete<${responseType}>(${urlTemplate}, { params, ...config })\n`
             } else {
               // 只有路径参数
-              content += `export const ${operationName} = (params: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+              content += `export const ${operationName} = (params: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
               content += `  return http.delete<${responseType}>(${urlTemplate}, { ...config })\n`
             }
           } else {
             // 只有查询参数
-            content += `export const ${operationName} = (params?: ${parameterType}, config?: ShortClipRequestConfig<any>) => {\n`
+            content += `export const ${operationName} = (params?: ${parameterType}, config?: SshineAdminRequestConfig<any>) => {\n`
             content += `  return http.delete<${responseType}>(${urlTemplate}, { params, ...config })\n`
           }
         } else {
-          content += `export const ${operationName} = (config?: ShortClipRequestConfig<any>) => {\n`
+          content += `export const ${operationName} = (config?: SshineAdminRequestConfig<any>) => {\n`
           content += `  return http.delete<${responseType}>(${urlTemplate}, config)\n`
         }
       }

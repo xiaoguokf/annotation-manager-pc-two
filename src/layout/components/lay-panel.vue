@@ -34,6 +34,19 @@
         </div>
       </el-tooltip> -->
 
+      <!-- 公告图标 -->
+      <el-tooltip content="公告" placement="bottom">
+        <div
+          class="flex items-center justify-center rounded-md cursor-pointer transition-all duration-300 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400"
+          :style="{ width: `var(--theme-panel-icon-size)`, height: `var(--theme-panel-icon-size)` }"
+          @click="announcementVisible = true"
+        >
+          <el-icon size="18">
+            <Icon icon="ep:bell" />
+          </el-icon>
+        </div>
+      </el-tooltip>
+
       <!-- 用户信息下拉菜单 -->
       <el-dropdown trigger="click" @command="handleCommand">
         <div
@@ -78,15 +91,19 @@
       </el-dropdown>
     </div>
   </div>
+
+  <!-- 公告查看对话框 -->
+  <AnnouncementDialog v-model="announcementVisible" />
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { ElMessageBox } from "element-plus";
 import { Icon } from "@iconify/vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
+import AnnouncementDialog from "@/components/AnnouncementDialog.vue";
 import avatar from "@/assets/user.png";
 import { getToken } from "@/utils/auth";
 
@@ -96,6 +113,9 @@ defineOptions({
 
 const router = useRouter();
 const userStore = useUserStore();
+
+// 公告抽屉显隐
+const announcementVisible = ref(false);
 
 // 用户信息
 const userInfo = computed(() => userStore.getUserInfo());

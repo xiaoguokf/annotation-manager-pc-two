@@ -1,5 +1,5 @@
 import http from '@/utils/http'
-import type { ShortClipRequestConfig } from '@/utils/http'
+import type { SshineAdminRequestConfig } from '@/utils/http'
 
 export interface LoginByRefreshTokenCmd {
   refreshToken?: string
@@ -86,7 +86,7 @@ export interface ResultSecretVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultTokenVO>
  */
-export const postAuthRefreshTokenApi = (data: LoginByRefreshTokenCmd, config?: ShortClipRequestConfig<any>) => {
+export const postAuthRefreshTokenApi = (data: LoginByRefreshTokenCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultTokenVO>('/auth/refreshToken', data, config)
 }
 
@@ -96,7 +96,7 @@ export const postAuthRefreshTokenApi = (data: LoginByRefreshTokenCmd, config?: S
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postAuthLogoutApi = (config?: ShortClipRequestConfig<any>) => {
+export const postAuthLogoutApi = (config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultVoid>('/auth/logout', null, config)
 }
 
@@ -106,7 +106,7 @@ export const postAuthLogoutApi = (config?: ShortClipRequestConfig<any>) => {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultTokenVO>
  */
-export const postAuthLoginApi = (data: LoginCmd, config?: ShortClipRequestConfig<any>) => {
+export const postAuthLoginApi = (data: LoginCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.post<ResultTokenVO>('/auth/login', data, config)
 }
 
@@ -116,7 +116,7 @@ export const postAuthLoginApi = (data: LoginCmd, config?: ShortClipRequestConfig
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultSecretVO>
  */
-export const getAuthGenSecretApi = (config?: ShortClipRequestConfig<any>) => {
+export const getAuthGenSecretApi = (config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultSecretVO>('/auth/genSecret', config)
 }
 

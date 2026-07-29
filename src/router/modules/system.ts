@@ -30,6 +30,16 @@ export default
                     showMenu: true
                 }
             },
+            {
+                path: 'announcement',
+                name: 'SystemAnnouncement',
+                component: () => import('@/views/system/announcement.vue'),
+                meta: {
+                    title: '公告管理',
+                    icon: 'ep:bell',
+                    showMenu: true
+                }
+            },
 
             // {
             //     path: 'theme-preview',
