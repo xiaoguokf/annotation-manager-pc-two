@@ -1,4 +1,27 @@
 // API 生成器配置文件
+
+/**
+ * REST 风格检测规则名。
+ * 与 scripts/generator/lint.ts 中的 RestRule 保持一致。
+ */
+export type RestLintRule =
+  | 'verb-in-uri'
+  | 'post-for-query'
+  | 'get-with-body'
+  | 'put-without-body'
+  | 'id-in-query'
+  | 'camel-case-in-uri'
+  | 'duplicate-resource'
+
+export interface RestLintConfig {
+  // 总开关，关闭后不做任何检测
+  enabled: boolean
+  // 细粒度规则开关，未列出的规则视为开启
+  rules?: Partial<Record<RestLintRule, boolean>>
+  // 不参与检测的路径（支持通配符）
+  ignore?: string[]
+}
+
 export interface ApiGeneratorConfig {
   // URL 过滤规则
   urlFilters: {
@@ -19,6 +42,8 @@ export interface ApiGeneratorConfig {
       generate?: boolean
     }
   >
+  // REST 风格检测（仅打印提示，不影响生成结果）
+  restLint?: RestLintConfig
 }
 
 export const config: ApiGeneratorConfig = {
@@ -37,6 +62,17 @@ export const config: ApiGeneratorConfig = {
     //   '/api/**',
     //   '/admin/**'
     // ]
+  },
+  // REST 风格检测：只打印提示，不会影响生成结果。
+  // 当前项目接口为 RPC 风格，默认关闭以免刷屏；需要时改为 true 即可。
+  restLint: {
+    enabled: false,
+    // 关闭单条规则（未列出的规则视为开启）
+    // rules: {
+    //   'camel-case-in-uri': false,
+    // },
+    // 不参与检测的路径（支持通配符）
+    // ignore: ['/admin/**'],
   },
   customMethods: {
     // '/test/tt': {

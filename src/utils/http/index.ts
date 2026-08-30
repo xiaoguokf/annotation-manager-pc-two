@@ -51,8 +51,6 @@ type SshineAdminRequestConfigEnhance = {
 }
 
 export type SshineAdminRequestConfig<D> = AxiosRequestConfig<D> & SshineAdminRequestConfigEnhance
-// 兼容旧项目业务API的类型别名
-export type OrangeRequestConfig<D> = SshineAdminRequestConfig<D>
 
 // SSE 流式请求回调选项
 export type SseOptions<T, D> = {
@@ -72,7 +70,7 @@ type Result<T> = {
   data: T
 }
 
-class ShortClipHttp {
+class SshineAdminHttp {
   private http: Axios
   constructor(config: AxiosRequestConfig) {
     this.http = axios.create(config)
@@ -292,18 +290,32 @@ class ShortClipHttp {
   ): Promise<R> {
     return this.http.patchForm(url, data, config)
   }
+  /**
+   * 下载文件。
+   *
+   * 请求方法可通过 params / config 中的 method 指定，默认 get。
+   * 例如 POST + 请求体的导出接口：http.download(url, { method: 'post', data })
+   *
+   * @returns 返回 Promise，便于调用方感知失败
+   */
   public download(
     url: string,
     params?: AxiosRequestConfig,
     config?: SshineAdminRequestConfig<any>
   ) {
-    this.http
-      .get(url, { responseType: "blob", ...params, ...config })
+    return this.http
+      .request({
+        url,
+        method: 'get',
+        responseType: 'blob',
+        ...params,
+        ...config,
+      })
       .then(response => {
-        console.log(response);
-        // let type = response.headers["Content-Type"] as string;
-        const blob = new Blob([response.data], { type: response.data.type });
-        const url = URL.createObjectURL(blob);
+        const blob = new Blob([response.data], {
+          type: response.data?.type || 'application/octet-stream',
+        });
+        const objectUrl = URL.createObjectURL(blob);
 
         const filenameRegex = /filename\*=(UTF-8'')?([^;\n]*)/i;
         const matches = filenameRegex.exec(
@@ -316,21 +328,28 @@ class ShortClipHttp {
         }
 
         const link = document.createElement("a");
-        link.href = url;
+        link.href = objectUrl;
         link.download = filename; // 指定下载文件的名称
         link.style.display = "none";
 
         document.body.appendChild(link);
         link.click();
-
-        // 清理临时URL和<a>标签
-        URL.revokeObjectURL(url);
         document.body.removeChild(link);
+
+        // 延迟释放，避免部分浏览器在下载完成前拿到已失效的 URL
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+
+        return response;
       });
   }
 
   /**
-   * SSE 流式请求（基于 fetch + ReadableStream，支持 POST 与自定义请求头）
+   * SSE 流式请求（基于 fetch + ReadableStream）。
+   *
+   * 请求方法可通过 config.method 指定，默认 post。
+   * GET / HEAD 无法携带请求体，此时 body 会被忽略，
+   * 需要查询参数时请使用 config.params。
+   *
    * 返回 abort 函数，调用可中断流。
    */
   sse<T = any, D = any>(
@@ -339,22 +358,31 @@ class ShortClipHttp {
     options?: SseOptions<T, D>,
   ): () => void {
     const { onMessage, onError, onDone, config } = options || {}
+    const method = (config?.method || 'post').toString().toUpperCase()
+    // fetch 规范要求 GET / HEAD 不得携带请求体
+    const allowsBody = method !== 'GET' && method !== 'HEAD'
     const controller = new AbortController()
     const baseURL = this.http.defaults.baseURL || ''
     const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`
 
+    // 查询参数序列化，与 axios 拦截器保持一致（数组为重复键形式）
+    const query = config?.params
+      ? qs.stringify(config.params, { arrayFormat: 'repeat' })
+      : ''
+    const requestUrl = query ? `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}${query}` : fullUrl
+
     const init: RequestInit = {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: getToken(),
         ...(config?.headers as Record<string, string> | undefined),
       },
-      body: data !== undefined ? JSON.stringify(data) : undefined,
+      body: allowsBody && data !== undefined ? JSON.stringify(data) : undefined,
       signal: controller.signal,
       credentials: config?.withCredentials ? 'include' : undefined,
     }
-    fetch(fullUrl, init)
+    fetch(requestUrl, init)
       .then(async (response) => {
         if (!response.ok) {
           onError?.(new Error(`SSE 请求失败，状态码：${response.status}`))
@@ -404,4 +432,4 @@ class ShortClipHttp {
 
 }
 
-export default new ShortClipHttp(config)
+export default new SshineAdminHttp(config)

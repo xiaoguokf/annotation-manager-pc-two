@@ -1,4 +1,4 @@
-import { generateApiModules } from './syncApi'
+import { generateApiModules } from './generator/index'
 
 async function main() {
   const baseUrl = process.argv[2] || 'http://localhost:5173'

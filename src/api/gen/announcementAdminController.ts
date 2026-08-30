@@ -97,6 +97,37 @@ export interface PageQuery {
   current?: number
 }
 
+export interface AnnouncementListVO {
+  id?: string
+  title?: string
+  status?: boolean
+  isTop?: boolean
+  startTime?: string
+  endTime?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface PageVOAnnouncementListVO {
+  /* 记录数据 */
+  records?: AnnouncementListVO[]
+  /* 记录条数 */
+  total?: number
+  /* 页面大小 */
+  size?: number
+  /* 页号 */
+  current?: number
+}
+
+export interface ResultPageVOAnnouncementListVO {
+  /* 状态码：200-成功，非200-失败 */
+  code?: number
+  /* 消息 */
+  msg?: string
+  /* 数据(如果存在) */
+  data?: PageVOAnnouncementListVO
+}
+
 /**
  * 修改公告
  * 修改公告
@@ -123,8 +154,10 @@ export const postAdminAnnouncementApi = (data: AnnouncementSaveCmd, config?: Ssh
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAdminAnnouncementStatusApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>('/admin/announcement/{id}/status', null, config)
+export const putAdminAnnouncementStatusApi = (params: {
+  id: string
+}, config?: SshineAdminRequestConfig<any>) => {
+  return http.put<ResultVoid>(`/admin/announcement/${params.id}/status`, null, config)
 }
 
 /**
@@ -133,8 +166,10 @@ export const putAdminAnnouncementStatusApi = (config?: SshineAdminRequestConfig<
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultAnnouncementVO>
  */
-export const getAdminAnnouncementApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultAnnouncementVO>('/admin/announcement/{id}', config)
+export const getAdminAnnouncementApi = (params: {
+  id: string
+}, config?: SshineAdminRequestConfig<any>) => {
+  return http.get<ResultAnnouncementVO>(`/admin/announcement/${params.id}`, config)
 }
 
 /**
@@ -143,8 +178,10 @@ export const getAdminAnnouncementApi = (config?: SshineAdminRequestConfig<any>) 
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const deleteAdminAnnouncementApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.delete<ResultVoid>('/admin/announcement/{id}', config)
+export const deleteAdminAnnouncementApi = (params: {
+  id: string
+}, config?: SshineAdminRequestConfig<any>) => {
+  return http.delete<ResultVoid>(`/admin/announcement/${params.id}`, config)
 }
 
 /**
@@ -161,10 +198,10 @@ export const getAdminAnnouncementListApi = (params?: AnnouncementQuery, config?:
  * 分页获取启用的公告
  * 分页获取启用的公告
  * @param config 可选配置，包含 timeout、loading 等选项
- * @returns Promise<ResultPageVOAnnouncementVO>
+ * @returns Promise<ResultPageVOAnnouncementListVO>
  */
 export const getAdminAnnouncementEnabledApi = (params?: PageQuery, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultPageVOAnnouncementVO>('/admin/announcement/enabled', { params, ...config })
+  return http.get<ResultPageVOAnnouncementListVO>('/admin/announcement/enabled', { params, ...config })
 }
 
 /**
@@ -173,7 +210,7 @@ export const getAdminAnnouncementEnabledApi = (params?: PageQuery, config?: Sshi
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const deleteAdminAnnouncementBatchApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.delete<ResultVoid>('/admin/announcement/batch', config)
+export const deleteAdminAnnouncementBatchApi = (data: string[], config?: SshineAdminRequestConfig<any>) => {
+  return http.delete<ResultVoid>('/admin/announcement/batch', { data, ...config })
 }
 

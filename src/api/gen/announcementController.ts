@@ -56,9 +56,20 @@ export interface PageQuery {
   current?: number
 }
 
-export interface PageVOAnnouncementVO {
+export interface AnnouncementListVO {
+  id?: string
+  title?: string
+  status?: boolean
+  isTop?: boolean
+  startTime?: string
+  endTime?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface PageVOAnnouncementListVO {
   /* 记录数据 */
-  records?: AnnouncementVO[]
+  records?: AnnouncementListVO[]
   /* 记录条数 */
   total?: number
   /* 页面大小 */
@@ -67,13 +78,13 @@ export interface PageVOAnnouncementVO {
   current?: number
 }
 
-export interface ResultPageVOAnnouncementVO {
+export interface ResultPageVOAnnouncementListVO {
   /* 状态码：200-成功，非200-失败 */
   code?: number
   /* 消息 */
   msg?: string
   /* 数据(如果存在) */
-  data?: PageVOAnnouncementVO
+  data?: PageVOAnnouncementListVO
 }
 
 /**
@@ -82,17 +93,19 @@ export interface ResultPageVOAnnouncementVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultAnnouncementVO>
  */
-export const getAnnouncementApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultAnnouncementVO>('/announcement/{id}', config)
+export const getAnnouncementApi = (params: {
+  id: string
+}, config?: SshineAdminRequestConfig<any>) => {
+  return http.get<ResultAnnouncementVO>(`/announcement/${params.id}`, config)
 }
 
 /**
  * 分页获取启用的公告列表
  * 分页获取启用的公告列表
  * @param config 可选配置，包含 timeout、loading 等选项
- * @returns Promise<ResultPageVOAnnouncementVO>
+ * @returns Promise<ResultPageVOAnnouncementListVO>
  */
 export const getAnnouncementListApi = (params?: PageQuery, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultPageVOAnnouncementVO>('/announcement/list', { params, ...config })
+  return http.get<ResultPageVOAnnouncementListVO>('/announcement/list', { params, ...config })
 }
 
