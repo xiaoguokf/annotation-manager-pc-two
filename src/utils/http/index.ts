@@ -5,9 +5,16 @@ import qs from 'qs'
 import { getToken, getRefreshToken, setToken, setRefreshToken } from '../auth'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { useNodeStore } from '@/stores/node'
 import { postAuthRefreshTokenApi } from '@/api/gen/baseAuthController'
 import { debounce, throttle } from '@/utils/debounce'
 import router from '@/router'
+
+// 节点切换状态
+let currentBaseURL = ''
+let isRetryWithBackup = false
+const MAX_RETRY_COUNT = 1
+let retryCount = 0
 
 const config: AxiosRequestConfig = {
   baseURL: '/api',
@@ -18,7 +25,32 @@ const config: AxiosRequestConfig = {
   }
 }
 
+if (import.meta.env.VITE_API_URL) {
+  config.baseURL = import.meta.env.VITE_API_URL
+}
 const whiteList = ['**/login', '**/genSecret']
+
+// 获取初始baseURL
+const getInitialBaseURL = () => {
+  if (config.baseURL && config.baseURL !== '/api') {
+    // 如果配置了VITE_API_URL，使用配置的URL
+    return config.baseURL
+  }
+  return '/api'
+}
+
+// 设置当前的baseURL
+const setCurrentBaseURL = (url: string) => {
+  currentBaseURL = url
+}
+
+// 获取当前baseURL
+const getCurrentBaseURL = () => {
+  return currentBaseURL || getInitialBaseURL()
+}
+
+// 导出获取 baseURL 的函数
+export { getCurrentBaseURL }
 let isRefreshing = false
 let refreshSubscribers: ((token: string) => void)[] = []
 
@@ -72,14 +104,111 @@ type Result<T> = {
 
 class SshineAdminHttp {
   private http: Axios
+  private nodeStore: ReturnType<typeof useNodeStore> | null = null
+
   constructor(config: AxiosRequestConfig) {
-    this.http = axios.create(config)
+    // 初始化当前baseURL
+    setCurrentBaseURL(getInitialBaseURL())
+
+    // 创建axios实例，使用当前baseURL
+    const initialConfig = {
+      ...config,
+      baseURL: getCurrentBaseURL()
+    }
+    this.http = axios.create(initialConfig)
     this.init()
   }
+
+  // 延迟获取nodeStore，确保在Vue上下文中
+  private getNodeStore() {
+    if (!this.nodeStore) {
+      this.nodeStore = useNodeStore()
+    }
+    return this.nodeStore
+  }
+
+  // 切换到备用节点
+  private async switchToBackupNode(): Promise<string | null> {
+    const nodeStore = this.getNodeStore()
+    const nodes = nodeStore.nodes
+    const mainNodeUrl = getInitialBaseURL()
+
+    if (!nodes || nodes.length === 0) {
+      // 没有备用节点，尝试切换回主节点
+      if (!nodeStore.isMainNode) {
+        ElMessage.info('切换回主节点')
+        nodeStore.setCurrentNodeInfo(mainNodeUrl, true)
+        nodeStore.setSelectedNode(null)
+        return mainNodeUrl
+      }
+      return null
+    }
+
+    // 如果是手动模式，使用选中的节点
+    if (nodeStore.switchMode === 'manual' && nodeStore.selectedNodeCode) {
+      const selectedNode = nodeStore.getSelectedNode()
+      if (selectedNode?.url) {
+        ElMessage.info(`切换到节点: ${selectedNode.code}`)
+        nodeStore.setCurrentNodeInfo(selectedNode.url, false)
+        return selectedNode.url
+      }
+    }
+
+    // 自动模式：先尝试其他备用节点
+    for (const node of nodes) {
+      if (node.url) {
+        try {
+          // 快速检查节点是否可用
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 2000)
+
+          await fetch(`${node.url}/config`, {
+            method: 'GET',
+            signal: controller.signal
+          })
+
+          clearTimeout(timeoutId)
+
+          // 节点可用，切换到该节点
+          ElMessage.success(`已自动切换到节点: ${node.code}`)
+          nodeStore.setCurrentNodeInfo(node.url, false)
+          // 同步更新选中的节点代码，以便节点管理对话框正确显示
+          nodeStore.setSelectedNode(node.code || null)
+          return node.url
+        } catch (error) {
+          // 节点不可用，继续检查下一个
+          console.warn(`节点 ${node.code} 不可用:`, error)
+        }
+      }
+    }
+
+    // 所有备用节点都不可用，尝试切换回主节点
+    if (!nodeStore.isMainNode) {
+      ElMessage.info('切换回主节点')
+      nodeStore.setCurrentNodeInfo(mainNodeUrl, true)
+      nodeStore.setSelectedNode(null)
+      return mainNodeUrl
+    }
+
+    // 已经是主节点，没有其他可用节点
+    ElMessage.error('所有节点均不可用')
+    return null
+  }
+
   init() {
     this.http.interceptors.request.use(
       async (config) => {
         const cfg = config as SshineAdminRequestConfig<any>
+
+        // 更新baseURL（如果nodeStore中的节点切换模式改变了）
+        const nodeStore = this.getNodeStore()
+        const expectedBaseURL = nodeStore.getCurrentNodeUrl(getInitialBaseURL())
+
+        // 如果baseURL发生变化，更新实例的baseURL
+        if (expectedBaseURL && config.baseURL !== expectedBaseURL) {
+          config.baseURL = expectedBaseURL
+        }
+
         if (cfg.loading) {
           NProgress.start()
         }
@@ -105,6 +234,11 @@ class SshineAdminHttp {
         if ((response.config as SshineAdminRequestConfig<any>).loading) {
           NProgress.done()
         }
+
+        // 请求成功，重置重试计数
+        isRetryWithBackup = false
+        retryCount = 0
+
         return response
       },
       async (error) => {
@@ -113,8 +247,26 @@ class SshineAdminHttp {
         error.isCancelRequest = axios.isCancel(error)
         // 关闭进度条动画
         NProgress.done()
+        const nodeStore = this.getNodeStore()
+
         if (error.code == 'ECONNABORTED') {
           ElMessage.error('请求超时，请刷新重试')
+
+          // 如果是超时错误且未重试过，尝试切换节点
+          if (!isRetryWithBackup && retryCount < MAX_RETRY_COUNT && nodeStore.switchMode === 'auto') {
+            const backupURL = await this.switchToBackupNode()
+            if (backupURL) {
+              isRetryWithBackup = true
+              retryCount++
+
+              // 更新实例的baseURL
+              this.http.defaults.baseURL = backupURL
+
+              // 重新执行原始请求
+              error.config.baseURL = backupURL
+              return this.http.request(error.config)
+            }
+          }
         }
         switch (error.status) {
           case 403:

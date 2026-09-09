@@ -145,7 +145,7 @@ const currentPreset = ref('蓝色商务')
 // 使用共享的预设主题配置
 
 // 监听主题变化，更新快速颜色选择器（添加防抖）
-let primaryColorUpdateTimer: number | null = null
+let primaryColorUpdateTimer: ReturnType<typeof setTimeout> | null = null
 watch(() => themeStore.currentColors.primary, (newPrimary) => {
   if (primaryColorUpdateTimer) {
     clearTimeout(primaryColorUpdateTimer)

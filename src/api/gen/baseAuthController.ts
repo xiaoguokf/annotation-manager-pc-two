@@ -97,7 +97,7 @@ export const postAuthRefreshTokenApi = (data: LoginByRefreshTokenCmd, config?: S
  * @returns Promise<ResultVoid>
  */
 export const postAuthLogoutApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>('/auth/logout', null, config)
+  return http.post<ResultVoid>('/auth/logout', config)
 }
 
 /**

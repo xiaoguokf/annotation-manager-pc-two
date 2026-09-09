@@ -4,7 +4,7 @@ $:
     - runner:
         cpus: 8
       docker:
-        image: docker.cnb.cool/sshinelt/ide/nodejs-ide
+        image: docker.cnb.cool/sshinelt/ide/electron-ide
       services:
         - vscode
         - docker
@@ -15,19 +15,21 @@ $:
           script: npm install -g pnpm && pnpm config set store-dir ~/.pnpm-store && pnpm i
         - name: install-vscode-codebuddy
           script: code-server --install-extension tencent-cloud.coding-copilot
+        - name: install-codegraph
+          script: npm i -g @colbymchenry/codegraph && codegraph init -i && mkdir -p /root/.codebuddy && cp .codebuddy/mcp.json  /root/.codebuddy/
         - name: install-idea-plugin
           script: /ide_cnb/idea-IU-**/bin/idea.sh installPlugins com.tencent.cloud.codingcopilot
 master:
   push:
     - docker:
-        image: node:22
+        image: electronuserland/builder:wine
       env:
-        BACKEND_NAME: ts-admin-fornt
-        PROJECT_PATH: /opt/1panel/www/sites/petalgrid.cn/index
+        BACKEND_NAME: annotation-manager-pc
+        PROJECT_PATH: /opt/1panel/apps/openresty/openresty/www/sites/at.sshine.ltd/index
       services:
         - docker
       imports:
-        - https://cnb.cool/sshinelt/secret/-/blob/main/154.219.103.129.yml
+        - https://cnb.cool/sshinelt/secret/-/blob/main/154.36.173.172.yml
       stages:
         - name: 安装依赖
           script: |
@@ -35,16 +37,19 @@ master:
             npm install -g pnpm && pnpm i
         - name: 构建
           script: |
-            pnpm build
-            tar -vczf dist.tar.gz dist/**
+            rm -rf release
+            pnpm build -wl
+            cp download.html release/
+            cp changelog.json release/
+            tar -vczf release.tar.gz $(find release -maxdepth 2  -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.AppImage" \)) release/*/latest*.yml release/download.html release/changelog.json
         - name: 上传附件
           image: docker.cnb.cool/sshinelt/cnb-tool/sftp-tool
           settings:
             ssh_host: $SEC_HOST
             ssh_user: $SEC_USERNAME
             ssh_password: $SEC_PASSWORD
-            local_file_path: dist.tar.gz
-            remote_file_path: /tmp/dist.tar.gz
+            local_file_path: release.tar.gz
+            remote_file_path: /tmp/release.tar.gz
         - name: 远程部署
           image: cnbcool/ssh
           settings:
@@ -53,8 +58,20 @@ master:
             username: $SEC_USERNAME
             password: $SEC_PASSWORD
             script: |
-              sudo rm -rf ${PROJECT_PATH}/**
-              sudo tar -vxzf /tmp/dist.tar.gz -C ${PROJECT_PATH}/
-              sudo mv ${PROJECT_PATH}/dist/** ${PROJECT_PATH}/
-              sudo rm -rf ${PROJECT_PATH}/dist
-              sudo rm -rf /tmp/dist.tar.gz
+              rm -rf ${PROJECT_PATH}/**
+              tar -vxzf /tmp/release.tar.gz -C ${PROJECT_PATH}/
+              mv ${PROJECT_PATH}/release/*/* ${PROJECT_PATH}/
+              mv ${PROJECT_PATH}/release/download.html ${PROJECT_PATH}/
+              mv ${PROJECT_PATH}/release/changelog.json ${PROJECT_PATH}/
+              rm -rf ${PROJECT_PATH}/release
+              rm -rf /tmp/release.tar.gz
+        - name: 同步到GitHub
+          image: tencentcom/git-sync
+          settings:
+            target_url: https://github.com/xiaoguokf/annotation-manager-pc.git
+            auth_type: https
+            username: ${GIT_USERNAME}
+            password: ${GIT_ACCESS_TOKEN}
+            branch: master
+            git_user: ${GIT_USERNAME}
+            git_email: ${GIT_EMAIL}

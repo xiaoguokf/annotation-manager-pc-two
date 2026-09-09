@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Annotation Admin PC - 下载页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .version-info {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-top: 20px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .platform-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .platform-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .platform-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .platform-icon {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .platform-icon img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .linux-icon {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+        }
+
+        .windows-icon {
+            background: linear-gradient(135deg, #0f4c81, #0078d4);
+        }
+
+        .mac-icon {
+            background: linear-gradient(135deg, #a8a8a8, #666666);
+        }
+
+
+
+        .platform-title {
+            flex: 1;
+        }
+
+        .platform-title h2 {
+            font-size: 1.4rem;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .platform-title span {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .version-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .changelog-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .changelog-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .changelog-container {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .changelog-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .changelog-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .changelog-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .changelog-container::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        .changelog-item {
+            border-left: 3px solid #667eea;
+            padding-left: 20px;
+            margin-bottom: 25px;
+        }
+
+        .changelog-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .changelog-version {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .changelog-date {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .changelog-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            margin-top: 12px;
+        }
+
+        .changelog-section-title:first-child {
+            margin-top: 0;
+        }
+
+        .changelog-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .changelog-list li {
+            padding: 6px 0;
+            color: #666;
+            position: relative;
+            padding-left: 18px;
+        }
+
+        .changelog-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .changelog-loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .download-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .download-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .download-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+
+        .file-meta {
+            color: #666;
+            font-size: 0.85rem;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .file-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn:active {
+            transform: scale(0.98);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fff;
+            color: #e74c3c;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .footer {
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.9rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .platform-section {
+                padding: 20px;
+            }
+
+            .download-item {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .download-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Annotation Admin PC</h1>
+            <p>专业的标注管理工具</p>
+            <div class="version-info" id="versionInfo">
+                正在获取最新版本信息...
+            </div>
+        </div>
+
+        <div id="content">
+            <div class="loading">正在加载下载信息...</div>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 Annotation Admin. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = './';
+        let globalVersion = '';
+
+        async function fetchYaml(url) {
+            try {
+                const response = await fetch(url, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                if (!response.ok) return null;
+                const text = await response.text();
+                return parseYaml(text);
+            } catch (error) {
+                console.error('Failed to fetch:', url, error);
+                return null;
+            }
+        }
+
+        function parseYaml(text) {
+            const result = {};
+            const lines = text.split('\n');
+            let currentFile = null;
+
+            for (let line of lines) {
+                const trimmed = line.trim();
+
+                if (trimmed.startsWith('version:')) {
+                    result.version = trimmed.split(':')[1].trim();
+                    globalVersion = result.version;
+                } else if (trimmed.startsWith('releaseDate:')) {
+                    // 提取冒号后面的所有内容作为日期
+                    const dateStr = trimmed.substring('releaseDate:'.length).trim().replace(/['"]/g, '');
+                    result.releaseDate = dateStr;
+                } else if (trimmed.startsWith('- url:')) {
+                    currentFile = {
+                        url: trimmed.split(':')[1].trim()
+                    };
+                    if (!result.files) result.files = [];
+                    result.files.push(currentFile);
+                } else if (currentFile) {
+                    if (trimmed.startsWith('sha512:')) {
+                        currentFile.sha512 = trimmed.split(':')[1].trim();
+                    } else if (trimmed.startsWith('size:')) {
+                        currentFile.size = parseInt(trimmed.split(':')[1].trim());
+                    } else if (trimmed.startsWith('blockMapSize:')) {
+                        currentFile.blockMapSize = parseInt(trimmed.split(':')[1].trim());
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        function formatSize(bytes) {
+            if (bytes === undefined || bytes === null) return '未知大小';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let size = bytes;
+            let unitIndex = 0;
+
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+
+            return size.toFixed(2) + ' ' + units[unitIndex];
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知日期';
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '未知日期';
+                return date.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            } catch (error) {
+                console.error('Date parsing error:', error);
+                return '未知日期';
+            }
+        }
+
+        function getFileType(filename) {
+            if (filename.endsWith('.AppImage')) return 'AppImage';
+            if (filename.endsWith('.deb')) return 'Debian 包';
+            if (filename.endsWith('.rpm')) return 'RPM 包';
+            if (filename.endsWith('.exe')) return '安装程序';
+            if (filename.endsWith('.dmg')) return 'DMG 镜像';
+            if (filename.endsWith('.zip')) return 'ZIP 压缩包';
+            return '安装包';
+        }
+
+        async function fetchJson(url) {
+            try {
+                const response = await fetch(url, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                console.error('Failed to fetch:', url, error);
+                return null;
+            }
+        }
+
+        function getPlatformName(type) {
+            const names = {
+                'linux': 'Linux',
+                'windows': 'Windows',
+                'win': 'Windows',
+                'mac': 'macOS'
+            };
+            return names[type] || type;
+        }
+
+        function createChangelogSection(changelogData) {
+            if (!changelogData || !changelogData.versions || changelogData.versions.length === 0) {
+                return '';
+            }
+
+            const versionsHtml = changelogData.versions.map(version => {
+                let contentHtml = '';
+
+                if (version.newFeatures && version.newFeatures.length > 0) {
+                    contentHtml += `
+                        <div class="changelog-section-title">✨ 新功能</div>
+                        <ul class="changelog-list">
+                            ${version.newFeatures.map(feature => `<li>${feature}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+
+                if (version.fixes && version.fixes.length > 0) {
+                    contentHtml += `
+                        <div class="changelog-section-title">🐛 修复</div>
+                        <ul class="changelog-list">
+                            ${version.fixes.map(fix => `<li>${fix}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+
+                return `
+                    <div class="changelog-item">
+                        <div class="changelog-version">v${version.version}</div>
+                        <div class="changelog-date">${formatDate(version.date)}</div>
+                        ${contentHtml}
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="changelog-section">
+                    <div class="changelog-title">📝 变更日志</div>
+                    <div class="changelog-container">
+                        ${versionsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function createPlatformSection(type, data) {
+            if (!data || !data.files || data.files.length === 0) return '';
+
+            const iconMap = {
+                'linux': '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNmZmYiLz48dGV4dCB4PSIyNCIgeT0iMzIiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZmlsbD0iIzMzMyI+8J+UpjwvdGV4dD48L3N2Zz4=" alt="Linux">',
+                'windows': '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNmZmYiLz48dGV4dCB4PSIyNCIgeT0iMzIiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMzMDc4ZDYiPldJTjwvdGV4dD48L3N2Zz4=" alt="Windows">',
+                'win': '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNmZmYiLz48dGV4dCB4PSIyNCIgeT0iMzIiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMzMDc4ZDYiPldJTjwvdGV4dD48L3N2Zz4=" alt="Windows">',
+                'mac': '<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNmZmYiLz48dGV4dCB4PSIyNCIgeT0iMzIiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMzMzMiPk1hYzwvdGV4dD48L3N2Zz4=" alt="macOS">'
+            };
+
+            const iconClassMap = {
+                'linux': 'linux-icon',
+                'windows': 'windows-icon',
+                'win': 'windows-icon',
+                'mac': 'mac-icon'
+            };
+
+            const filesHtml = data.files.map(file => {
+                const filename = file.url.split('/').pop();
+                const fileType = getFileType(filename);
+                const fileSize = formatSize(file.size);
+
+                return `
+                    <div class="download-item">
+                        <div class="file-info">
+                            <div class="file-name">${filename}</div>
+                            <div class="file-meta">
+                                <span>📦 ${fileType}</span>
+                                <span>📊 ${fileSize}</span>
+                                <span>🔐 SHA512: ${file.sha512 ? file.sha512.substring(0, 16) + '...' : 'N/A'}</span>
+                            </div>
+                        </div>
+                        <a href="${file.url}"
+                           class="download-btn"
+                           download
+                           onclick="return confirm('确定要下载 ${filename} 吗？');">
+                            ⬇️ 立即下载
+                        </a>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="platform-section">
+                    <div class="platform-header">
+                        <div class="platform-icon ${iconClassMap[type]}">
+                            ${iconMap[type]}
+                        </div>
+                        <div class="platform-title">
+                            <h2>${getPlatformName(type)}</h2>
+                            <span>发布日期: ${formatDate(data.releaseDate)}</span>
+                        </div>
+                        <div class="version-badge">v${data.version}</div>
+                    </div>
+                    <div class="download-list">
+                        ${filesHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadDownloads() {
+            const content = document.getElementById('content');
+            const versionInfo = document.getElementById('versionInfo');
+
+            try {
+                const [linuxData, windowsData, macData, changelogData] = await Promise.all([
+                    fetchYaml(`${BASE_URL}latest-linux.yml`),
+                    fetchYaml(`${BASE_URL}latest.yml`),
+                    fetchYaml(`${BASE_URL}latest-mac.yml`),
+                    fetch(`${BASE_URL}changelog.json`).then(r => r.ok ? r.json() : null)
+                ]);
+
+                if (!linuxData && !windowsData && !macData) {
+                    content.innerHTML = `
+                        <div class="error">
+                            <h3>未找到版本信息</h3>
+                            <p>请确保与 download.html 同级目录下存在对应的 latest-linux.yml、latest.yml 或 latest-mac.yml 文件</p>
+                        </div>
+                    `;
+                    versionInfo.textContent = '版本信息未知';
+                    return;
+                }
+
+                // 从 YAML 文件中获取版本号
+                if (linuxData && linuxData.version) globalVersion = linuxData.version;
+                else if (windowsData && windowsData.version) globalVersion = windowsData.version;
+                else if (macData && macData.version) globalVersion = macData.version;
+
+                versionInfo.textContent = globalVersion ? `当前版本: v${globalVersion}` : '版本信息未知';
+
+                const sections = [];
+                
+                // 显示下载平台（按顺序）
+                if (windowsData) sections.push(createPlatformSection('windows', windowsData));
+                if (macData) sections.push(createPlatformSection('mac', macData));
+                if (linuxData) sections.push(createPlatformSection('linux', linuxData));
+
+                // 添加变更日志
+                if (changelogData && changelogData.versions && changelogData.versions.length > 0) {
+                    sections.push(createChangelogSection(changelogData));
+                }
+
+                if (sections.length === 0) {
+                    content.innerHTML = `
+                        <div class="error">
+                            <h3>暂无可用的下载包</h3>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = sections.join('');
+                }
+
+            } catch (error) {
+                console.error('Error loading downloads:', error);
+                content.innerHTML = `
+                    <div class="error">
+                        <h3>加载失败</h3>
+                        <p>无法获取下载信息，请检查网络连接或稍后重试。</p>
+                    </div>
+                `;
+                versionInfo.textContent = '加载失败';
+            }
+        }
+
+        // 页面加载完成后立即加载
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDownloads();
+        });
+    </script>
+</body>
+</html>

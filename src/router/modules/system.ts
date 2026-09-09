@@ -5,7 +5,7 @@ export default
         meta: {
             title: '系统管理',
             icon: 'ep:setting',
-            roles: ['supper_admin'],
+            roles: ['admin', 'supper_admin'],
             showMenu: true,
             sort: 9999
         },
@@ -27,16 +27,6 @@ export default
                 meta: {
                     title: '角色管理',
                     icon: 'ep:user-filled',
-                    showMenu: true
-                }
-            },
-            {
-                path: 'announcement',
-                name: 'SystemAnnouncement',
-                component: () => import('@/views/system/announcement.vue'),
-                meta: {
-                    title: '公告管理',
-                    icon: 'ep:bell',
                     showMenu: true
                 }
             },

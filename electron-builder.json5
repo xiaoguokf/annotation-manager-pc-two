@@ -1,0 +1,48 @@
+// @see https://www.electron.build/configuration/configuration
+{
+  $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  appId: "ltd.sshine.at",
+  productName: "annotation-admin-pc",
+  copyright: "Copyright © 2026-present, annotation-admin",
+  publish: {
+    provider: "generic",
+    url: "http://8.134.38.154:4567/"
+  },
+  directories: {
+    buildResources: "dist",
+    output: "release/${version}"
+  },
+  files: ["dist-electron/**", "dist/**"],
+  nsis: {
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "教材辅助采集系统",
+    perMachine: true,
+    oneClick: false
+  },
+  mac: {
+    icon: "dist/icons/mac/icon.icns",
+    artifactName: "${productName}_${version}.${ext}",
+    target: [{
+      target: "dmg",
+      arch: ["universal"]
+    }],
+
+  },
+  win: {
+    icon: "dist/icons/win/icon.ico",
+    artifactName: "${productName}_${version}.${ext}",
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64"]
+      }
+    ]
+  },
+  linux: {
+    icon: "dist/icons/png",
+    artifactName: "${productName}_${version}.${ext}",
+    target: ["deb", "AppImage"]
+  }
+}

@@ -1,0 +1,3 @@
+provider: generic
+url: http://dl.sshine.ltd/
+updaterCacheDirName: annotation-admin-pc-updater

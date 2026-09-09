@@ -335,7 +335,7 @@ onBeforeUnmount(() => {
         <div class="mb-10">
           <div class="flex items-center space-x-4 mb-6">
             <div class="w-16 h-16 bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <img src="/logo.svg" alt="Logo" class="w-10 h-10" />
+              <img src="/logo-annotation.svg" alt="Logo" class="w-10 h-10" />
             </div>
             <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">{{ appName }}</h1>
           </div>
@@ -401,7 +401,7 @@ onBeforeUnmount(() => {
           <div class="lg:hidden text-center mb-8">
             <div class="inline-flex items-center justify-center w-16 h-16 mb-4">
               <div class="w-full h-full bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <img src="/logo.svg" alt="Logo" class="w-10 h-10" />
+                <img src="/logo-annotation.svg" alt="Logo" class="w-10 h-10" />
               </div>
             </div>
             <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ appName }}</h1>

@@ -1,0 +1,45 @@
+name: Build macOS
+
+on:
+  push:
+    branches:
+      - 'master'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 11.7.0
+
+      - name: Install dependencies
+        run: rm pnpm-lock.yaml && pnpm i
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build
+        run: pnpm build -- --mac --universal
+      - name: mv file
+        run: mv release/*/annotation-admin-pc_*.dmg ./ &&  mv release/*/latest-mac.yml ./
+
+      - name: Upload files via FTP
+        run: |
+          for file in annotation-admin-pc_*.dmg latest-mac.yml; do
+            curl -T "$file" "ftp://170.106.119.146/" --user "atsshine:c2xnyG6aCkFnhrSn"
+          done
+

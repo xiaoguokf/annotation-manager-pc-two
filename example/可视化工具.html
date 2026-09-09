@@ -1,0 +1,1979 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="origin" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教材可视化工具 Pro </title>
+  <link rel="stylesheet" href="./libs/index.css">
+  <script src="./libs/vue.min.js"></script>
+  <script src="./libs/index.min.js"></script>
+  <script src="./libs/xlsx.full.min.js"></script>
+  <script src="./libs/md5.min.js"></script>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' },
+      startup: { ready: () => { MathJax.startup.defaultReady(); } }
+    };
+  </script>
+  <script src="./libs/tex-svg.min.js" id="MathJax-script" async></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      background-color: #f5f7fa;
+      color: #303133;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #app,
+    .el-container {
+      height: 100%;
+    }
+
+    .el-aside {
+      background-color: #2b3a4a;
+      color: #bfcbd9;
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+      z-index: 9;
+    }
+
+    .el-menu {
+      border-right: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: #c0c4cc;
+      border-radius: 3px;
+    }
+
+    .el-header {
+      background-color: #fff;
+      box-shadow: 0 1px 4px rgba(0, 21, 41, .05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 10;
+      border-bottom: 1px solid #ebeef5;
+    }
+
+    .el-main {
+      padding: 20px;
+      background-color: #f5f7fa;
+      overflow-y: auto;
+    }
+
+    .paper-card {
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      background: #fff;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #303133;
+      margin-bottom: 15px;
+      padding-left: 10px;
+      border-left: 4px solid #409EFF;
+      line-height: 1.2;
+    }
+
+    .item-card {
+      background: #fff;
+      border: 1px solid #e4e7ed;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .item-card:hover {
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      border-color: #c6e2ff;
+    }
+
+    .item-meta {
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .item-body {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .question-index {
+      font-weight: bold;
+      color: #409EFF;
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
+    .item-choices {
+      background-color: #fcfcfc;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px dashed #ebeef5;
+      margin-bottom: 20px;
+    }
+
+    .item-pic-container {
+      margin: 12px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .el-image {
+      border-radius: 4px;
+      background-color: #f5f7fa;
+    }
+
+    .analysis-box {
+      background-color: #f9fafc;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #e1e6eb;
+      font-size: 15px;
+    }
+
+    .analysis-row {
+      margin-bottom: 15px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .label-tag {
+      font-weight: bold;
+      margin-bottom: 6px;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #fff;
+      align-self: flex-start;
+    }
+
+    .tag-ans {
+      background-color: #67C23A;
+    }
+
+    .tag-ana {
+      background-color: #409EFF;
+    }
+
+    .tag-tip {
+      background-color: #E6A23C;
+    }
+
+    .no-data {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #909399;
+    }
+
+    .zw img,
+    .item-body img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 8px 0;
+      border-radius: 4px;
+    }
+
+    .item-footer {
+      border-top: 1px solid #ebeef5;
+      margin-top: 15px;
+      padding-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .sheet-preview-section {
+      margin-bottom: 30px;
+    }
+
+    .sheet-preview-container {
+      display: flex;
+      gap: 20px;
+      min-height: 400px;
+    }
+
+    .sheet-json-panel,
+    .sheet-visual-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .panel-header {
+      font-weight: bold;
+      font-size: 14px;
+      color: #409EFF;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #409EFF;
+    }
+
+    .json-preview-content {
+      flex: 1;
+      overflow: auto;
+      background: #1f2933;
+      color: #e0e6ed;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 800px;
+    }
+
+    .sheet-visual-panel {
+      background: #f9fafc;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-y: auto;
+      max-height: 800px;
+    }
+
+    .book-info-visual,
+    .images-visual,
+    .chapters-visual,
+    .shiti-visual {
+      width: 100%;
+    }
+
+    .custom-tree-node {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      padding-right: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <el-container>
+      <el-header height="60px">
+        <div style="font-size: 18px; font-weight: 600; color: #2b3a4a; display: flex; align-items: center;">
+          <i class="el-icon-reading" style="margin-right: 10px; color: #409EFF; font-size: 24px;"></i>
+          <span>教材可视化工具 Pro</span>
+        </div>
+        <div style="display: flex; align-items: center;">
+          <div v-if="name"
+            style="margin-right: 20px; font-size: 14px; color: #606266; background: #f0f2f5; padding: 5px 10px; border-radius: 4px;">
+            <i class="el-icon-document"></i> {{name}}
+          </div>
+          <el-upload action="#" :show-file-list="false" :before-upload="handleFileChange" accept=".json,.xlsx,.xls">
+            <el-button size="small" type="primary" icon="el-icon-upload2">导入 Excel/JSON</el-button>
+          </el-upload>
+          <el-button v-if="subjectJsonData.length > 0" style="margin-left: 15px;" size="small" type="success"
+            icon="el-icon-download" @click="exportJson">导出 JSON</el-button>
+        </div>
+      </el-header>
+
+      <el-container style="overflow: hidden;">
+        <el-aside width="280px" v-if="subjectJsonData.length > 0">
+          <el-menu :default-active="activeIndex" background-color="#2b3a4a" text-color="#bfcbd9"
+            active-text-color="#409EFF" unique-opened :default-openeds="openeds" @select="handleSelect"
+            @open="handleSelectMenu" @close="handleSelectMenu">
+            <template v-for="unit in subjectJsonData[0].units">
+              <el-submenu :key="unit.unit_code" :index="unit.unit_code" :unitData="unit" dataType="unit">
+                <template slot="title"><i class="el-icon-folder"></i><span slot="title"
+                    :title="unit.unit_title">{{unit.unit}} {{unit.unit_title}}</span></template>
+                <template v-for="module in unit.modules">
+                  <el-menu-item-group :key="module.module_code">
+                    <template slot="title"><span style="color: #8b9bb4; font-size: 12px;"
+                        @click="handleClick(module,unit)">{{module.module}}</span></template>
+                    <el-menu-item :index="module.module_code" dataType="module" :unitData="unit" :moduledata="module"
+                      style="display:none;"></el-menu-item>
+                    <template v-for="lesson in module.lessons">
+                      <el-submenu v-if="lesson.sublessons && lesson.sublessons.length > 0" :key="lesson.lesson_code"
+                        :index="lesson.lesson_code" dataType="lesson" :unitData="unit" :lessonData="lesson">
+                        <template slot="title"><span :title="lesson.lesson_title">{{lesson.lesson_order}}
+                            {{lesson.lesson_title}}</span></template>
+                        <el-menu-item v-for="sub in lesson.sublessons" :key="sub.sublesson_code"
+                          :index="sub.sublesson_code" dataType="sublesson" :unitData="unit" :lessonData="lesson"
+                          :sublessonData="sub">
+                          <i class="el-icon-document-remove"
+                            style="font-size: 12px; margin-right: 5px;"></i>{{sub.sublesson_title}}
+                        </el-menu-item>
+                      </el-submenu>
+                      <el-menu-item v-else :key="lesson.lesson_code" :index="lesson.lesson_code" dataType="lesson"
+                        :unitData="unit" :lessonData="lesson">
+                        <span>{{lesson.lesson_order}} {{lesson.lesson_title}}</span>
+                      </el-menu-item>
+                    </template>
+                  </el-menu-item-group>
+                </template>
+              </el-submenu>
+            </template>
+          </el-menu>
+        </el-aside>
+
+        <el-main ref="mianBody">
+          <div v-if="previewJsons.bookInfo || previewJsons.images || previewJsons.chapters || previewJsons.shitiList">
+            <div v-if="previewJsons.bookInfo" class="sheet-preview-section">
+              <el-card class="paper-card">
+                <div slot="header" class="clearfix">
+                  <span class="section-title">Sheet 1: 书本信息（bookInfo）</span>
+                </div>
+                <div class="sheet-preview-container">
+                  <div class="sheet-json-panel">
+                    <div class="panel-header">JSON 数据
+                      <el-tooltip content="JSON 中的 \\times 表示 \times（单个反斜杠），这是 JSON 标准转义格式" placement="top">
+                        <i class="el-icon-info" style="margin-left: 8px; color: #909399; cursor: help; font-size: 14px;"></i>
+                      </el-tooltip>
+                    </div>
+                    <pre class="json-preview-content" v-html="formatJsonForDisplay(previewJsons.bookInfo)"></pre>
+                  </div>
+                  <div class="sheet-visual-panel">
+                    <div class="panel-header">可视化数据</div>
+                    <div class="book-info-visual">
+                      <el-descriptions :column="2" border>
+                        <el-descriptions-item label="书籍ID">{{ previewJsons.bookInfo.importID }}</el-descriptions-item>
+                        <el-descriptions-item label="书籍名称">{{ previewJsons.bookInfo.bookname }}</el-descriptions-item>
+                        <el-descriptions-item label="书籍ISBN">{{ previewJsons.bookInfo.bookIsbn }}</el-descriptions-item>
+                        <el-descriptions-item label="年份">{{ previewJsons.bookInfo.year }}</el-descriptions-item>
+                        <el-descriptions-item label="年级">{{ previewJsons.bookInfo.grade }}</el-descriptions-item>
+                        <el-descriptions-item label="学科">{{ previewJsons.bookInfo.subject }}</el-descriptions-item>
+                        <el-descriptions-item label="册别">{{ previewJsons.bookInfo.volume }}</el-descriptions-item>
+                        <el-descriptions-item label="版本">{{ previewJsons.bookInfo.bookVersion }}</el-descriptions-item>
+                        <el-descriptions-item label="出版社">{{ previewJsons.bookInfo.publisher }}</el-descriptions-item>
+                        <el-descriptions-item label="定价">{{ previewJsons.bookInfo.price }}</el-descriptions-item>
+                        <el-descriptions-item label="教辅标签" v-if="previewJsons.bookInfo.bookLabel">{{ previewJsons.bookInfo.bookLabel }}</el-descriptions-item>
+                        <el-descriptions-item label="是否有专版" v-if="previewJsons.bookInfo.hasSpecialVersion !== undefined">
+                          {{ previewJsons.bookInfo.hasSpecialVersion ? '是' : '否' }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="专版省份" v-if="previewJsons.bookInfo.province">{{ previewJsons.bookInfo.province }}</el-descriptions-item>
+                        <el-descriptions-item label="专版城市" v-if="previewJsons.bookInfo.city">{{ previewJsons.bookInfo.city }}</el-descriptions-item>
+                      </el-descriptions>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+
+            <div v-if="previewJsons.images" class="sheet-preview-section">
+              <el-card class="paper-card">
+                <div slot="header" class="clearfix">
+                  <span class="section-title">Sheet 2: 图片信息（images）</span>
+                </div>
+                <div class="sheet-preview-container">
+                  <div class="sheet-json-panel">
+                    <div class="panel-header">JSON 数据
+                      <el-tooltip content="JSON 中的 \\times 表示 \times（单个反斜杠），这是 JSON 标准转义格式" placement="top">
+                        <i class="el-icon-info" style="margin-left: 8px; color: #909399; cursor: help; font-size: 14px;"></i>
+                      </el-tooltip>
+                    </div>
+                    <pre class="json-preview-content" v-html="formatJsonForDisplay(previewJsons.images)"></pre>
+                  </div>
+                  <div class="sheet-visual-panel">
+                    <div class="panel-header">可视化数据</div>
+                    <div class="images-visual">
+                      <div v-if="previewJsons.images.book_cover && previewJsons.images.book_cover.length > 0" style="margin-bottom: 20px;">
+                        <div style="font-weight: bold; margin-bottom: 10px;">封面/目录/封底 ({{ previewJsons.images.book_cover.length }}张)</div>
+                        <div class="item-pic-container">
+                          <el-image v-for="(img, idx) in previewJsons.images.book_cover" :key="'cover'+idx" 
+                            :src="img.img" :preview-src-list="previewJsons.images.book_cover.map(i => i.img)"
+                            style="width: 150px; height: 200px; border:1px solid #eee; margin: 8px; object-fit: contain;"
+                            @error="handleImageError($event, img.img)">
+                            <div slot="error" class="image-slot">加载失败</div>
+                          </el-image>
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                          <span v-for="(img, idx) in previewJsons.images.book_cover" :key="idx" style="margin-right: 10px;">
+                            页码{{ img.real_page }}({{ img.content_type }})
+                          </span>
+                        </div>
+                      </div>
+                      <div v-if="previewJsons.images.book_img && previewJsons.images.book_img.length > 0" style="margin-bottom: 20px;">
+                        <div style="font-weight: bold; margin-bottom: 10px;">正文图片 ({{ previewJsons.images.book_img.length }}张)</div>
+                        <div class="item-pic-container">
+                          <el-image v-for="(img, idx) in previewJsons.images.book_img" :key="'book'+idx" 
+                            :src="img.img" :preview-src-list="previewJsons.images.book_img.map(i => i.img)"
+                            style="width: 150px; height: 200px; border:1px solid #eee; margin: 8px; object-fit: contain;"
+                            @error="handleImageError($event, img.img)">
+                            <div slot="error" class="image-slot">加载失败</div>
+                          </el-image>
+                        </div>
+                      </div>
+                      <div v-if="previewJsons.images.answer_img && previewJsons.images.answer_img.length > 0">
+                        <div style="font-weight: bold; margin-bottom: 10px;">答案图片 ({{ previewJsons.images.answer_img.length }}张)</div>
+                        <div class="item-pic-container">
+                          <el-image v-for="(img, idx) in previewJsons.images.answer_img" :key="'answer'+idx" 
+                            :src="img.img" :preview-src-list="previewJsons.images.answer_img.map(i => i.img)"
+                            style="width: 150px; height: 200px; border:1px solid #eee; margin: 8px; object-fit: contain;"
+                            @error="handleImageError($event, img.img)">
+                            <div slot="error" class="image-slot">加载失败</div>
+                          </el-image>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+
+            <div v-if="previewJsons.chapters" class="sheet-preview-section">
+              <el-card class="paper-card">
+                <div slot="header" class="clearfix">
+                  <span class="section-title">Sheet 3: 章节信息（chapters）</span>
+                </div>
+                <div class="sheet-preview-container">
+                  <div class="sheet-json-panel">
+                    <div class="panel-header">JSON 数据
+                      <el-tooltip content="JSON 中的 \\times 表示 \times（单个反斜杠），这是 JSON 标准转义格式" placement="top">
+                        <i class="el-icon-info" style="margin-left: 8px; color: #909399; cursor: help; font-size: 14px;"></i>
+                      </el-tooltip>
+                    </div>
+                    <pre class="json-preview-content" v-html="formatJsonForDisplay(previewJsons.chapters)"></pre>
+                  </div>
+                  <div class="sheet-visual-panel">
+                    <div class="panel-header">可视化数据</div>
+                    <div class="chapters-visual">
+                      <el-tree :data="formatChaptersTree(previewJsons.chapters.chapters)" 
+                        :props="{ children: 'sub', label: 'text' }" 
+                        default-expand-all
+                        style="max-height: 600px; overflow-y: auto;">
+                        <span class="custom-tree-node" slot-scope="{ node, data }">
+                          <span>
+                            <i :class="getChapterIcon(data.type)" style="margin-right: 5px;"></i>
+                            {{ node.label }}
+                          </span>
+                        </span>
+                      </el-tree>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+
+            <div v-if="previewJsons.shitiList && previewJsons.shitiList.shitiList && previewJsons.shitiList.shitiList.length > 0" 
+              class="sheet-preview-section">
+              <el-card class="paper-card">
+                <div slot="header" class="clearfix" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="section-title">Sheet 4: 试题列表（shitiList）(共计: {{ previewJsons.shitiList.shitiList.length }}题)</span>
+                  <el-button size="small" type="primary" @click="scrollToTop">返回顶部</el-button>
+                </div>
+                <div class="sheet-preview-container">
+                  <div class="sheet-json-panel">
+                    <div class="panel-header">JSON 数据
+                      <el-tooltip content="JSON 中的 \\times 表示 \times（单个反斜杠），这是 JSON 标准转义格式" placement="top">
+                        <i class="el-icon-info" style="margin-left: 8px; color: #909399; cursor: help; font-size: 14px;"></i>
+                      </el-tooltip>
+                    </div>
+                    <pre class="json-preview-content" v-html="formatJsonForDisplay(previewJsons.shitiList)"></pre>
+                  </div>
+                  <div class="sheet-visual-panel">
+                    <div class="panel-header">可视化数据</div>
+                    <div class="shiti-visual" style="max-height: 800px; overflow-y: auto;">
+                      <div v-for="(item, index) in previewJsons.shitiList.shitiList" :key="index" class="item-card" style="margin-bottom: 30px;">
+                        <div class="item-meta">
+                          <span class="question-index">第{{ index + 1 }}题</span>
+                          <el-tag size="small" v-if="item.tishi" type="info">题型: {{ item.tishi }}</el-tag>
+                          <el-tag size="small" v-if="item.tilei" type="warning">题类: {{ item.tilei }}</el-tag>
+                          <el-tag size="small" v-if="item.difficulty !== undefined" type="success">难度: {{ item.difficulty }}</el-tag>
+                        </div>
+                        <div class="item-body">
+                          <div v-html="processInlineContent(item.question)" style="font-size: 16px; line-height: 1.8;"></div>
+                        </div>
+                        <div v-if="item.choice && item.choice.length > 0" class="item-choices">
+                          <div style="font-weight: bold; font-size: 14px; color: #909399; margin-bottom: 10px;">选项</div>
+                          <div v-for="(choice, cIdx) in item.choice" :key="cIdx" style="margin-bottom: 8px; padding: 8px; background: #f9fafc; border-radius: 4px;">
+                            <span v-html="processInlineContent(choice)"></span>
+                          </div>
+                        </div>
+                        <div class="analysis-box">
+                          <div class="analysis-row" v-if="item.answer">
+                            <span class="label-tag tag-ans">参考答案</span>
+                            <div>
+                              <span v-html="processInlineContent(item.answer)"></span>
+                            </div>
+                          </div>
+                          <div class="analysis-row" v-if="item.analysis">
+                            <span class="label-tag tag-ana">试题解析</span>
+                            <div>
+                              <span v-html="processInlineContent(item.analysis)"></span>
+                            </div>
+                          </div>
+                          <div class="analysis-row" v-if="item.comment">
+                            <span class="label-tag tag-tip">点评</span>
+                            <span>{{ item.comment }}</span>
+                          </div>
+                        </div>
+                        <div class="item-footer">
+                          <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 8px;">
+                            <span v-if="item.subject"><strong>学科:</strong> {{ item.subject }}</span>
+                            <span v-if="item.step"><strong>学段:</strong> {{ item.step }}</span>
+                            <span v-if="item.grade"><strong>年级:</strong> {{ item.grade }}</span>
+                            <span v-if="item.bookname"><strong>书本:</strong> {{ item.bookname }}</span>
+                            <span v-if="item.bookIsbn"><strong>ISBN:</strong> {{ item.bookIsbn }}</span>
+                          </div>
+                          <div v-if="item.chapters" style="margin-top: 8px; font-size: 12px; color: #666;">
+                            <span v-if="item.chapters.text"><strong>章节:</strong> {{ item.chapters.text }}</span>
+                            <span v-if="item.chapters.sub && item.chapters.sub.text" style="margin-left: 10px;">→ {{ item.chapters.sub.text }}</span>
+                            <span v-if="item.chapters.sub && item.chapters.sub.sub && item.chapters.sub.sub.text" style="margin-left: 10px;">→ {{ item.chapters.sub.sub.text }}</span>
+                          </div>
+                          <div v-if="item.knowledge && item.knowledge.length > 0" style="margin-top: 8px;">
+                            <strong style="font-size: 12px; color: #666;">知识点:</strong>
+                            <el-tag v-for="(k, kIdx) in item.knowledge" :key="kIdx" size="mini" style="margin-left: 5px; margin-right: 5px;">{{ k }}</el-tag>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+          </div>
+          <div style="margin-bottom: 20px;" v-if="subjectJsonData.length > 0 && checkedData.unitdata">
+            <el-breadcrumb separator-class="el-icon-arrow-right">
+              <el-breadcrumb-item>{{subjectJsonData[0].subject}}{{subjectJsonData[0].grade_volume}}</el-breadcrumb-item>
+              <el-breadcrumb-item v-if="checkedData.unitdata" :key="checkedData.unitdata.unit_code">{{checkedData.unitdata.unit_title}}</el-breadcrumb-item>
+              <el-breadcrumb-item
+                v-if="dataType=='module' && checkedData.moduledata" :key="checkedData.moduledata.module_code">{{checkedData.moduledata.module}}</el-breadcrumb-item>
+              <el-breadcrumb-item
+                v-if="(dataType=='lesson' || dataType=='sublesson') && checkedData.lessondata" :key="checkedData.lessondata.lesson_code">{{checkedData.lessondata.lesson_title}}</el-breadcrumb-item>
+              <el-breadcrumb-item
+                v-if="dataType=='sublesson' && checkedData.sublessondata" :key="checkedData.sublessondata.sublesson_code">{{checkedData.sublessondata.sublesson_title}}</el-breadcrumb-item>
+            </el-breadcrumb>
+          </div>
+
+          <div v-if="dataType" :key="keyCode">
+            <el-card class="paper-card">
+              <div slot="header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 20px; font-weight: bold; color: #303133;">
+                  <template
+                    v-if="dataType=='sublesson' && checkedData.sublessondata">{{checkedData.sublessondata.sublesson_title}}</template>
+                  <template
+                    v-else-if="dataType=='lesson' && checkedData.lessondata">{{checkedData.lessondata.lesson_title}}</template>
+                  <template
+                    v-else-if="dataType=='module' && checkedData.moduledata">{{checkedData.moduledata.module}}</template>
+                  <template
+                    v-else-if="dataType=='unit' && checkedData.unitdata">{{checkedData.unitdata.unit_title}}</template>
+                </span>
+                <el-tag size="small" type="info" effect="plain">页码: {{ getCurrentPage('start') }} - {{
+                  getCurrentPage('end') }}</el-tag>
+              </div>
+              <div style="font-size: 12px; color: #999; margin-top: -10px;">
+                ID: <span
+                  v-if="dataType=='sublesson' && checkedData.sublessondata">{{checkedData.sublessondata.sublesson_code}}</span>
+                <span v-if="dataType=='lesson' && checkedData.lessondata">{{checkedData.lessondata.lesson_code}}</span>
+                <span v-if="dataType=='module' && checkedData.moduledata">{{checkedData.moduledata.module_code}}</span>
+                <span v-if="dataType=='unit' && checkedData.unitdata">{{checkedData.unitdata.unit_code}}</span>
+              </div>
+            </el-card>
+
+            <el-card class="paper-card">
+              <div slot="header" class="clearfix"><span class="section-title">课文内容</span></div>
+              <div v-html="processInlineContent(getCurrentContent('text'))" class="zw"
+                style="font-size: 16px; line-height: 1.8;"></div>
+              <div class="item-pic-container" v-if="getCurrentContent('pics').length > 0">
+                <el-image v-for="(url, idx) in getCurrentContent('pics')" :key="'c'+idx"
+                  style="width: 200px; height: 150px; border:1px solid #eee;" fit="contain" :src="url"
+                  :preview-src-list="[url]" @error="handleImageError($event, url)"></el-image>
+              </div>
+              <template v-if="getCurrentContent('global_pics').length > 0">
+                <el-divider content-position="left">整体配图</el-divider>
+                <div class="item-pic-container">
+                  <el-image v-for="(url, idx) in getCurrentContent('global_pics')" :key="'g'+idx"
+                    style="width: 200px; height: 150px; border:1px solid #eee;" fit="contain" :src="url"
+                    :preview-src-list="[url]" @error="handleImageError($event, url)"></el-image>
+                </div>
+              </template>
+            </el-card>
+
+            <div v-if="getCurrentItems().length > 0">
+              <div
+                style="margin: 30px 0 20px 5px; font-size: 20px; font-weight: bold; display: flex; align-items: center; color: #2c3e50;">
+                <i class="el-icon-edit-outline" style="color: #67C23A; margin-right: 10px;"></i>
+                相关试题 / 练习 <el-badge :value="getCurrentItems().length" class="item" type="primary"
+                  style="margin-left: 10px;"></el-badge>
+              </div>
+              <div v-for="(item, index) in getCurrentItems()" :key="'item'+index" class="item-card">
+                <div class="item-meta">
+                  <el-tag size="small" effect="dark" v-if="item.item_tilei">{{item.item_tilei}}</el-tag>
+                  <el-tag size="small" type="warning" effect="plain" v-if="item.item_difficulty">难度:
+                    {{item.item_difficulty}}</el-tag>
+                  <el-tag size="small" type="info" v-if="item.item_knowledge"><i class="el-icon-price-tag"></i>
+                    {{item.item_knowledge}}</el-tag>
+                </div>
+                <div class="item-body">
+                  <span class="question-index">{{index + 1}}.</span>
+                  <span v-html="processInlineContent(item.item_question)"></span>
+                </div>
+                <div class="item-pic-container" v-if="item.item_question_pic && item.item_question_pic.length">
+                  <el-image v-for="url in item.item_question_pic" :src="url" :preview-src-list="[url]"
+                    style="max-height: 200px; border:1px solid #eee;" @error="handleImageError($event, url)"></el-image>
+                </div>
+                <div v-if="item.item_choice" class="item-choices">
+                  <div style="font-weight: bold; font-size: 14px; color: #909399; margin-bottom: 10px;">选项 / 填空项</div>
+                  <div v-html="processInlineContent(item.item_choice)" class="zw"></div>
+                  <div class="item-pic-container" v-if="item.item_choice_pic && item.item_choice_pic.length">
+                    <el-image v-for="url in item.item_choice_pic" :src="url" :preview-src-list="[url]"
+                      style="max-height: 120px;" @error="handleImageError($event, url)"></el-image>
+                  </div>
+                </div>
+                <div class="analysis-box">
+                  <div class="analysis-row" v-if="item.item_answer">
+                    <span class="label-tag tag-ans">参考答案</span>
+                    <div>
+                      <span v-html="processInlineContent(item.item_answer)"></span>
+                      <div v-if="item.item_answer_pic && item.item_answer_pic.length" class="item-pic-container">
+                        <el-image v-for="url in item.item_answer_pic" :src="url" :preview-src-list="[url]"
+                          style="max-height: 100px; border:1px solid #ddd;" @error="handleImageError($event, url)"></el-image>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="analysis-row" v-if="item.item_analysis">
+                    <span class="label-tag tag-ana">试题解析</span>
+                    <div>
+                      <span v-html="processInlineContent(item.item_analysis)"></span>
+                      <div v-if="item.item_analysis_pic && item.item_analysis_pic.length" class="item-pic-container">
+                        <el-image v-for="url in item.item_analysis_pic" :src="url" :preview-src-list="[url]"
+                          style="max-height: 100px; border:1px solid #ddd;" @error="handleImageError($event, url)"></el-image>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="analysis-row" v-if="item.item_tishi">
+                    <span class="label-tag tag-tip">提示</span>
+                    <span style="color: #E6A23C;">{{item.item_tishi}}</span>
+                  </div>
+                </div>
+                <div class="item-footer"><span v-if="item.item_source">来源: {{item.item_source}}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="no-data">
+            <i class="el-icon-data-board" style="font-size: 60px; color: #dcdfe6; margin-bottom: 20px;"></i>
+            <p style="font-size: 16px; color: #909399;">暂无内容显示</p>
+          </div>
+        </el-main>
+      </el-container>
+    </el-container>
+  </div>
+</body>
+
+<script>
+  // 全局图片错误处理函数（用于动态生成的 img 标签）
+  window.handleImageErrorEvent = function(event, originalUrl) {
+    const img = event.target;
+    const retryCount = parseInt(img.dataset.retryCount || '0');
+    const maxRetries = 10; // 最多重试3次
+    
+    // 如果已经重试过多次，不再重试
+    if (retryCount >= maxRetries) {
+      console.warn('图片加载失败，已重试' + maxRetries + '次:', originalUrl);
+      return;
+    }
+    
+    // 更新重试次数
+    img.dataset.retryCount = (retryCount + 1).toString();
+    
+    // 延迟重试：第一次等待2秒，第二次等待4秒，第三次等待6秒
+    // 递增延迟可以避免同时重试导致服务器压力过大
+    const delay = (retryCount + 1) * 2000;
+    
+    setTimeout(() => {
+      try {
+        // 尝试添加时间戳参数重新加载（绕过缓存）
+        const separator = originalUrl.includes('?') ? '&' : '?';
+        const retryUrl = originalUrl + separator + '_retry=' + Date.now() + '_' + retryCount;
+        
+        // 设置超时处理（30秒超时）
+        const timeoutId = setTimeout(() => {
+          if (!img.complete || img.naturalWidth === 0) {
+            // 图片仍未加载完成，触发错误事件进行下一次重试
+            img.dispatchEvent(new Event('error'));
+          }
+        }, 30000);
+        
+        // 图片加载成功后清除超时
+        img.onload = () => {
+          clearTimeout(timeoutId);
+        };
+        
+        img.src = retryUrl;
+      } catch (error) {
+        console.warn('图片重试失败:', originalUrl, error);
+      }
+    }, delay);
+  };
+
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        name: '', subjectJsonData: [], activeIndex: '', openeds: [],
+        checkedData: { unitdata: null, moduledata: null, lessondata: null, sublessondata: null },
+        dataType: "",
+        previewJsons: {
+          bookInfo: null,
+          images: null,
+          chapters: null,
+          shitiList: null
+        },
+        imageErrorCache: {} // 记录加载失败的图片信息
+      }
+    },
+    computed: {
+      keyCode() {
+        return this.dataType === 'sublesson' && this.checkedData.sublessondata ? this.checkedData.sublessondata.sublesson_code :
+          this.dataType === 'lesson' && this.checkedData.lessondata ? this.checkedData.lessondata.lesson_code :
+            this.dataType === 'module' && this.checkedData.moduledata ? this.checkedData.moduledata.module_code :
+              this.dataType === 'unit' && this.checkedData.unitdata ? this.checkedData.unitdata.unit_code : '';
+      } 
+    },
+    methods: {
+      handleClick(module, unit) {
+        this.dataType = 'module'
+        this.$set(this.checkedData, 'moduledata', module)
+        this.$set(this.checkedData, 'unitdata', unit)
+      },
+      getCurrentPage(type) {
+        let d = this.getDataObj();
+        if (!d) return '-';
+        return type === 'start' ? (d[`${this.dataType}_start_page`] || '-') : (d[`${this.dataType}_end_page`] || '-');
+      },
+      getDataObj() {
+        if (this.dataType === 'sublesson') return this.checkedData.sublessondata;
+        if (this.dataType === 'lesson') return this.checkedData.lessondata;
+        if (this.dataType === 'module') return this.checkedData.moduledata;
+        if (this.dataType === 'unit') return this.checkedData.unitdata;
+        return null;
+      },
+      hasContent() {
+        const txt = this.getCurrentContent('text');
+        const pics = this.getCurrentContent('pics');
+        const gpics = this.getCurrentContent('global_pics');
+        return !!txt || pics.length > 0 || gpics.length > 0;
+      },
+      getCurrentContent(type) {
+        let d = this.getDataObj();
+        if (!d) return type === 'text' ? '' : [];
+        if (type === 'text') return d[`${this.dataType}_content`];
+        if (type === 'pics') return d[`${this.dataType}_content_pic`] || [];
+        if (type === 'global_pics') return d[`${this.dataType}_global_pic`] || [];
+        return '';
+      },
+      getCurrentMeta(type) {
+        let d = this.getDataObj();
+        if (!d) return '';
+        if (type === 'questions') return d[`${this.dataType}_questions`];
+        if (type === 'objectives' && this.dataType === 'unit') return d.unit_learning_objectives;
+        return '';
+      },
+      getCurrentItems() {
+        let d = this.getDataObj();
+        return (d && Array.isArray(d.items)) ? d.items : [];
+      },
+      handleFileJson(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            this.subjectJsonData = JSON.parse(e.target.result);
+            if (this.subjectJsonData.length) this.openeds = this.subjectJsonData[0].units.map(item => item.unit_code);
+            this.dataType = ''; this.name = file.name; this.mathElement();
+            this.$message.success('JSON 加载成功');
+          } catch (error) { this.$message.error('JSON 解析失败'); }
+        };
+        reader.readAsText(file);
+      },
+      handleFileExcle(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const wb = XLSX.read(e.target.result, { type: 'binary' });
+            this.name = file.name;
+            // 现在只保留新规范：按 4 个 Sheet 解析并导出 4 个 JSON + 页面预览
+            this.handleNewSpecExcel(wb);
+          } catch (error) { this.$message.error('Excel 解析失败: ' + error.message); }
+        };
+        reader.readAsArrayBuffer(file);
+      },
+      handleFileChange(file) {
+        if (!file) return;
+        file.type.includes('json') || file.name.endsWith('.json') ? this.handleFileJson(file) : this.handleFileExcle(file);
+        return false;
+      },
+      // 修复 LaTeX 公式中丢失的反斜杠
+      // 当 Excel 读取时反斜杠可能被丢失，需要主动修复常见的 LaTeX 命令
+      fixLaTeXBackslashes(str) {
+        if (!str || typeof str !== 'string') return str;
+        
+        // 常见的 LaTeX 命令列表（需要反斜杠的命令），按长度从长到短排序，避免短命令误匹配
+        const latexCommands = [
+          'leftrightarrow', 'Leftrightarrow', 'leftarrow', 'rightarrow', 'Leftarrow', 'Rightarrow',
+          'subseteq', 'supseteq', 'setminus', 'unlhd', 'unrhd',
+          'cdots', 'ldots', 'vdots', 'ddots', 'cdot', 'approx', 'equiv', 'parallel',
+          'times', 'frac', 'sqrt', 'alpha', 'beta', 'gamma', 'delta', 'epsilon',
+          'theta', 'lambda', 'sigma', 'omega', 'nabla', 'infty', 'forall', 'exists',
+          'emptyset', 'subset', 'supset', 'oplus', 'otimes', 'odot', 'prime',
+          'uparrow', 'downarrow', 'partial', 'propto', 'asymp', 'models',
+          'vdash', 'dashv', 'smile', 'frown', 'bowtie', 'angle', 'triangle',
+          'square', 'diamond', 'parallel', 'perp', 'sim', 'simeq', 'cong',
+          'div', 'pi', 'sum', 'prod', 'int', 'oint', 'lim', 'sin', 'cos',
+          'tan', 'log', 'ln', 'exp', 'min', 'max', 'sup', 'inf', 'neq', 'leq',
+          'geq', 'pm', 'mp', 'left', 'right', 'big', 'Big', 'bigg', 'Bigg',
+          'mu', 'phi', 'ell', 'hbar', 'imath', 'jmath', 'Re', 'Im', 'wr',
+          'Join', 'lhd', 'rhd', 'cup', 'cap', 'in', 'notin', 'star', 'ast',
+          'circ', 'bullet', 'to', 'o', 'u', 'v', 'w'
+        ];
+        
+        let fixed = str;
+        
+        // 处理块公式 $$...$$
+        fixed = fixed.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+          let formulaFixed = formula;
+          // 重要：按命令长度从长到短处理，避免短命令误匹配长命令的一部分
+          const sortedCommands = [...latexCommands].sort((a, b) => b.length - a.length);
+          
+          sortedCommands.forEach(cmd => {
+            const escapedCmd = cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // 对于单字母命令，使用更严格的匹配条件
+            let lookahead;
+            if (cmd.length === 1) {
+              lookahead = '(?![a-zA-Z0-9])';
+            } else {
+              // 对于 triangle 等特殊命令，允许后面跟大写字母（如 triangleABC）
+              if (cmd === 'triangle') {
+                lookahead = '(?![a-z])';
+              } else {
+                lookahead = '(?![a-zA-Z])';
+              }
+            }
+            
+            const regex = new RegExp(`([^\\\\]|^)${escapedCmd}${lookahead}`, 'g');
+            
+            // 收集所有匹配，从后往前替换，避免索引变化
+            const matches = [];
+            let match;
+            while ((match = regex.exec(formulaFixed)) !== null) {
+              const prefix = match[1] || '';
+              const cmdStart = match.index + prefix.length;
+              
+              // 关键检查：检查当前命令是否是更长命令的一部分
+              if (cmdStart > 0) {
+                let isPartOfLongerCmd = false;
+                for (const longerCmd of sortedCommands) {
+                  if (longerCmd.length > cmd.length && longerCmd.endsWith(cmd)) {
+                    const prefixLength = longerCmd.length - cmd.length;
+                    if (cmdStart >= prefixLength) {
+                      const possiblePrefix = formulaFixed.substring(cmdStart - prefixLength, cmdStart);
+                      const expectedPrefix = longerCmd.substring(0, prefixLength);
+                      // 检查是否匹配（考虑可能已经有反斜杠的情况）
+                      if (possiblePrefix === expectedPrefix || 
+                          (possiblePrefix.length > 0 && possiblePrefix[0] === '\\' && 
+                           possiblePrefix.substring(1) === expectedPrefix)) {
+                        isPartOfLongerCmd = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (isPartOfLongerCmd) {
+                  continue; // 跳过，这是长命令的一部分
+                }
+              }
+              
+              matches.push({
+                fullMatch: match[0],
+                prefix: prefix,
+                index: match.index
+              });
+            }
+            
+            // 从后往前替换
+            for (let i = matches.length - 1; i >= 0; i--) {
+              const { fullMatch, prefix, index } = matches[i];
+              if (prefix === '\\') {
+                continue; // 已经处理过，跳过
+              }
+              const replacement = prefix === '$' ? `$\\${cmd}` : `${prefix}\\${cmd}`;
+              formulaFixed = formulaFixed.substring(0, index) + replacement + formulaFixed.substring(index + fullMatch.length);
+            }
+          });
+          return `$$${formulaFixed}$$`;
+        });
+        
+        // 处理行内公式 $...$
+        fixed = fixed.replace(/\$([^$]+?)\$/g, (match, formula) => {
+          if (match.startsWith('$$') && match.endsWith('$$')) return match;
+          
+          let formulaFixed = formula;
+          
+          // 特殊处理：如果公式以常见 LaTeX 命令开头但没有反斜杠
+          for (const cmd of latexCommands) {
+            if (formulaFixed.startsWith(cmd) && !formulaFixed.startsWith('\\' + cmd)) {
+              formulaFixed = '\\' + formulaFixed;
+              break;
+            }
+          }
+          
+          // 重要：按命令长度从长到短处理
+          const sortedCommands = [...latexCommands].sort((a, b) => b.length - a.length);
+          
+          sortedCommands.forEach(cmd => {
+            const escapedCmd = cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            let lookahead;
+            if (cmd.length === 1) {
+              lookahead = '(?![a-zA-Z0-9])';
+            } else {
+              if (cmd === 'triangle') {
+                lookahead = '(?![a-z])';
+              } else {
+                lookahead = '(?![a-zA-Z])';
+              }
+            }
+            
+            const regex = new RegExp(`([^\\\\]|^)${escapedCmd}${lookahead}`, 'g');
+            
+            const matches = [];
+            let match;
+            while ((match = regex.exec(formulaFixed)) !== null) {
+              const prefix = match[1] || '';
+              const cmdStart = match.index + prefix.length;
+              
+              // 关键检查：检查当前命令是否是更长命令的一部分
+              if (cmdStart > 0) {
+                let isPartOfLongerCmd = false;
+                for (const longerCmd of sortedCommands) {
+                  if (longerCmd.length > cmd.length && longerCmd.endsWith(cmd)) {
+                    const prefixLength = longerCmd.length - cmd.length;
+                    if (cmdStart >= prefixLength) {
+                      const possiblePrefix = formulaFixed.substring(cmdStart - prefixLength, cmdStart);
+                      const expectedPrefix = longerCmd.substring(0, prefixLength);
+                      if (possiblePrefix === expectedPrefix || 
+                          (possiblePrefix.length > 0 && possiblePrefix[0] === '\\' && 
+                           possiblePrefix.substring(1) === expectedPrefix)) {
+                        isPartOfLongerCmd = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (isPartOfLongerCmd) {
+                  continue;
+                }
+              }
+              
+              matches.push({
+                fullMatch: match[0],
+                prefix: prefix,
+                index: match.index
+              });
+            }
+            
+            // 从后往前替换
+            for (let i = matches.length - 1; i >= 0; i--) {
+              const { fullMatch, prefix, index } = matches[i];
+              if (prefix === '\\') {
+                continue;
+              }
+              const replacement = prefix === '$' ? `$\\${cmd}` : `${prefix}\\${cmd}`;
+              formulaFixed = formulaFixed.substring(0, index) + replacement + formulaFixed.substring(index + fullMatch.length);
+            }
+          });
+          return `$${formulaFixed}$`;
+        });
+        
+        // 最后处理：修复丢失了开头的 $\ 的情况
+        const sortedCommands = [...latexCommands].sort((a, b) => b.length - a.length);
+        
+        sortedCommands.forEach(cmd => {
+          const escapedCmd = cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`([^$\\\\]|^)${escapedCmd}([^$]*?)\\$`, 'g');
+          fixed = fixed.replace(regex, (match, prefix, content) => {
+            if (prefix !== '$' && prefix !== '\\' && content && !content.includes('$')) {
+              if (!prefix || /[\s,，。；;：:]/.test(prefix) || prefix === '') {
+                return `${prefix}$\\${cmd}${content}$`;
+              }
+            }
+            return match;
+          });
+        });
+        
+        return fixed;
+      },
+      
+      // 清洗数据：处理空值和特殊字符，将 \n 替换为 <br>
+      // 注意：必须保留 LaTeX 公式中的反斜杠（如 \times, \frac 等）
+      hadelZD(value) { 
+        if (value === null || value === undefined) return '';
+        let str = String(value);
+        
+        // 先修复可能丢失的 LaTeX 反斜杠
+        str = this.fixLaTeXBackslashes(str);
+        
+        // 重要：先保护 LaTeX 公式中的反斜杠，避免被后续处理破坏
+        // 使用临时占位符保护 $...$ 和 $$...$$ 中的内容
+        const FORMULA_PLACEHOLDER = '\uE001';
+        const formulaMatches = [];
+        let formulaIndex = 0;
+        
+        // 保护块公式 $$...$$
+        str = str.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+          const placeholder = `${FORMULA_PLACEHOLDER}BLOCK${formulaIndex}${FORMULA_PLACEHOLDER}`;
+          formulaMatches.push({ placeholder, content: match });
+          formulaIndex++;
+          return placeholder;
+        });
+        
+        // 保护行内公式 $...$
+        str = str.replace(/\$([^$]+?)\$/g, (match, formula) => {
+          // 跳过已经被保护的块公式
+          if (match.includes(FORMULA_PLACEHOLDER)) return match;
+          const placeholder = `${FORMULA_PLACEHOLDER}INLINE${formulaIndex}${FORMULA_PLACEHOLDER}`;
+          formulaMatches.push({ placeholder, content: match });
+          formulaIndex++;
+          return placeholder;
+        });
+        
+        // 将 \n 替换为 <br>（但不在公式中）
+        str = str.replace(/\n/g, '<br>');
+        str = str.trim();
+        
+        // 恢复被保护的公式内容（保持原始格式，包括所有反斜杠）
+        formulaMatches.forEach(({ placeholder, content }) => {
+          str = str.replace(placeholder, content);
+        });
+        
+        return (str !== '' && str !== '无') ? str : ''; 
+      },
+
+      buildSign(payload) {
+        const secret = '';
+        const keys = Object.keys(payload)
+          .filter(k => k !== 'ak' && k !== 'sign' && payload[k] !== undefined && payload[k] !== null)
+          .sort((a, b) => a.localeCompare(b));
+        const kv = keys.map(k => {
+          const v = payload[k];
+          const strVal = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+          return `${k}=${strVal}`;
+        });
+        const raw = kv.join('&') + secret;
+        return window.md5 ? window.md5(raw) : '';
+      },
+      replaceNewlinesInObject(obj) {
+        if (obj === null || obj === undefined) return obj;
+        if (typeof obj === 'string') {
+          return obj.replace(/\n/g, '<br>');
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(item => this.replaceNewlinesInObject(item));
+        }
+        if (typeof obj === 'object') {
+          const result = {};
+          for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              result[key] = this.replaceNewlinesInObject(obj[key]);
+            }
+          }
+          return result;
+        }
+        return obj;
+      },
+      exportJsonFile(obj, fileName) {
+        const processedObj = this.replaceNewlinesInObject(JSON.parse(JSON.stringify(obj)));
+        const blob = new Blob([JSON.stringify(processedObj, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      },
+
+      handleNewSpecExcel(workbook) {
+        try {
+          const sheetNames = workbook.SheetNames;
+          const baseSheet = workbook.Sheets[sheetNames[0]];
+          const imgSheet = workbook.Sheets[sheetNames[1]];
+          const chapterSheet = workbook.Sheets[sheetNames[2]];
+          const shitiSheet = workbook.Sheets[sheetNames[3]];
+
+          const baseRows = XLSX.utils.sheet_to_json(baseSheet, { defval: '' });
+          if (!baseRows.length) {
+            this.$message.error('基础信息 Sheet 为空，无法生成 JSON');
+            return;
+          }
+
+          const baseRow = baseRows[0];
+          const importID = this.hadelZD(baseRow.importID || baseRow.importId || baseRow.importid);
+          const bookBase = {
+            importID,
+            bookname: this.hadelZD(baseRow.bookname),
+            bookIsbn: this.hadelZD(baseRow.bookIsbn),
+            year: this.hadelZD(baseRow.year),
+            grade: this.hadelZD(baseRow.grade),
+            subject: this.hadelZD(baseRow.subject),
+            volume: this.hadelZD(baseRow.volume),
+            bookVersion: this.hadelZD(baseRow.bookVersion),
+            publisher: this.hadelZD(baseRow.publisher),
+            price: baseRow.price !== undefined && baseRow.price !== null ? String(baseRow.price) : '',
+            bookLabel: this.hadelZD(baseRow.bookLabel),
+            hasSpecialVersion: baseRow.hasSpecialVersion || baseRow.hasSpecial || 0,
+            province: this.hadelZD(baseRow.province),
+            city: this.hadelZD(baseRow.city)
+          };
+          bookBase.sign = this.buildSign(bookBase);
+
+          const imgRows = XLSX.utils.sheet_to_json(imgSheet, { defval: '' });
+          const book_cover = [];
+          const book_img = [];
+          const answer_img = [];
+
+          imgRows.forEach(r => {
+            const rowImportID = this.hadelZD(r.importID || r.importId || r.importid);
+            const real_page = r.real_page !== undefined && r.real_page !== null ? Number(r.real_page) : null;
+            
+            const coverImg = this.hadelZD(r.cover);
+            if (coverImg && real_page !== null) {
+              book_cover.push({ img: coverImg, real_page, content_type: 'cover' });
+            }
+            const directoryImg = this.hadelZD(r.directory);
+            if (directoryImg && real_page !== null) {
+              book_cover.push({ img: directoryImg, real_page, content_type: 'directory' });
+            }
+            const backCoverImg = this.hadelZD(r.back_cover || r.backCover);
+            if (backCoverImg && real_page !== null) {
+              book_cover.push({ img: backCoverImg, real_page, content_type: 'back_cover' });
+            }
+            const bookImg = this.hadelZD(r.book_img || r.bookImg);
+            if (bookImg && real_page !== null) {
+              book_img.push({ img: bookImg, real_page });
+            }
+            const answerImg = this.hadelZD(r.answer_img || r.answerImg);
+            if (answerImg && real_page !== null) {
+              answer_img.push({ img: answerImg, real_page });
+            }
+            if (!bookBase.importID && rowImportID) {
+              bookBase.importID = rowImportID;
+            }
+          });
+
+          // 按页数（real_page）排序：第一页在前面，第二页在后面，以此类推
+          book_cover.sort((a, b) => {
+            // 如果页数相同，按 content_type 排序（cover < directory < back_cover）
+            if (a.real_page === b.real_page) {
+              const typeOrder = { 'cover': 1, 'directory': 2, 'back_cover': 3 };
+              return (typeOrder[a.content_type] || 999) - (typeOrder[b.content_type] || 999);
+            }
+            return a.real_page - b.real_page;
+          });
+          
+          book_img.sort((a, b) => a.real_page - b.real_page);
+          answer_img.sort((a, b) => a.real_page - b.real_page);
+
+          const imgBody = {
+            importID: bookBase.importID,
+            book_cover,
+            book_img,
+            answer_img
+          };
+          imgBody.sign = this.buildSign(imgBody);
+
+          const chapterRows = XLSX.utils.sheet_to_json(chapterSheet, { defval: '' });
+          const chapterMap = {};
+          chapterRows.forEach(r => {
+            const chapterText = this.hadelZD(r.chapters || r.chapter || r.Chapter || r['chapter(一级)'] || r['chapter（一级目录）']);
+            const sectionText = this.hadelZD(r.section || r.Section || r['section(二级)'] || r['section（二级目录）']);
+            const lessonText = this.hadelZD(r.lesson || r.Lesson || r['lesson(三级)'] || r['lesson（三级目录）']);
+            const sublessonText = this.hadelZD(r.sublesson || r.Sublesson || r['sublesson(四级)'] || r['sublesson（四级目录）']);
+
+            if (!chapterText) return;
+            if (!chapterMap[chapterText]) {
+              chapterMap[chapterText] = { text: chapterText, type: 'chapter', sub: [] };
+            }
+            let chapterNode = chapterMap[chapterText];
+
+            let sectionNode = null;
+            if (sectionText) {
+              sectionNode = chapterNode.sub.find(s => s.text === sectionText);
+              if (!sectionNode) {
+                sectionNode = { text: sectionText, type: 'section', sub: [] };
+                chapterNode.sub.push(sectionNode);
+              }
+            }
+
+            let lessonNode = null;
+            if (lessonText) {
+              const parent = sectionNode || chapterNode;
+              lessonNode = parent.sub.find(s => s.text === lessonText);
+              if (!lessonNode) {
+                lessonNode = { text: lessonText, type: 'lesson', sub: [] };
+                parent.sub.push(lessonNode);
+              }
+            }
+
+            if (sublessonText) {
+              const parent = lessonNode || sectionNode || chapterNode;
+              const exists = parent.sub.find(s => s.text === sublessonText);
+              if (!exists) {
+                parent.sub.push({ text: sublessonText, type: 'sublesson', sub: [] });
+              }
+            }
+          });
+          const chaptersArr = Object.values(chapterMap);
+          const chapterBody = {
+            importID: bookBase.importID,
+            chapters: chaptersArr
+          };
+          chapterBody.sign = this.buildSign(chapterBody);
+
+          const shitiRows = XLSX.utils.sheet_to_json(shitiSheet, { defval: '' });
+          const shitiList = shitiRows.map(r => {
+            const knowledgeRaw = this.hadelZD(r.knowledge || r.knowledgePoints || '');
+            const knowledgeArr = knowledgeRaw
+              ? String(knowledgeRaw).split(/[,，；;]/).map(s => s.trim().replace(/\n/g, '<br>')).filter(Boolean)
+              : [];
+            
+            const chapterText = this.hadelZD(r.chapters || r.chapter);
+            const sectionText = this.hadelZD(r.section);
+            const lessonText = this.hadelZD(r.lesson);
+            const sublessonText = this.hadelZD(r.sublesson);
+            
+            let chaptersObj = null;
+            if (chapterText) {
+              if (sectionText) {
+                if (lessonText) {
+                  if (sublessonText) {
+                    chaptersObj = {
+                      text: chapterText,
+                      type: 'chapter',
+                      sub: {
+                        text: sectionText,
+                        type: 'section',
+                        sub: {
+                          text: lessonText,
+                          type: 'lesson',
+                          sub: [{ text: sublessonText, type: 'sublesson', sub: [] }]
+                        }
+                      }
+                    };
+                  } else {
+                    chaptersObj = {
+                      text: chapterText,
+                      type: 'chapter',
+                      sub: {
+                        text: sectionText,
+                        type: 'section',
+                        sub: {
+                          text: lessonText,
+                          type: 'lesson',
+                          sub: []
+                        }
+                      }
+                    };
+                  }
+                } else {
+                  chaptersObj = {
+                    text: chapterText,
+                    type: 'chapter',
+                    sub: {
+                      text: sectionText,
+                      type: 'section',
+                      sub: []
+                    }
+                  };
+                }
+              } else {
+                chaptersObj = {
+                  text: chapterText,
+                  type: 'chapter',
+                  sub: []
+                };
+              }
+            }
+            
+            let difficultyValue = 0;
+            if (r.difficulty !== '' && r.difficulty !== undefined && r.difficulty !== null) {
+              const diffNum = Number(r.difficulty);
+              difficultyValue = !isNaN(diffNum) ? diffNum : 0;
+            }
+            
+            let choiceArray = [];
+            if (r.choice && String(r.choice) !== '无') {
+              choiceArray = String(r.choice).split('\n')
+                .map(s => s.trim())
+                .filter(Boolean)
+                .map(s => s.replace(/\n/g, '<br>'));
+            }
+            
+            const item = {
+              question: this.hadelZD(r.question),
+              choice: choiceArray,
+              answer: this.hadelZD(r.answer),
+              analysis: this.hadelZD(r.analysis),
+              comment: this.hadelZD(r.comment),
+              tishi: this.hadelZD(r.tishi),
+              tilei: this.hadelZD(r.tilei),
+              difficulty: difficultyValue,
+              subject: this.hadelZD(r.subject),
+              step: this.hadelZD(r.step),
+              grade: this.hadelZD(r.grade),
+              bookname: this.hadelZD(r.bookname || r.bookName),
+              bookIsbn: this.hadelZD(r.bookIsbn || r.bookISBN || r.isbn),
+              chapters: chaptersObj,
+              knowledge: knowledgeArr
+            };
+            
+            return item;
+          }).filter(item => item.question);
+
+          const shitiBody = {
+            importID: bookBase.importID,
+            shitiList
+          };
+          shitiBody.sign = this.buildSign(shitiBody);
+
+          this.previewJsons = {
+            bookInfo: bookBase,
+            images: imgBody,
+            chapters: chapterBody,
+            shitiList: shitiBody
+          };
+
+          this.$nextTick(() => {
+            this.mathElement();
+          });
+
+          // 注释掉自动导出，用户可以点击"导出JSON"按钮手动导出
+          // const baseFileName = this.name ? this.name.replace(/\.xlsx?$/i, '') : 'export';
+          // this.exportJsonFile(bookBase, `${baseFileName}_${sheetNames[0] || 'bookInfo'}.json`);
+          // this.exportJsonFile(imgBody, `${baseFileName}_${sheetNames[1] || 'images'}.json`);
+          // this.exportJsonFile(chapterBody, `${baseFileName}_${sheetNames[2] || 'chapters'}.json`);
+          // this.exportJsonFile(shitiBody, `${baseFileName}_${sheetNames[3] || 'shitiList'}.json`);
+
+          this.$message.success('新规范 Excel 解析成功');
+        } catch (e) {
+          console.error(e);
+          this.$message.error('新规范 Excel 解析失败：' + e.message);
+        }
+      },
+      extractItemData(row) {
+        const getVal = (field) => row[field] === 0 ? '0' : this.hadelZD(row[field]);
+        const splitPic = (v) => (v && String(v) !== '无' ? String(v).split('\n') : []);
+
+        // 核心判断：如果 f_code 为空，说明没有试题，直接返回 null
+        let fCode = getVal('f_code');
+        if (!fCode) return null;
+        return {
+          f_code: fCode,
+          item_code: this.hadelZD(row['item_code']),
+          item_question: getVal('item_question'),
+          item_question_pic: splitPic(row['item_question_pic']),
+          item_choice: getVal('item_choice'),
+          item_choice_pic: splitPic(row['item_choice_pic']),
+          item_answer: getVal('item_answer'),
+          item_answer_pic: splitPic(row['item_answer_pic']),
+          item_analysis: getVal('item_analysis'),
+          item_analysis_pic: splitPic(row['item_analysis_pic']),
+          item_tishi: getVal('item_tishi'),
+          item_comment: getVal('item_comment'),
+          item_tilei: getVal('item_tilei'),
+          item_difficulty: getVal('item_difficulty'),
+          item_knowledge: getVal('item_knowledge'),
+          item_bookLabel: getVal('item_bookLabel'),
+          item_source: getVal('item_source')
+        };
+      },
+      hadelExcleData(excelData) {
+        let subMap = {}, lesMap = {}, modMap = {}, unitMap = {}, subjMap = {};
+        const splitPic = (v) => (v && String(v) !== '无' ? String(v).split('\n') : []);
+        const getVal = (v) => this.hadelZD(v);
+
+        excelData.forEach(row => {
+          const sCode = getVal(row.sublesson_code);
+          if (sCode) {
+            if (!subMap[sCode]) {
+              subMap[sCode] = {
+                sublesson_code: sCode,
+                sublesson_title: getVal(row.sublesson_title),
+                sublesson_content: getVal(row.sublesson_content),
+                sublesson_content_pic: splitPic(row.sublesson_content_pic),
+                sublesson_global_pic: splitPic(row.sublesson_global_pic),
+                sublesson_start_page: getVal(row.sublesson_start_page),
+                sublesson_end_page: getVal(row.sublesson_end_page),
+                lesson_code: getVal(row.lesson_code),
+                items: []
+              };
+            }
+            if (subMap[sCode]) {
+              const subItem = this.extractItemData(row);
+              if (subItem && subItem.f_code == sCode) {
+                subMap[sCode].items.push(subItem);
+              }
+            }
+          }
+
+          const lCode = getVal(row.lesson_code);
+          if (lCode && !lesMap[lCode]) {
+            lesMap[lCode] = {
+              lesson_code: lCode,
+              lesson_title: getVal(row.lesson_title),
+              lesson_order: getVal(row.lesson_order),
+              lesson_content: getVal(row.lesson_content),
+              lesson_content_pic: splitPic(row.lesson_content_pic),
+              lesson_global_pic: splitPic(row.lesson_global_pic),
+              lesson_start_page: getVal(row.lesson_start_page),
+              lesson_end_page: getVal(row.lesson_end_page),
+              module_code: getVal(row.module_code),
+              sublessons: [],
+              items: []
+            };
+          }
+          if (lCode && lesMap[lCode]) {
+            const lesItem = this.extractItemData(row);
+            if (lesItem && lesItem.f_code == lCode) {
+              lesMap[lCode].items.push(lesItem);
+            }
+          }
+
+          const mCode = getVal(row.module_code);
+          if (mCode && !modMap[mCode]) {
+            modMap[mCode] = {
+              module_code: mCode,
+              module: getVal(row.module),
+              module_content: getVal(row.module_content),
+              module_content_pic: splitPic(row.module_content_pic),
+              module_global_pic: splitPic(row.module_global_pic),
+              module_start_page: getVal(row.module_start_page),
+              module_end_page: getVal(row.module_end_page),
+              unit_code: getVal(row.unit_code),
+              lessons: [],
+              items: []
+            };
+          }
+          if (mCode && modMap[mCode]) {
+            const modItem = this.extractItemData(row);
+            if (modItem && modItem.f_code == mCode) {
+              modMap[mCode].items.push(modItem);
+            }
+          }
+
+          const uCode = getVal(row.unit_code);
+          if (uCode && !unitMap[uCode]) {
+            unitMap[uCode] = {
+              textbook_code: getVal(row.textbook_code),
+              unit_code: uCode,
+              unit: getVal(row.unit),
+              unit_title: getVal(row.unit_title),
+              unit_content: getVal(row.unit_content),
+              unit_content_pic: splitPic(row.unit_content_pic),
+              unit_start_page: getVal(row.unit_start_page),
+              unit_end_page: getVal(row.unit_end_page),
+              modules: []
+            };
+          }
+
+          let subjKey = (row.subject || 'default') + (row.grade_volume || '');
+          if (!subjMap[subjKey]) {
+            subjMap[subjKey] = {
+              subject: getVal(row.subject),
+              textbook_code: getVal(row.textbook_code),
+              grade: getVal(row.grade),
+              volume: getVal(row.volume),
+              grade_volume: getVal(row.grade_volume),
+              press: getVal(row.press),
+              textbook_version: getVal(row.textbook_version),
+              units: []
+            };
+          }
+        });
+
+        Object.values(subMap).forEach(s => {
+          if (lesMap[s.lesson_code]) {
+            lesMap[s.lesson_code].sublessons.push(s);
+          }
+        });
+        Object.values(lesMap).forEach(l => {
+          if (modMap[l.module_code]) {
+            modMap[l.module_code].lessons.push(l);
+          }
+        });
+        Object.values(modMap).forEach(m => {
+          if (unitMap[m.unit_code]) {
+            unitMap[m.unit_code].modules.push(m);
+          }
+        });
+        let subjectList = Object.values(subjMap);
+        if (subjectList.length > 0) {
+          subjectList[0].units = Object.values(unitMap);
+        }
+
+        this.subjectJsonData = subjectList;
+        if (this.subjectJsonData.length && this.subjectJsonData[0].units) {
+          this.openeds = this.subjectJsonData[0].units.map(i => i.unit_code);
+        }
+        this.dataType = '';
+        this.mathElement();
+      },
+      exportJson() {
+        if (!this.subjectJsonData.length) return;
+        const blob = new Blob([JSON.stringify(this.subjectJsonData, null, 4)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = (this.name || 'export') + '.json';
+        link.click();
+      },
+      handleSelect(index, indexPath, item) {
+        if (item && item.$attrs) {
+          this.dataType = item.$attrs.datatype;
+          this.$set(this.checkedData, 'unitdata', item.$attrs.unitdata);
+          this.$set(this.checkedData, 'moduledata', item.$attrs.moduledata || null);
+          this.$set(this.checkedData, 'lessondata', item.$attrs.lessondata || null);
+          this.$set(this.checkedData, 'sublessondata', item.$attrs.sublessondata || null);
+        } else { this.dataType = ''; }
+        this.$nextTick(() => { if (this.$refs.mianBody) this.$refs.mianBody.$el.scrollTop = 0; })
+      },
+      handleSelectMenu(index, indexPath, item) {
+        const unilist = this.subjectJsonData[0].units;
+        if (indexPath.length == 1) {
+          this.dataType = 'unit';
+          this.checkedData.unitdata = unilist.find(i => i.unit_code == index);
+          this.checkedData.moduledata = null; this.checkedData.lessondata = null; this.checkedData.sublessondata = null;
+        }
+        if (indexPath.length == 2) {
+          this.dataType = 'lesson'
+          this.checkedData.unitdata = unilist.find((item) => {
+            return item.unit_code == indexPath[0]
+          })
+          this.checkedData.mdeldata = this.checkedData.unitdata.modules.find((item) => {
+            return indexPath[1].includes(item.module_code)
+          })
+          this.checkedData.lessondata = this.checkedData.mdeldata.lessons.find((item) => {
+            return item.lesson_code == indexPath[1]
+          })
+        }
+      },
+      mathElement() { 
+        this.$nextTick(async () => { 
+          if (window.MathJax && MathJax.typesetPromise) {
+            try {
+              await MathJax.typesetPromise();
+            } catch (error) {
+              console.warn('MathJax rendering error:', error);
+            }
+          }
+        });
+      },
+      processInlineContent(text) {
+        if (!text) return '';
+        let processedText = String(text);
+        
+        processedText = processedText.replace(/\\\$/g, '$');
+        processedText = processedText.replace(/{tabular}/g, '{array}');
+        
+        processedText = processedText.replace(/\{\s*(https?:\/\/[^}]+?)\s*\}/gi, (match, url) => {
+          const cleanUrl = url.trim();
+          return `<br><img src="${cleanUrl}" style="max-width: 90%; border-radius: 4px; margin: 10px 0; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="window.handleImageErrorEvent && window.handleImageErrorEvent(event, '${cleanUrl.replace(/'/g, "\\'")}')" /><br>`;
+        });
+        
+        processedText = processedText.replace(/([A-Za-z0-9一二三四五六七八九十]+[\.:：、])\s*(https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|bmp|webp|svg)(?:\?[^\s<>"']*)?)/gi, (match, label, url, offset, string) => {
+          const beforeText = string.substring(Math.max(0, offset - 100), offset);
+          const afterText = string.substring(offset + match.length, Math.min(string.length, offset + match.length + 50));
+          if (beforeText.includes('<img') || afterText.includes('</img>') || beforeText.match(/src=["']/i)) {
+            return match;
+          }
+          return `${label}<br><img src="${url}" style="max-width: 90%; border-radius: 4px; margin: 10px 0; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="window.handleImageErrorEvent && window.handleImageErrorEvent(event, '${url.replace(/'/g, "\\'")}')" />`;
+        });
+        
+        processedText = processedText.replace(/(https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|bmp|webp|svg)(?:\?[^\s<>"']*)?)(<br>|<br\/>)/gi, (match, url, brTag, offset, string) => {
+          const beforeText = string.substring(Math.max(0, offset - 50), offset);
+          if (beforeText.includes('<img') && !beforeText.includes('</img>')) {
+            return match;
+          }
+          return `<br><img src="${url}" style="max-width: 90%; border-radius: 4px; margin: 10px 0; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="window.handleImageErrorEvent && window.handleImageErrorEvent(event, '${url.replace(/'/g, "\\'")}')" />${brTag}`;
+        });
+        
+        processedText = processedText.replace(/(<br>|<br\/>)(https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|bmp|webp|svg)(?:\?[^\s<>"']*)?)/gi, (match, brTag, url, offset, string) => {
+          const afterText = string.substring(offset + match.length, Math.min(string.length, offset + match.length + 50));
+          if (afterText.includes('</img>')) {
+            return match;
+          }
+          return `${brTag}<br><img src="${url}" style="max-width: 90%; border-radius: 4px; margin: 10px 0; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="window.handleImageErrorEvent && window.handleImageErrorEvent(event, '${url.replace(/'/g, "\\'")}')" /><br>`;
+        });
+        
+        const imageUrlPattern = /(https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|bmp|webp|svg)(?:\?[^\s<>"']*)?)/gi;
+        const imageUrls = [];
+        let match;
+        while ((match = imageUrlPattern.exec(processedText)) !== null) {
+          const url = match[0];
+          const urlIndex = match.index;
+          const beforeUrl = processedText.substring(Math.max(0, urlIndex - 200), urlIndex);
+          const afterUrl = processedText.substring(urlIndex + url.length, Math.min(processedText.length, urlIndex + url.length + 200));
+          const isInHtmlTag = beforeUrl.match(/<(img|a|link|script|style)[^>]*$/i) || 
+                             afterUrl.match(/^[^>]*>/i) ||
+                             beforeUrl.match(/src=["']/i) ||
+                             beforeUrl.match(/href=["']/i);
+          if (isInHtmlTag) {
+            continue;
+          }
+          if (beforeUrl.includes('<img') || afterUrl.includes('</img>')) {
+            continue;
+          }
+          const charBefore = urlIndex > 0 ? processedText[urlIndex - 1] : '';
+          const charAfter = (urlIndex + url.length) < processedText.length ? processedText[urlIndex + url.length] : '';
+          const beforeIsWhitespace = urlIndex === 0 || /[\s\n\r<>]/.test(charBefore);
+          const afterIsWhitespace = (urlIndex + url.length) >= processedText.length || /[\s\n\r<>]/.test(charAfter);
+          if (urlIndex === 0 || (beforeIsWhitespace && afterIsWhitespace)) {
+            imageUrls.push({ url, index: urlIndex, length: url.length });
+          }
+        }
+        
+        for (let i = imageUrls.length - 1; i >= 0; i--) {
+          const { url, index, length } = imageUrls[i];
+          const imgTag = `<br><img src="${url}" style="max-width: 90%; border-radius: 4px; margin: 10px 0; display: block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onerror="window.handleImageErrorEvent && window.handleImageErrorEvent(event, '${url.replace(/'/g, "\\'")}')" /><br>`;
+          processedText = processedText.substring(0, index) + imgTag + processedText.substring(index + length);
+        }
+        
+        const processFormula = (formula) => {
+          let fixedFormula = formula;
+          fixedFormula = fixedFormula.replace(/\\\\/g, '\\');
+          const TEMP_ESCAPED = '\uE000';
+          fixedFormula = fixedFormula.replace(/\\_/g, TEMP_ESCAPED);
+          fixedFormula = fixedFormula.replace(/_(?![a-zA-Z0-9{])/g, '\\_');
+          fixedFormula = fixedFormula.replace(new RegExp(TEMP_ESCAPED, 'g'), '\\_');
+          return fixedFormula;
+        };
+        
+        const latexEnvironments = ['aligned', 'align', 'equation', 'eqnarray', 'gather', 'multline'];
+        latexEnvironments.forEach(env => {
+          const envPattern = new RegExp(`\\\\begin\\{${env}\\}([\\s\\S]*?)\\\\end\\{${env}\\}`, 'g');
+          let envMatch;
+          const envMatches = [];
+          while ((envMatch = envPattern.exec(processedText)) !== null) {
+            envMatches.push({
+              fullMatch: envMatch[0],
+              content: envMatch[1],
+              index: envMatch.index
+            });
+          }
+          for (let i = envMatches.length - 1; i >= 0; i--) {
+            const { fullMatch, content, index } = envMatches[i];
+            const contentWithNewlines = content.replace(/<br>/g, '\n');
+            const processedContent = processFormula(contentWithNewlines);
+            const replacement = `$$\\begin{${env}}${processedContent}\\end{${env}}$$`;
+            processedText = processedText.substring(0, index) + replacement + processedText.substring(index + fullMatch.length);
+          }
+        });
+        
+        processedText = processedText.replace(/\$([^$]+?)\$/g, (match, formula) => {
+          if (formula.includes('\\begin{') || formula.includes('\\end{')) {
+            return match;
+          }
+          return `$${processFormula(formula)}$`;
+        });
+        
+        processedText = processedText.replace(/\$\$([^$]+?)\$\$/g, (match, formula) => {
+          return `$$${processFormula(formula)}$$`;
+        });
+        
+        processedText = processedText.replace(/\\\$([^$]+?)\\\$/g, '$$$1$$');
+        processedText = processedText.replace(/\\\$([^$]+?)\$/g, '$$$1$$');
+        
+        const FORMULA_NEWLINE = '\uE002';
+        processedText = processedText.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+          return `$$${formula.replace(/\n/g, FORMULA_NEWLINE)}$$`;
+        });
+        processedText = processedText.replace(/\$([^$]+?)\$/g, (match, formula) => {
+          return `$${formula.replace(/\n/g, FORMULA_NEWLINE)}$`;
+        });
+        processedText = processedText.replace(/\n/g, '<br>');
+        processedText = processedText.replace(new RegExp(FORMULA_NEWLINE, 'g'), '\n');
+        
+        return processedText;
+      },
+      scrollToTop() {
+        if (this.$refs.mianBody) {
+          this.$refs.mianBody.$el.scrollTop = 0;
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+      formatChaptersTree(chapters) {
+        if (!chapters || !Array.isArray(chapters)) return [];
+        return chapters.map(chapter => {
+          const node = { text: chapter.text, type: chapter.type };
+          if (chapter.sub) {
+            if (Array.isArray(chapter.sub)) {
+              node.sub = chapter.sub.map(item => this.formatChapterNode(item));
+            } else if (typeof chapter.sub === 'object' && chapter.sub.text) {
+              node.sub = [this.formatChapterNode(chapter.sub)];
+            } else {
+              node.sub = [];
+            }
+          } else {
+            node.sub = [];
+          }
+          return node;
+        });
+      },
+      formatChapterNode(node) {
+        const result = { text: node.text, type: node.type };
+        if (node.sub) {
+          if (Array.isArray(node.sub)) {
+            result.sub = node.sub.map(item => this.formatChapterNode(item));
+          } else if (typeof node.sub === 'object' && node.sub.text) {
+            result.sub = [this.formatChapterNode(node.sub)];
+          } else {
+            result.sub = [];
+          }
+        } else {
+          result.sub = [];
+        }
+        return result;
+      },
+      getChapterIcon(type) {
+        const iconMap = {
+          'chapter': 'el-icon-folder',
+          'section': 'el-icon-folder-opened',
+          'lesson': 'el-icon-document',
+          'sublesson': 'el-icon-document-remove'
+        };
+        return iconMap[type] || 'el-icon-document';
+      },
+      // 处理图片加载错误，添加延迟重试机制
+      // 当图片数量很多时，可能需要等待一段时间再重试
+      handleImageError(event, originalUrl) {
+        const img = event.target;
+        const retryCount = parseInt(img.dataset.retryCount || '0');
+        const maxRetries = 100; // 最多重试100次
+        
+        // 如果已经重试过多次，不再重试
+        if (retryCount >= maxRetries) {
+          console.warn('图片加载失败，已重试' + maxRetries + '次:', originalUrl);
+          return;
+        }
+        
+        // 更新重试次数
+        img.dataset.retryCount = (retryCount + 1).toString();
+        
+        // 延迟重试：第一次等待2秒，第二次等待4秒，第三次等待6秒
+        // 递增延迟可以避免同时重试导致服务器压力过大
+        const delay = (retryCount + 1) * 2000;
+        
+        // 显示重试提示
+        if (retryCount === 0) {
+          const errorSlot = img.parentElement?.querySelector('.image-slot');
+          if (errorSlot) {
+            errorSlot.textContent = `加载失败，正在重试... (${retryCount + 1}/${maxRetries})`;
+          }
+        }
+        
+        setTimeout(() => {
+          try {
+            // 尝试添加时间戳参数重新加载（绕过缓存）
+            const separator = originalUrl.includes('?') ? '&' : '?';
+            const retryUrl = originalUrl + separator + '_retry=' + Date.now() + '_' + retryCount;
+            
+            // 设置超时处理（30秒超时）
+            const timeoutId = setTimeout(() => {
+              if (!img.complete || img.naturalWidth === 0) {
+                // 图片仍未加载完成，触发错误事件进行下一次重试
+                img.dispatchEvent(new Event('error'));
+              }
+            }, 30000);
+            
+            // 图片加载成功后清除超时
+            img.onload = () => {
+              clearTimeout(timeoutId);
+              const errorSlot = img.parentElement?.querySelector('.image-slot');
+              if (errorSlot) {
+                errorSlot.textContent = '';
+              }
+            };
+            
+            img.src = retryUrl;
+          } catch (error) {
+            console.warn('图片重试失败:', originalUrl, error);
+          }
+        }, delay);
+      },
+      // 格式化 JSON 用于左侧面板显示（带反斜杠高亮）
+      // 在显示时把 \\ 替换为更明显的单反斜杠 \，让用户能看清楚
+      // 注意：这只是显示效果，不影响实际导出的 JSON 数据
+      formatJsonForDisplay(data) {
+        if (!data) return '';
+        try {
+          let jsonStr = JSON.stringify(data, null, 2);
+          
+          // 转义 HTML 特殊字符
+          const escapeHtml = (str) => {
+            const map = {
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#039;'
+            };
+            return str.replace(/[&<>"']/g, m => map[m]);
+          };
+          
+          // 先转义 HTML
+          jsonStr = escapeHtml(jsonStr);
+          
+          // 常见的 LaTeX 命令列表（需要反斜杠的命令），按长度从长到短排序，避免短命令误匹配
+          const latexCommands = [
+            'leftrightarrow', 'Leftrightarrow', 'leftarrow', 'rightarrow', 'Leftarrow', 'Rightarrow',
+            'subseteq', 'supseteq', 'setminus', 'unlhd', 'unrhd',
+            'cdots', 'ldots', 'vdots', 'ddots', 'cdot', 'approx', 'equiv', 'parallel',
+            'times', 'frac', 'sqrt', 'alpha', 'beta', 'gamma', 'delta', 'epsilon',
+            'theta', 'lambda', 'sigma', 'omega', 'nabla', 'infty', 'forall', 'exists',
+            'emptyset', 'subset', 'supset', 'oplus', 'otimes', 'odot', 'prime',
+            'uparrow', 'downarrow', 'partial', 'propto', 'asymp', 'models',
+            'vdash', 'dashv', 'smile', 'frown', 'bowtie', 'angle', 'triangle',
+            'square', 'diamond', 'parallel', 'perp', 'sim', 'simeq', 'cong',
+            'div', 'pi', 'sum', 'prod', 'int', 'oint', 'lim', 'sin', 'cos',
+            'tan', 'log', 'ln', 'exp', 'min', 'max', 'sup', 'inf', 'neq', 'leq',
+            'geq', 'pm', 'mp', 'left', 'right', 'big', 'Big', 'bigg', 'Bigg',
+            'mu', 'phi', 'ell', 'hbar', 'imath', 'jmath', 'Re', 'Im', 'wr',
+            'Join', 'lhd', 'rhd', 'cup', 'cap', 'in', 'notin', 'star', 'ast',
+            'circ', 'bullet', 'to', 'o', 'u', 'v', 'w'
+          ];
+          
+          // 按长度从长到短排序，避免短命令误匹配长命令的一部分
+          const sortedCommands = [...latexCommands].sort((a, b) => b.length - a.length);
+          
+          // 使用占位符避免重复替换
+          const PLACEHOLDER = '\uE004';
+          const placeholders = [];
+          let placeholderIndex = 0;
+          
+          // 先处理已知的 LaTeX 命令（按长度从长到短，避免误匹配）
+          // 使用一次性匹配所有命令，然后按位置排序，确保长命令优先
+          const allMatches = [];
+          
+          // 按长度从长到短处理，确保长命令优先匹配
+          sortedCommands.forEach(cmd => {
+            const escapedCmd = cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // 匹配 JSON 字符串中的 \\命令名（在字符串值中）
+            // 模式：\\命令名，后面跟非字母字符或字符串结束
+            const regex = new RegExp(`(\\\\\\\\)(${escapedCmd})(?![a-zA-Z])`, 'g');
+            let match;
+            // 重置 lastIndex，避免全局正则的问题
+            regex.lastIndex = 0;
+            while ((match = regex.exec(jsonStr)) !== null) {
+              const matchStart = match.index;
+              const matchEnd = matchStart + match[0].length;
+              
+              // 检查这个位置是否已经被其他命令占用（重叠检查）
+              const isOverlapped = allMatches.some(m => {
+                const mStart = m.index;
+                const mEnd = mStart + m.length;
+                // 检查是否有重叠：新匹配的开始或结束在已有匹配范围内
+                return (matchStart >= mStart && matchStart < mEnd) || 
+                       (matchEnd > mStart && matchEnd <= mEnd) ||
+                       (matchStart <= mStart && matchEnd >= mEnd);
+              });
+              
+              if (!isOverlapped) {
+                allMatches.push({
+                  index: matchStart,
+                  length: match[0].length,
+                  fullMatch: match[0],
+                  command: cmd,
+                  backslashes: match[1]
+                });
+              }
+            }
+          });
+          
+          // 按位置从后往前排序，这样替换时不会影响前面的索引
+          allMatches.sort((a, b) => b.index - a.index);
+          
+          // 从后往前替换，避免索引变化
+          allMatches.forEach(match => {
+            const placeholder = `${PLACEHOLDER}LATEX${placeholderIndex}${PLACEHOLDER}`;
+            placeholders.push({
+              placeholder,
+              html: `<span style="color: #67C23A; font-weight: bold;">\\${match.command}</span>`
+            });
+            placeholderIndex++;
+            jsonStr = jsonStr.substring(0, match.index) + placeholder + jsonStr.substring(match.index + match.length);
+          });
+          
+          // 处理其他反斜杠转义（如 \$、\n、\t 等）
+          // 匹配 \\ 后跟非字母字符（这些通常是转义字符）
+          jsonStr = jsonStr.replace(/(\\\\)([^a-zA-Z\\])/g, (match, backslashes, char) => {
+            // 跳过已经被占位符标记的内容
+            if (match.includes(PLACEHOLDER)) return match;
+            
+            const placeholder = `${PLACEHOLDER}OTHER${placeholderIndex}${PLACEHOLDER}`;
+            placeholders.push({
+              placeholder,
+              html: `<span style="color: #909399;">\\</span>${char}`
+            });
+            placeholderIndex++;
+            return placeholder;
+          });
+          
+          // 恢复占位符为 HTML
+          placeholders.forEach(({ placeholder, html }) => {
+            jsonStr = jsonStr.replace(placeholder, html);
+          });
+          
+          return jsonStr;
+        } catch (error) {
+          return String(data);
+        }
+      }
+    },
+    watch: { 
+      checkedData: { handler() { this.mathElement() }, deep: true },
+      previewJsons: { 
+        handler() { 
+          this.mathElement();
+        }, 
+        deep: true 
+      }
+    }
+  });
+</script>
+
+</html>

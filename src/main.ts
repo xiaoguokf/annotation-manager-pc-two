@@ -10,6 +10,7 @@ import App from './App.vue'
 import router from './router'
 import { useThemeStore } from './stores/theme'
 import { useUserStore } from './stores/user'
+import { useNodeStore } from './stores/node'
 import { ElMessage } from 'element-plus'
 
 // 浏览器兼容性检测
@@ -87,5 +88,9 @@ themeStore.initTheme()
 // 初始化用户信息（如果有token）
 const userStore = useUserStore()
 userStore.initAppUserInfo()
+
+// 初始化节点信息
+const nodeStore = useNodeStore()
+nodeStore.initNodes()
 
 app.mount('#app')

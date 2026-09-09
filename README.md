@@ -304,3 +304,15 @@ TailwindCSS 提供了丰富的原子化 CSS 类名：
 2. **确保对比度**：深色模式下文字和背景之间需保持足够对比度，文字颜色使用 `gray-200`/`gray-300` 而非纯白
 3. **成对编写样式**：写浅色样式时同步写 `dark:` 对应样式，避免遗漏
 4. **测试验证**：开发完成后切换到深色模式检查页面效果，确保无刺眼、不可读内容
+## 升级基础模板
+
+本项目基于 [sshine-admin](https://cnb.cool/sshinelt/labs/sshine-admin) 模板初始化，保留了模板的完整提交历史，
+因此模板升级可以直接合并：
+
+\`\`\`bash
+# 首次使用需要添加模板仓库
+git remote add sshine-admin https://cnb.cool/sshinelt/labs/sshine-admin.git
+
+git fetch sshine-admin
+git merge sshine-admin/develop   # 解决冲突后再提交
+\`\`\`
