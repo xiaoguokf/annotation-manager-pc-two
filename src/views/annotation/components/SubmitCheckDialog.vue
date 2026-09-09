@@ -922,7 +922,7 @@ const handleProblemSubmit = async () => {
 
 .toggle-icon {
   font-size: 14px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   transition: transform 0.3s;
 }
 
@@ -1017,13 +1017,13 @@ const handleProblemSubmit = async () => {
 }
 
 .non-leaf-path {
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-size: 14px;
   margin-bottom: 4px;
 }
 
 .non-leaf-count {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 13px;
 }
 
@@ -1059,13 +1059,13 @@ const handleProblemSubmit = async () => {
 }
 
 .catalogue-name {
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-weight: 500;
   flex-shrink: 0;
 }
 
 .question-num {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   flex-shrink: 0;
 }
 
@@ -1172,7 +1172,7 @@ const handleProblemSubmit = async () => {
 }
 
 .remark-text {
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-size: 13px;
 }
 </style>

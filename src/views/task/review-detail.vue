@@ -682,14 +682,14 @@ onMounted(async () => {
 
 .problem-label {
   font-weight: 500;
-  color: #606266;
+  color: var(--el-text-color-regular);
   min-width: 80px;
   flex-shrink: 0;
 }
 
 .problem-value {
   flex: 1;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.6;
 }
 
@@ -775,7 +775,7 @@ onMounted(async () => {
 .no-records {
   text-align: center;
   padding: 40px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .audit-record-item {
@@ -811,12 +811,12 @@ onMounted(async () => {
 
 .record-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .record-content {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.6;
 }
 
@@ -853,7 +853,7 @@ onMounted(async () => {
 .record-handler,
 .record-handle-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
   gap: 4px;

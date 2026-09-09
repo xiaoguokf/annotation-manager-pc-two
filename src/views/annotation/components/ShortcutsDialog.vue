@@ -117,7 +117,7 @@ defineExpose({
 .group-title {
   font-weight: 600;
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   padding-bottom: 8px;
   border-bottom: 1px solid #ebeef5;
 }
@@ -159,13 +159,13 @@ defineExpose({
 
 .shortcut-name {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   font-weight: 500;
 }
 
 .shortcut-description {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   line-height: 1.4;
 }
 </style>

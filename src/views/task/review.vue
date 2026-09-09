@@ -746,7 +746,7 @@ onMounted(() => {
 .pdf-page-nav .page-number {
   margin: 0 16px;
   font-weight: 500;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .pdf-preview-content {
@@ -771,7 +771,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .no-image .el-icon {

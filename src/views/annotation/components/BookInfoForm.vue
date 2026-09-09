@@ -363,7 +363,7 @@ defineExpose({
 }
 
 .option-remark {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-left: 8px;
 }
 </style>

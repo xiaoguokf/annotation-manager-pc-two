@@ -81,7 +81,7 @@ defineProps<Props>()
 .node-label {
   flex: 1;
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .catalog-check-node.has-error > .node-content .node-label {
@@ -91,7 +91,7 @@ defineProps<Props>()
 
 .node-count {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .catalog-check-node.has-error > .node-content .node-count {

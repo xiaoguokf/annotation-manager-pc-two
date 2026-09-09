@@ -218,13 +218,13 @@ const navigateTo = (path: string) => {
 .action-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
   margin-bottom: 4px;
 }
 
 .action-desc {
   font-size: 14px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .system-info {
@@ -245,11 +245,11 @@ const navigateTo = (path: string) => {
 }
 
 .info-label {
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .info-value {
-  color: #303133;
+  color: var(--el-text-color-primary);
   font-weight: 500;
 }
 
@@ -276,13 +276,13 @@ const navigateTo = (path: string) => {
 
 .activity-title {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   margin-bottom: 2px;
 }
 
 .activity-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 /* 覆盖Element Plus卡片样式 */

@@ -406,7 +406,7 @@ onMounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: bold;
-  color: #303133;
+  color: var(--el-text-color-primary);
   padding-left: 10px;
   border-left: 4px solid #409EFF;
   line-height: 1.2;
@@ -535,7 +535,7 @@ onMounted(() => {
 .no-data {
   text-align: center;
   padding: 60px 20px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .selected-info {
@@ -564,7 +564,7 @@ onMounted(() => {
 
 .record-content {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -618,12 +618,12 @@ onMounted(() => {
 
 .record-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .handler-info {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
   gap: 4px;

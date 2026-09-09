@@ -342,7 +342,7 @@ onMounted(() => {
 .section-title {
   font-size: 15px;
   font-weight: bold;
-  color: #303133;
+  color: var(--el-text-color-primary);
   padding-left: 10px;
   border-left: 4px solid #409EFF;
   line-height: 1.2;
@@ -455,7 +455,7 @@ onMounted(() => {
 }
 
 .page-number {
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .image-slot {
@@ -464,7 +464,7 @@ onMounted(() => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   background-color: #f5f7fa;
 }
@@ -472,7 +472,7 @@ onMounted(() => {
 .no-data {
   text-align: center;
   padding: 60px 20px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .edit-mode-hint {
@@ -483,7 +483,7 @@ onMounted(() => {
   height: 100%;
   min-height: 200px;
   padding: 40px 20px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .edit-mode-hint p {
@@ -523,7 +523,7 @@ onMounted(() => {
 
 .record-content {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -577,12 +577,12 @@ onMounted(() => {
 
 .record-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .handler-info {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
   gap: 4px;

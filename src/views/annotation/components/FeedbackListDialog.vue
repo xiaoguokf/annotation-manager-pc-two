@@ -349,7 +349,7 @@ defineExpose({
 
 .feedback-auditor {
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .feedback-content,
@@ -360,13 +360,13 @@ defineExpose({
 
 .feedback-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
 
 .feedback-text {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
@@ -380,7 +380,7 @@ defineExpose({
 
 .feedback-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .ml-4 {

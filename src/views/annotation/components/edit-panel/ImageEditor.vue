@@ -357,7 +357,7 @@ onMounted(() => {
 }
 
 .setting-label {
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .color-picker {
@@ -370,7 +370,7 @@ onMounted(() => {
 
 .size-value {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   min-width: 35px;
 }
 

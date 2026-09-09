@@ -871,7 +871,7 @@ onMounted(async () => {
 .section-title {
   font-size: 16px;
   font-weight: bold;
-  color: #303133;
+  color: var(--el-text-color-primary);
   padding-left: 10px;
   border-left: 4px solid #409EFF;
   line-height: 1.2;
@@ -924,7 +924,7 @@ onMounted(async () => {
 }
 
 .page-number {
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .image-slot {
@@ -933,7 +933,7 @@ onMounted(async () => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   background-color: #f5f7fa;
 }
@@ -944,7 +944,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 40px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .loading-wrapper .el-icon {
@@ -1006,7 +1006,7 @@ onMounted(async () => {
 
 .page-indicator {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   min-width: 60px;
   text-align: center;
 }
@@ -1014,7 +1014,7 @@ onMounted(async () => {
 .no-data {
   text-align: center;
   padding: 60px 20px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .content-area {

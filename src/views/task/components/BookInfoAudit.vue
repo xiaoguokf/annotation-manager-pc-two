@@ -668,7 +668,7 @@ defineExpose({
 .section-title {
   font-size: 16px;
   font-weight: bold;
-  color: #303133;
+  color: var(--el-text-color-primary);
   padding-left: 10px;
   border-left: 4px solid #409EFF;
   line-height: 1.2;
@@ -713,7 +713,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   padding: 40px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .loading-wrapper .el-icon {
@@ -724,7 +724,7 @@ defineExpose({
 .no-data {
   text-align: center;
   padding: 60px 20px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .records-list {
@@ -746,7 +746,7 @@ defineExpose({
 
 .record-content {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -799,12 +799,12 @@ defineExpose({
 
 .record-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .handler-info {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -843,7 +843,7 @@ defineExpose({
 }
 
 .option-remark {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-left: 8px;
 }
 </style>

@@ -1425,7 +1425,7 @@ const toggleProgressMinimize = () => {
 .section-title {
   font-size: 16px;
   font-weight: bold;
-  color: #303133;
+  color: var(--el-text-color-primary);
   padding-left: 10px;
   border-left: 4px solid #409EFF;
   line-height: 1.2;
@@ -1514,7 +1514,7 @@ const toggleProgressMinimize = () => {
 
 .filter-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .tree-node {
@@ -1526,7 +1526,7 @@ const toggleProgressMinimize = () => {
 
 .question-count {
   margin-left: 8px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: normal;
 }
@@ -1539,7 +1539,7 @@ const toggleProgressMinimize = () => {
 }
 
 .tishi-count {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: normal;
 }
@@ -1613,16 +1613,16 @@ const toggleProgressMinimize = () => {
   display: flex;
   align-items: center;
   font-size: 12px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .meta-info-item .info-label {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-right: 4px;
 }
 
 .meta-info-item .info-value {
-  color: #303133;
+  color: var(--el-text-color-primary);
   font-weight: 500;
 }
 
@@ -1632,7 +1632,7 @@ const toggleProgressMinimize = () => {
   gap: 15px;
   margin-bottom: 8px;
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .user-info {
@@ -1711,7 +1711,7 @@ const toggleProgressMinimize = () => {
 .audit-title {
   font-size: 14px;
   font-weight: bold;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .audit-content {
@@ -1739,7 +1739,7 @@ const toggleProgressMinimize = () => {
 .edit-input :deep(.el-textarea__inner) {
   background-color: #f0f9ff;
   border-color: #409EFF;
-  color: #303133;
+  color: var(--el-text-color-primary);
   font-family: monospace;
   font-size: 13px;
   line-height: 1.6;
@@ -1761,7 +1761,7 @@ const toggleProgressMinimize = () => {
 .audit-label {
   font-size: 13px;
   font-weight: bold;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1894,7 +1894,7 @@ const toggleProgressMinimize = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .item-footer {
@@ -1936,7 +1936,7 @@ const toggleProgressMinimize = () => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   background-color: #f5f7fa;
 }
@@ -1957,7 +1957,7 @@ const toggleProgressMinimize = () => {
 .question-audit-section :deep(.el-divider__text) {
   font-size: 13px;
   font-weight: 500;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .question-audit-section .records-list {
@@ -2036,12 +2036,12 @@ const toggleProgressMinimize = () => {
 
 .record-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .handler-info {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2155,7 +2155,7 @@ const toggleProgressMinimize = () => {
 
 /* 加载占位符 */
 .preview-content :deep(.lazy-image-placeholder) {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 14px;
   pointer-events: none;
   z-index: 1;
@@ -2244,7 +2244,7 @@ const toggleProgressMinimize = () => {
 .minimized-text {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 /* 展开模式容器 */
@@ -2264,7 +2264,7 @@ const toggleProgressMinimize = () => {
 .minimize-btn {
   cursor: pointer;
   font-size: 20px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   transition: all 0.2s;
   padding: 4px;
   border-radius: 4px;
@@ -2279,13 +2279,13 @@ const toggleProgressMinimize = () => {
 .progress-label {
   font-size: 13px;
   font-weight: 500;
-  color: #606266;
+  color: var(--el-text-color-regular);
   margin-bottom: 4px;
 }
 
 .progress-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-bottom: 4px;
   padding: 4px 8px;
   background: #f5f7fa;
@@ -2304,7 +2304,7 @@ const toggleProgressMinimize = () => {
 .progress-text {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .progress-percent {

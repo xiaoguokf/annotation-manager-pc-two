@@ -482,14 +482,14 @@ watch(() => props.annotations, (newAnnotations) => {
 .annotation-bar-type {
   font-size: 12px;
   font-weight: 500;
-  color: #303133;
+  color: var(--el-text-color-primary);
   word-break: break-word;
   line-height: 1.3;
 }
 
 .annotation-bar-page {
   font-size: 10px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
 
@@ -500,7 +500,7 @@ watch(() => props.annotations, (newAnnotations) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .no-annotation-data {

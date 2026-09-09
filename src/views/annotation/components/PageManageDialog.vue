@@ -580,7 +580,7 @@ const handleImageError = (event: Event, url: string) => {
 }
 
 .page-number {
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .image-slot {
@@ -589,7 +589,7 @@ const handleImageError = (event: Event, url: string) => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   background-color: #f5f7fa;
 }
@@ -597,7 +597,7 @@ const handleImageError = (event: Event, url: string) => {
 .no-data {
   text-align: center;
   padding: 40px 20px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
 }
 </style>

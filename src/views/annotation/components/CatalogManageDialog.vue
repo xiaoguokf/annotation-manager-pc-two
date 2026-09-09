@@ -1002,7 +1002,7 @@ const handleNodeDrop = (draggingNode: any, dropNode: any, position: string) => {
   overflow-y: auto;
   font-size: 13px;
   line-height: 1.6;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .example-thumbnail {
@@ -1027,7 +1027,7 @@ const handleNodeDrop = (draggingNode: any, dropNode: any, position: string) => {
   width: 100%;
   height: 100%;
   background-color: #f5f7fa;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .dialog-header {
@@ -1039,7 +1039,7 @@ const handleNodeDrop = (draggingNode: any, dropNode: any, position: string) => {
 .dialog-title {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 </style>
 
