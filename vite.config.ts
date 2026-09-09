@@ -33,7 +33,7 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
       allowedHosts: true,
       proxy: {
         '/api': {
-          target: 'https://6fm08ytjel-8080.cnb.run/',
+          target: 'http://localhost:8080',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },

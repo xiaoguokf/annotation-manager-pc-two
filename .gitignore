@@ -39,3 +39,9 @@ __screenshots__/
 
 dist-electron
 release
+
+# Playwright
+.auth/
+screenshots/
+test-results/
+playwright-report/
