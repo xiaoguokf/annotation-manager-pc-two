@@ -4,7 +4,7 @@ $:
     - runner:
         cpus: 8
       docker:
-        image: docker.cnb.cool/sshinelt/ide/idea-maven-ide
+        image: docker.cnb.cool/sshinelt/ide/nodejs-ide
       services:
         - vscode
         - docker
