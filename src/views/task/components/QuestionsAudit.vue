@@ -361,7 +361,7 @@ import type { DicGradeVO, DicSubjectVO } from '@/api/gen/dicController'
 import type { CatalogueVO } from '@/api/gen/catalogueController'
 import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotationController'
 import { getAnnotationListByQuestionApi, type AnnotationVO as AnnotationFullVO } from '@/api/gen/annotationController'
-import { renderContent as renderContentUtil } from '@/utils/contentRenderer'
+import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
 import AnnotationViewer from './AnnotationViewer.vue'
 import 'katex/dist/katex.min.css'
 
@@ -1078,7 +1078,8 @@ const processImageUrls = (content: string | undefined) => {
 // 渲染 LaTeX 公式
 // 处理内联内容（使用公共工具函数）
 const processInlineContent = (content: string | undefined) => {
-  return renderContentUtil(content || '', processImageUrl)
+  // 题干/选项来自用户输入或模型输出，先清洗再渲染
+  return renderContentUtil(sanitizeHtml(content || ''), processImageUrl)
 }
 
 // 提交审核反馈

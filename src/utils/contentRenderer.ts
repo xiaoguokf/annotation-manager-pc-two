@@ -1,5 +1,46 @@
 import katex from 'katex'
+import DOMPurify from 'dompurify'
 import 'katex/contrib/mhchem'
+
+/**
+ * 行内公式定界符：$...$ 与 \(...\)
+ */
+const INLINE_FORMULA = /\$([^$\n]+)\$|\\\(([\s\S]*?)\\\)/g
+
+/**
+ * 块级公式定界符：$$...$$ 与 \[...\]
+ */
+const BLOCK_FORMULA = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
+
+/**
+ * 渲染一段文本中的公式。
+ *
+ * 与后端 FormulaNormalizer 保持同一套定界符（\( \)、\[ \]、$ $、$$ $$），
+ * 先块级后行内，避免 $$ 被行内规则截断。
+ */
+export const renderFormulas = (text: string): string =>
+  text
+    .replace(BLOCK_FORMULA, (_match, dollarLatex, bracketLatex) =>
+      renderLatex((dollarLatex ?? bracketLatex).trim(), true),
+    )
+    .replace(INLINE_FORMULA, (_match, dollarLatex, parenLatex) =>
+      renderLatex((dollarLatex ?? parenLatex).trim(), false),
+    )
+
+/**
+ * 清洗富文本，仅保留排版与媒体标签。
+ *
+ * 题干、选项、解析均来自用户/模型输出，直接 v-html 存在 XSS 风险。
+ * 公式渲染依赖 class 与 style，自定义标签 blank、supplement 属性一并放行。
+ */
+export const sanitizeHtml = (html: string): string => {
+  if (!html) return ''
+
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['blank'],
+    ADD_ATTR: ['supplement'],
+  })
+}
 
 /**
  * 渲染 LaTeX 公式
@@ -130,7 +171,8 @@ export const renderContent = (
   })
 
   // 第二步：对非表格内容进行 LaTeX 和 Markdown 处理
-  const regex = /(\$\$[\s\S]*?\$\$|\$[^\$\n]+\$)/g
+  // 定界符与后端 FormulaNormalizer 一致：$$..$$、\[..\]、$..$、\(..\)
+  const regex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\$\n]+\$|\\\([\s\S]*?\\\))/g
   const parts = result.split(regex)
 
   let processedResult = ''
@@ -138,6 +180,12 @@ export const renderContent = (
     if (part.startsWith('$$') && part.endsWith('$$')) {
       const latex = part.slice(2, -2).trim()
       processedResult += renderLatex(latex, true)
+    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+      const latex = part.slice(2, -2).trim()
+      processedResult += renderLatex(latex, true)
+    } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+      const latex = part.slice(2, -2).trim()
+      processedResult += renderLatex(latex, false)
     } else if (part.startsWith('$') && part.endsWith('$')) {
       const latex = part.slice(1, -1).trim()
       processedResult += renderLatex(latex, false)
@@ -235,29 +283,7 @@ export const renderContent = (
     }
 
     // 处理表格内的 LaTeX 公式
-    processedTable = processedTable.replace(/\$([^\$\n]+)\$/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex, {
-          displayMode: false,
-          throwOnError: false,
-          strict: false
-        })
-      } catch (error) {
-        return match
-      }
-    })
-    // 处理块级公式 $$...$$
-    processedTable = processedTable.replace(/\$\$([\s\S]*?)\$\$/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex.trim(), {
-          displayMode: true,
-          throwOnError: false,
-          strict: false
-        })
-      } catch (error) {
-        return match
-      }
-    })
+    processedTable = renderFormulas(processedTable)
     processedResult = processedResult.replace(`__TABLE_${idx}__`, processedTable)
   })
 
@@ -278,32 +304,8 @@ export const renderContent = (
 
   // 第五步：还原 span 标签占位符
   spanTags.forEach((tag, idx) => {
-    // 处理 span 标签内的 LaTeX
-    let processedSpan = tag
-    // 处理行内公式 $...$
-    processedSpan = processedSpan.replace(/\$([^\$\n]+)\$/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex, {
-          displayMode: false,
-          throwOnError: false,
-          strict: false
-        })
-      } catch (error) {
-        return match
-      }
-    })
-    // 处理块级公式 $$...$$
-    processedSpan = processedSpan.replace(/\$\$([\s\S]*?)\$\$/g, (match, latex) => {
-      try {
-        return katex.renderToString(latex.trim(), {
-          displayMode: true,
-          throwOnError: false,
-          strict: false
-        })
-      } catch (error) {
-        return match
-      }
-    })
+    // 处理 span 标签内的 LaTeX（四种定界符）
+    const processedSpan = renderFormulas(tag)
     processedResult = processedResult.replace(`__SPAN_TAG_${idx}__`, processedSpan)
   })
 

@@ -236,7 +236,7 @@ import { type QuestionVO, type QuestionDetailsVO, getQuestionDetailsApi, putQues
 import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotationController'
 import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
-import { renderContent as renderContentUtil } from '@/utils/contentRenderer'
+import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
 
 const configStore = useConfigStore()
 const parseSettingsStore = useParseSettingsStore()
@@ -803,7 +803,8 @@ const processImageUrl = (url: string) => {
 
 // 渲染内容（支持 Markdown 和 LaTeX）
 const renderContent = (content: string, forPreview: boolean = false) => {
-  return renderContentUtil(content, forPreview ? processImageUrl : null)
+  // 题干/选项来自用户输入或模型输出，先清洗再渲染
+  return renderContentUtil(sanitizeHtml(content), forPreview ? processImageUrl : null)
 }
 
 // 加载题目详情
