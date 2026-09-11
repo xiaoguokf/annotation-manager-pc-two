@@ -30,6 +30,36 @@ if (import.meta.env.VITE_API_URL) {
 }
 const whiteList = ['**/login', '**/genSecret']
 
+/** 无 Content-Disposition 时，按响应类型兜底的文件扩展名 */
+const CONTENT_TYPE_EXTENSIONS: Array<[string, string]> = [
+  ['application/zip', '.zip'],
+  ['application/pdf', '.pdf'],
+  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx'],
+  ['application/vnd.ms-excel', '.xls'],
+]
+
+/**
+ * 解析下载文件名：优先 RFC 5987 的 filename*=UTF-8''，回退普通 filename=。
+ * 两者都缺失时按 content-type 兜底，避免拿到无扩展名的 downloaded_file。
+ */
+function resolveDownloadFilename(disposition: string, contentType: string): string {
+  const encoded = /filename\*\s*=\s*[^']*''([^;\n]*)/i.exec(disposition)
+  if (encoded?.[1]) {
+    const raw = encoded[1].trim()
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  }
+
+  const plain = /filename\s*=\s*"?([^";\n]*)"?/i.exec(disposition)
+  if (plain?.[1]) return plain[1].trim()
+
+  const extension = CONTENT_TYPE_EXTENSIONS.find(([type]) => contentType.includes(type))?.[1] || ''
+  return `download${extension}`
+}
+
 // 获取初始baseURL
 const getInitialBaseURL = () => {
   if (config.baseURL && config.baseURL !== '/api') {
@@ -464,20 +494,14 @@ class SshineAdminHttp {
         ...config,
       })
       .then(response => {
-        const blob = new Blob([response.data], {
-          type: response.data?.type || 'application/octet-stream',
-        });
+        // 后端未声明类型时按 zip 兜底（交付导出固定为 zip）
+        const contentType: string =
+          response.headers?.["content-type"] || response.data?.type || 'application/zip';
+        const blob = new Blob([response.data], { type: contentType });
         const objectUrl = URL.createObjectURL(blob);
 
-        const filenameRegex = /filename\*=(UTF-8'')?([^;\n]*)/i;
-        const matches = filenameRegex.exec(
-          response.headers["content-disposition"]
-        );
-        let filename = "downloaded_file";
-
-        if (matches != null && matches[2]) {
-          filename = decodeURIComponent(matches[2]);
-        }
+        const disposition: string = response.headers?.["content-disposition"] || "";
+        const filename = resolveDownloadFilename(disposition, contentType);
 
         const link = document.createElement("a");
         link.href = objectUrl;

@@ -18,6 +18,9 @@ const PKG_NAME: string = pkg.name || 'annotation-admin-pc'
 // 生成显示名称: annotation-admin-pc → Annotation Admin Pc
 const APP_DISPLAY_NAME = PKG_NAME.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
+// 后端代理地址：本地联调可用 VITE_PROXY_TARGET=http://127.0.0.1:8080 覆盖
+const PROXY_TARGET = process.env.VITE_PROXY_TARGET || 'http://localhost:8080'
+
 // https://vite.dev/config/
 export default ({ command, mode }: ConfigEnv): UserConfigExport => {
   const isServe = command === 'serve'
@@ -33,7 +36,7 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
       allowedHosts: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:8080',
+          target: PROXY_TARGET,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },

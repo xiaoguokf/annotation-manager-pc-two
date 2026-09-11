@@ -275,7 +275,7 @@ import {
   type ProjectClaimListVO,
 } from '@/api/gen/projectController'
 import { getPdfPageListApi, type PdfPageVO } from '@/api/gen/pdfAdminController'
-import { getDeliverExportApi } from '@/api/gen/deliverController'
+import { getDeliverDocxExportApi } from '@/api/gen/docxDeliver'
 import { saveLastExportFolder, getLastExportFolder, isElectron } from '@/utils/export'
 import { getToken } from '@/utils/auth'
 import { getCurrentBaseURL } from '@/utils/http'
@@ -661,7 +661,7 @@ const handleExport = async () => {
 
         // 从 http.ts 获取当前 baseURL
         const baseUrl = getCurrentBaseURL()
-        const apiUrl = `/deliver/export/${row.projectId}`
+        const apiUrl = `/deliver/docx/export/${row.projectId}`
 
         // 下载文件（传入文件夹路径、token 和 baseUrl）
         const result = await window.ipcRenderer?.invoke(
@@ -684,7 +684,7 @@ const handleExport = async () => {
         if (!row) continue
 
         ElMessage.info(`正在导出 ${i + 1}/${selectedRows.value.length}: ${row.title}`)
-        await getDeliverExportApi({ projectId: row.projectId, validate: false })
+        await getDeliverDocxExportApi({ projectId: row.projectId })
       }
     }
 

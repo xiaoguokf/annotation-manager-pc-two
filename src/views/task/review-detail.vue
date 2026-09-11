@@ -199,7 +199,7 @@ import { getBookInfoDetailsApi, type BookVO } from '@/api/gen/bookController'
 import { getDocInfoDetailsApi, type DocVO } from '@/api/gen/docController'
 import { getCatalogueListApi, type CatalogueVO } from '@/api/gen/catalogueController'
 import { putProjectReviewApi, type ProjectReviewCmd } from '@/api/gen/projectController'
-import { getDeliverExportApi } from '@/api/gen/deliverController'
+import { getDeliverDocxExportApi } from '@/api/gen/docxDeliver'
 import {
   getDicGradeListApi,
   getDicSubjectListApi,
@@ -621,7 +621,7 @@ const formatTime = (time: string | undefined) => {
 // 导出JSON
 const handleExportJson = async () => {
   try {
-    await getDeliverExportApi({ projectId: projectId.value, validate: false })
+    await getDeliverDocxExportApi({ projectId: projectId.value })
     ElMessage.success('导出JSON成功')
   } catch (error) {
     ElMessage.error('导出JSON失败')

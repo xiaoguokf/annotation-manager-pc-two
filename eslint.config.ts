@@ -14,7 +14,8 @@ export default defineConfigWithVueTs(
     files: ['**/*.{ts,mts,tsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/dist-electron/**', '**/example/**', '**/coverage/**']),
+  // src/api/gen 为生成器产物，不做 lint
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/dist-electron/**', '**/example/**', '**/coverage/**', 'src/api/gen/**']),
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
