@@ -150,6 +150,20 @@
         </el-form-item>
       </el-form>
     </div>
+
+    <!-- 子题区域 -->
+    <div class="detail-section mb-4">
+      <div class="section-title mb-3">
+        <span>子题</span>
+      </div>
+      <SubQuestionPanel
+        :question-id="props.selectedQuestion.id"
+        :project-id="props.selectedQuestion.projectId"
+        :catalogue-id="props.selectedQuestion.catalogueId"
+        :level="0"
+        @changed="emit('refreshQuestion')"
+      />
+    </div>
     </template>
 
     <!-- 预览模式 -->
@@ -237,6 +251,7 @@ import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotat
 import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
 import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
+import SubQuestionPanel from './SubQuestionPanel.vue'
 
 const configStore = useConfigStore()
 const parseSettingsStore = useParseSettingsStore()
