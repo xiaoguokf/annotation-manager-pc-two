@@ -9,7 +9,12 @@ export const PASSWORD = 'a12345678'
  * 登录并等待跳转首页。
  * 注意：genSecret 很可能在 goto 期间就返回，必须在导航前注册监听，否则会一直等不到。
  */
-export async function login(page: Page, baseURL = BASE_URL) {
+export async function login(
+  page: Page,
+  baseURL = BASE_URL,
+  username: string = USERNAME,
+  password: string = PASSWORD,
+) {
   let lastError: unknown
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -23,8 +28,8 @@ export async function login(page: Page, baseURL = BASE_URL) {
       await usernameInput.waitFor({ state: 'visible', timeout: 15_000 })
       await page.waitForTimeout(1200) // 等 RSA 公钥就绪
 
-      await usernameInput.fill(USERNAME)
-      await page.getByPlaceholder('请输入密码').fill(PASSWORD)
+      await usernameInput.fill(username)
+      await page.getByPlaceholder('请输入密码').fill(password)
 
       const loginPromise = page.waitForResponse((r) => r.url().includes('/auth/login'), { timeout: 20_000 })
       await page.getByRole('button', { name: '登 录' }).click()

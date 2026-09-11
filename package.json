@@ -23,7 +23,8 @@
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
     "icon": "tsx scripts/generate-icons.ts",
-    "generate-api": "tsx scripts/generate-api.ts"
+    "generate-api": "tsx scripts/generate-api.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
