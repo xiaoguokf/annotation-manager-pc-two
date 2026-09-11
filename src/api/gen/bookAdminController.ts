@@ -19,6 +19,12 @@ export interface ResultObject {
   data?: any
 }
 
+export interface BookCreateWithPdfCmd {
+  /* 上传任务ID */
+  uploadId: string
+  fileName: string
+}
+
 export interface ResultString {
   /* 状态码：200-成功，非200-失败 */
   code?: number
@@ -124,6 +130,20 @@ export interface BookVO {
   pdfName: string
   /* 专版描述 */
   specialVersionDesc?: string
+  /* 学段：1-小学，2-初中，3-高中 */
+  phase?: number
+  /* docx 学科枚举（1语文 2数学 3英语 4物理 5化学 6生物 7历史 8地理 9思想政治/道德与法治 10日语 11俄语） */
+  subjectCode?: number
+  /* 册次中文（上册/下册/全一册） */
+  volume?: string
+  /* 版本中文（人教版/北师大版） */
+  edition?: string
+  /* 教辅版本号（supTreeVersion） */
+  supTreeVersion?: string
+  /* 原始学校名称（originSchoolName） */
+  originSchoolName?: string
+  /* 教辅树状态（supStatus） */
+  supStatus?: number
 }
 
 export interface PageVOBookVO {
@@ -173,7 +193,7 @@ export interface ResultBookVO {
 export const postBookAdminRetryPdfApi = (params: {
   bookId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/book/admin/retryPdf/${params?.bookId}`, config)
+  return http.post<ResultVoid>(`/book/admin/retryPdf/${params.bookId}`, null, config)
 }
 
 /**
@@ -195,12 +215,8 @@ export const postBookAdminImportApi = (data: {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultString>
  */
-export const postBookAdminCreateWithPdfApi = (data: {
-  /* 上传任务ID */
-  uploadId: File
-  fileName: File
-}, config?: SshineAdminRequestConfig<any>) => {
-  return http.postForm<ResultString>('/book/admin/createWithPdf', data, config)
+export const postBookAdminCreateWithPdfApi = (data: BookCreateWithPdfCmd, config?: SshineAdminRequestConfig<any>) => {
+  return http.post<ResultString>('/book/admin/createWithPdf', data, config)
 }
 
 /**
@@ -220,7 +236,7 @@ export const getBookAdminListApi = (params?: BookQuery, config?: SshineAdminRequ
  * @returns Promise<ResultListBookVO>
  */
 export const getBookAdminListByIdsApi = (params?: {
-  ids: number[]
+  ids: string[]
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultListBookVO>('/book/admin/listByIds', { params, ...config })
 }
@@ -232,7 +248,7 @@ export const getBookAdminListByIdsApi = (params?: {
  * @returns Promise<any>
  */
 export const getBookAdminExportTemplateApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.download('/book/admin/exportTemplate', config)
+  return http.download('/book/admin/exportTemplate', { method: 'GET', ...config })
 }
 
 /**
@@ -244,7 +260,7 @@ export const getBookAdminExportTemplateApi = (config?: SshineAdminRequestConfig<
 export const getBookAdminDetailsApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultBookVO>(`/book/admin/details/${params?.id}`, config)
+  return http.get<ResultBookVO>(`/book/admin/details/${params.id}`, config)
 }
 
 /**
@@ -254,7 +270,7 @@ export const getBookAdminDetailsApi = (params: {
  * @returns Promise<ResultVoid>
  */
 export const deleteBookAdminBatchDeleteApi = (params?: {
-  ids: number[]
+  ids: string[]
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.delete<ResultVoid>('/book/admin/batchDelete', { params, ...config })
 }

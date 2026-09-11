@@ -60,6 +60,8 @@ export interface DicSubjectVO {
   subjectName: string
   /* 类型：1-书籍，2-试卷 */
   type?: number
+  /* docx 学科枚举（交付输出使用，与题型字典 subject_code 对应） */
+  docxCode?: number
 }
 
 export interface ResultListDicSubjectVO {
@@ -69,6 +71,28 @@ export interface ResultListDicSubjectVO {
   msg?: string
   /* 数据(如果存在) */
   data?: DicSubjectVO[]
+}
+
+export interface DicQuestionTypeVO {
+  /* 主键 */
+  id?: string
+  /* 学科枚举（1~11） */
+  subjectCode?: number
+  /* 题型枚举值（docx） */
+  typeCode?: number
+  /* 题型名 */
+  typeName?: string
+  /* 排序 */
+  sortNo?: number
+}
+
+export interface ResultListDicQuestionTypeVO {
+  /* 状态码：200-成功，非200-失败 */
+  code?: number
+  /* 消息 */
+  msg?: string
+  /* 数据(如果存在) */
+  data?: DicQuestionTypeVO[]
 }
 
 export interface DicPublisherVO {
@@ -187,6 +211,18 @@ export const getDicSubjectListApi = (params?: {
 }
 
 /**
+ * 查询标签题型字典（docx 154 条）
+ * 查询标签题型字典（docx 154 条）
+ * @param config 可选配置，包含 timeout、loading 等选项
+ * @returns Promise<ResultListDicQuestionTypeVO>
+ */
+export const getDicQuestionTypeListApi = (params?: {
+  subjectCode?: number
+}, config?: SshineAdminRequestConfig<any>) => {
+  return http.get<ResultListDicQuestionTypeVO>('/dic/question-type/list', { params, ...config })
+}
+
+/**
  * 查询出版社列表
  * 查询出版社列表
  * @param config 可选配置，包含 timeout、loading 等选项
@@ -211,8 +247,6 @@ export const getDicGradeListApi = (params?: {
 }
 
 /**
- * 查询教辅内容标签列表
- * 查询教辅内容标签列表
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultListDicBookLabelVO>
  */

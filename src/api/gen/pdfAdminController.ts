@@ -119,10 +119,8 @@ export interface ResultListPdfVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postPdfUploadApi = (params: {
-  /* 项目ID */
-  projectId: string
-  /* PDF文件 */
+export const postPdfUploadApi = (params?: {
+  projectId: string,
   file: File
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.postForm<ResultVoid>('/pdf/upload', params, config)
@@ -134,11 +132,11 @@ export const postPdfUploadApi = (params: {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postPdfUploadByUploadIdApi = (params: {
-  uploadId: File,
+export const postPdfUploadByUploadIdApi = (params?: {
+  uploadId: string,
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.postForm<ResultVoid>('/pdf/uploadByUploadId', params, config)
+  return http.post<ResultVoid>('/pdf/uploadByUploadId', null, { params, ...config })
 }
 
 /**
@@ -192,7 +190,7 @@ export const getPdfListApi = (params?: PdfQuery, config?: SshineAdminRequestConf
 export const deletePdfDeleteApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.delete<ResultVoid>(`/pdf/delete/${params?.id}`, { ...config })
+  return http.delete<ResultVoid>(`/pdf/delete/${params.id}`, config)
 }
 
 /**
@@ -202,7 +200,7 @@ export const deletePdfDeleteApi = (params: {
  * @returns Promise<ResultVoid>
  */
 export const deletePdfBatchDeleteApi = (params?: {
-  ids: number[]
+  ids: string[]
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.delete<ResultVoid>('/pdf/batchDelete', { params, ...config })
 }

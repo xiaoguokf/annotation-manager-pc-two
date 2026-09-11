@@ -62,7 +62,7 @@ export interface CatalogueSort {
   /* 排序号 */
   sortNum: number
   /* 子目录 */
-  children?: any[]
+  children?: CatalogueSort[]
 }
 
 export interface CatalogueChangeCmd {

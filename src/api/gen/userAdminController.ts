@@ -47,7 +47,7 @@ export interface ChangePwdCmd {
 
 export interface UserRoleAssignCmd {
   id: string
-  roleIds: number[]
+  roleIds: string[]
 }
 
 export interface UserAddCmd {
@@ -195,7 +195,7 @@ export const getAdminUserListApi = (params?: UserQuery, config?: SshineAdminRequ
  * @returns Promise<ResultVoid>
  */
 export const deleteAdminUserApi = (params?: {
-  id: number[]
+  id: string[]
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.delete<ResultVoid>('/admin/user', { params, ...config })
 }

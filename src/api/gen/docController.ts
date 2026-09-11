@@ -96,10 +96,10 @@ export interface ResultDocVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putDocInfoUpdateApi = (data: DocUpdateCmd, params?: {
+export const putDocInfoUpdateApi = (data: DocUpdateCmd, params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/doc/info/update/${params?.id}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/doc/info/update/${params.id}`, data, config)
 }
 
 /**
@@ -111,6 +111,6 @@ export const putDocInfoUpdateApi = (data: DocUpdateCmd, params?: {
 export const getDocInfoDetailsApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultDocVO>(`/doc/info/details/${params?.id}`, config)
+  return http.get<ResultDocVO>(`/doc/info/details/${params.id}`, config)
 }
 

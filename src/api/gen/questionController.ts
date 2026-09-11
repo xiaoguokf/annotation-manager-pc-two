@@ -1,6 +1,64 @@
 import http from '@/utils/http'
 import type { SshineAdminRequestConfig } from '@/utils/http'
 
+export interface QuestionOptionVO {
+  /* 选项键：A/B/C/D，判断题为 true/false */
+  optionKey?: string
+  /* 选项内容（富文本 HTML） */
+  optionVal?: string
+}
+
+export interface QuestionContentVO {
+  /* 题内序号 */
+  questionOrder?: number
+  /* 分值 */
+  questionScore?: number
+  /* 题目来源名 */
+  questionOriginName?: string
+  /* 题干（富文本 HTML，含 LaTeX 公式与 img 标签） */
+  questionStem?: string
+  /* 一维选项，填空/解答题为 null */
+  questionOptionList?: QuestionOptionVO[]
+  /* 二维选项矩阵 */
+  questionOptionMatrix?: QuestionOptionVO[][]
+  /* 是否连线题：0-否，1-是 */
+  isMatchLine?: number
+  /* 音频地址 */
+  audioUrl?: string
+}
+
+export interface QuestionAnswerOptionVO {
+  /* 答案键：单选填正确选项（如 C），判断填 true/false，填空/解答留空 */
+  optionKey?: string
+  /* 答案内容 */
+  optionVal?: string
+  /* 备选答案（多答案兼容） */
+  extendOptionList?: QuestionOptionVO[]
+}
+
+export interface QuestionAnswerVO {
+  /* 一维答案：多个答案分多条对象填写，禁止合并 */
+  answerOptionList?: QuestionAnswerOptionVO[]
+  /* 二维答案矩阵 */
+  answerOptionMatrix?: QuestionAnswerOptionVO[][]
+}
+
+export interface QuestionAttachVO {
+  /* 文件名 */
+  fileName?: string
+  /* 附件类型：1-图片，2-音频 */
+  fileType?: number
+  /* base64 内容：本系统不接收 base64 上传，图片统一由前端调现有上传接口 `/upload/*` 存 OSS 后回传 OSS 信息，
+ 该字段仅为 docx 输出结构占位，输出固定为空串 */
+  fileData?: string
+  /* OSS bucket */
+  ossBucket?: string
+  /* OSS 路径 */
+  ossPath?: string
+  /* 图片可访问地址（前端走现有上传接口存 OSS 后回传），docx 无此字段，输出不携带 */
+  fileUrl?: string
+}
+
 export interface QuestionUpdateCmd {
   /* 目录id */
   catalogueId?: string
@@ -26,6 +84,32 @@ export interface QuestionUpdateCmd {
   noAnswer?: boolean
   /* 解析 */
   analysis?: string
+  /* 母题ID，顶级题目为 0 */
+  parentId?: string
+  /* 层级：0-母题，1-一级子题，2-二级子题，由服务端按层级推导 */
+  level?: number
+  /* 标签题型枚举（atd_dic_question_type.type_code） */
+  labelQuestionType?: number
+  /* 作答方式：0-综合母题，1-单选，2-多选，3-填空，4-判断，5-解答 */
+  questionAnswerMode?: number
+  /* 题目内容结构化（docx questionContent） */
+  questionContent?: QuestionContentVO
+  /* 题目答案结构化（docx questionAnswer） */
+  questionAnswer?: QuestionAnswerVO
+  /* 题目扩展 */
+  questionExtra?: string
+  /* 文件页码 */
+  filePageNumber?: number
+  /* 教辅页码 */
+  bookPageNumber?: number
+  /* 题目年份 */
+  questionYear?: string
+  /* 题目主题 */
+  questionTopic?: string
+  /* 附件（图片：base64 与 fileUrl 二选一） */
+  attachFileList?: QuestionAttachVO[]
+  /* 子题（最多 2 级递归，三级及以上拒绝） */
+  subQuestionList?: QuestionUpdateCmd[]
 }
 
 export interface ResultVoid {
@@ -80,6 +164,34 @@ export interface QuestionCreateCmd {
   questionComment?: string
   /* 题目开始页码 */
   page?: number
+  /* 题内序号（docx questionOrder） */
+  questionOrder?: number
+  /* 母题ID，顶级题目为 0 */
+  parentId?: string
+  /* 层级：0-母题，1-一级子题，2-二级子题，由服务端按层级推导 */
+  level?: number
+  /* 标签题型枚举（atd_dic_question_type.type_code） */
+  labelQuestionType?: number
+  /* 作答方式：0-综合母题，1-单选，2-多选，3-填空，4-判断，5-解答 */
+  questionAnswerMode?: number
+  /* 题目内容结构化（docx questionContent） */
+  questionContent?: QuestionContentVO
+  /* 题目答案结构化（docx questionAnswer） */
+  questionAnswer?: QuestionAnswerVO
+  /* 题目扩展 */
+  questionExtra?: string
+  /* 文件页码 */
+  filePageNumber?: number
+  /* 教辅页码 */
+  bookPageNumber?: number
+  /* 题目年份 */
+  questionYear?: string
+  /* 题目主题 */
+  questionTopic?: string
+  /* 附件（图片：base64 与 fileUrl 二选一） */
+  attachFileList?: QuestionAttachVO[]
+  /* 子题（最多 2 级递归，三级及以上拒绝） */
+  subQuestionList?: QuestionCreateCmd[]
 }
 
 export interface QuestionAutoSortCmd {
@@ -94,6 +206,16 @@ export interface QuestionQuery {
   projectId: string
   /* 目录ID */
   catalogueId?: string
+  /* 母题ID：0-只查母题，大于0-查指定母题的子题，不传-全部 */
+  parentId?: string
+  /* 层级：0-母题，1-一级子题，2-二级子题 */
+  level?: number
+  /* 标签题型枚举（atd_dic_question_type.type_code） */
+  labelQuestionType?: number
+  /* 作答方式：0-综合母题，1-单选，2-多选，3-填空，4-判断，5-解答 */
+  questionAnswerMode?: number
+  /* 题干关键字（模糊匹配，子题独立检索） */
+  questionKeyword?: string
 }
 
 export interface QuestionVO {
@@ -147,6 +269,36 @@ export interface QuestionDetailsVO {
   analysis?: string
   /* 题目开始页码 */
   page?: number
+  /* 母题ID，顶级题目为 0 */
+  parentId?: string
+  /* 层级：0-母题，1-一级子题，2-二级子题 */
+  level?: number
+  /* 标签题型枚举 */
+  labelQuestionType?: number
+  /* 标签题型中文 */
+  labelQuestionTypeZh?: string
+  /* 作答方式 */
+  questionAnswerMode?: number
+  /* 作答方式中文 */
+  questionAnswerModeZh?: string
+  /* 题目内容结构化 */
+  questionContent?: QuestionContentVO
+  /* 题目答案结构化 */
+  questionAnswer?: QuestionAnswerVO
+  /* 题目扩展 */
+  questionExtra?: string
+  /* 文件页码 */
+  filePageNumber?: number
+  /* 教辅页码 */
+  bookPageNumber?: number
+  /* 题目年份 */
+  questionYear?: string
+  /* 题目主题 */
+  questionTopic?: string
+  /* 附件 */
+  attachFileList?: QuestionAttachVO[]
+  /* 子题（递归） */
+  subQuestionList?: QuestionDetailsVO[]
 }
 
 export interface ResultQuestionDetailsVO {
@@ -183,6 +335,36 @@ export interface QuestionDetailsListVO {
   analysis?: string
   /* 题目开始页码 */
   page?: number
+  /* 母题ID，顶级题目为 0 */
+  parentId?: string
+  /* 层级：0-母题，1-一级子题，2-二级子题 */
+  level?: number
+  /* 标签题型枚举 */
+  labelQuestionType?: number
+  /* 标签题型中文 */
+  labelQuestionTypeZh?: string
+  /* 作答方式 */
+  questionAnswerMode?: number
+  /* 作答方式中文 */
+  questionAnswerModeZh?: string
+  /* 题目内容结构化 */
+  questionContent?: QuestionContentVO
+  /* 题目答案结构化 */
+  questionAnswer?: QuestionAnswerVO
+  /* 题目扩展 */
+  questionExtra?: string
+  /* 文件页码 */
+  filePageNumber?: number
+  /* 教辅页码 */
+  bookPageNumber?: number
+  /* 题目年份 */
+  questionYear?: string
+  /* 题目主题 */
+  questionTopic?: string
+  /* 附件 */
+  attachFileList?: QuestionAttachVO[]
+  /* 子题（递归） */
+  subQuestionList?: QuestionDetailsVO[]
   /* 排序数，用户保证同目录下的题目顺序 */
   sortNum?: number
   /* 目录id */
@@ -250,10 +432,10 @@ export interface ResultQuestionCatalogueVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putQuestionUpdateApi = (data: QuestionUpdateCmd, params?: {
+export const putQuestionUpdateApi = (data: QuestionUpdateCmd, params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/question/update/${params?.id}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/question/update/${params.id}`, data, config)
 }
 
 /**
@@ -305,7 +487,7 @@ export const getQuestionListApi = (params?: QuestionQuery, config?: SshineAdminR
 export const getQuestionDetailsApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultQuestionDetailsVO>(`/question/details/${params?.id}`, config)
+  return http.get<ResultQuestionDetailsVO>(`/question/details/${params.id}`, config)
 }
 
 /**
@@ -317,7 +499,7 @@ export const getQuestionDetailsApi = (params: {
 export const getQuestionDetailsListApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultListQuestionDetailsListVO>(`/question/details/list/${params?.projectId}`, config)
+  return http.get<ResultListQuestionDetailsListVO>(`/question/details/list/${params.projectId}`, config)
 }
 
 /**
@@ -339,7 +521,7 @@ export const getQuestionCheckApi = (params?: QuestionQuery, config?: SshineAdmin
 export const getQuestionCatalogueIdApi = (params: {
   questionId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultQuestionCatalogueVO>(`/question/catalogueId/${params?.questionId}`, config)
+  return http.get<ResultQuestionCatalogueVO>(`/question/catalogueId/${params.questionId}`, config)
 }
 
 /**
@@ -351,6 +533,6 @@ export const getQuestionCatalogueIdApi = (params: {
 export const deleteQuestionDeleteApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.delete<ResultVoid>(`/question/delete/${params?.id}`, { ...config })
+  return http.delete<ResultVoid>(`/question/delete/${params.id}`, config)
 }
 

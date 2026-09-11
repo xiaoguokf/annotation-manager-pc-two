@@ -328,17 +328,52 @@ function resolveParamsType(
     }
   }
 
-  const fields = params.map((param) => {
-    const optional = !param.required
-    const paramName = toCamelCase(param.name)
-    const hasBinary = registry.hasBinaryProperty(param.schema, param.name)
-    const type = hasBinary
-      ? registry.resolveUploadType(param.schema, paramName)
-      : registry.resolveType(param.schema, paramName)
-    return `  ${paramName}${optional ? '?' : ''}: ${type}`
-  })
+  const fields = params.flatMap((param) => expandParamFields(param, registry))
 
   return `{\n${fields.join(',\n')}\n}`
+}
+
+/**
+ * 展开单个参数的字段列表。
+ *
+ * Spring 的对象型参数（@ModelAttribute / 查询对象）在 OpenAPI 里表现为
+ * 名为 cmd / query / arg0 的单个对象参数，但请求实际按扁平字段发送与绑定，
+ * 因此这里展开为其属性，避免生成后端无法绑定的 cmd[xxx] 结构。
+ */
+function expandParamFields(param: OpenAPIParameter, registry: SchemaRegistry): string[] {
+  const hasBinary = registry.hasBinaryProperty(param.schema, param.name)
+  const objectSchema = resolveObjectSchema(param.schema, registry)
+
+  if (objectSchema) {
+    const required = objectSchema.required || []
+    return Object.entries(objectSchema.properties || {}).map(([key, prop]) => {
+      const type = hasBinary
+        ? registry.resolveUploadType(prop, key)
+        : registry.resolveType(prop, key)
+      return `  ${key}${required.includes(key) ? '' : '?'}: ${type}`
+    })
+  }
+
+  const paramName = toCamelCase(param.name)
+  const type = hasBinary
+    ? registry.resolveUploadType(param.schema, paramName)
+    : registry.resolveType(param.schema, paramName)
+  return [`  ${paramName}${param.required ? '' : '?'}: ${type}`]
+}
+
+/** 取对象型 schema（$ref 会解析为实体定义），非对象返回 undefined */
+function resolveObjectSchema(
+  schema: OpenAPISchemaLike | undefined,
+  registry: SchemaRegistry,
+): OpenAPISchemaLike | undefined {
+  if (!schema) return undefined
+
+  if (schema.$ref) {
+    const resolved = registry.getSchema(schema.$ref.replace('#/components/schemas/', ''))
+    return resolved?.type === 'object' ? resolved : undefined
+  }
+
+  return schema.type === 'object' ? schema : undefined
 }
 
 /** 响应类型，取 200/201/首个响应 */

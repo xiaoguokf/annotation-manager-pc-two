@@ -158,7 +158,7 @@ export const getDocAdminListApi = (params?: DocQuery, config?: SshineAdminReques
  * @returns Promise<any>
  */
 export const getDocAdminExportTemplateApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.download('/doc/admin/exportTemplate', config)
+  return http.download('/doc/admin/exportTemplate', { method: 'GET', ...config })
 }
 
 /**
@@ -170,7 +170,7 @@ export const getDocAdminExportTemplateApi = (config?: SshineAdminRequestConfig<a
 export const getDocAdminDetailsApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultDocVO>(`/doc/admin/details/${params?.id}`, config)
+  return http.get<ResultDocVO>(`/doc/admin/details/${params.id}`, config)
 }
 
 /**
@@ -180,7 +180,7 @@ export const getDocAdminDetailsApi = (params: {
  * @returns Promise<ResultVoid>
  */
 export const deleteDocAdminBatchDeleteApi = (params?: {
-  ids: number[]
+  ids: string[]
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.delete<ResultVoid>('/doc/admin/batchDelete', { params, ...config })
 }

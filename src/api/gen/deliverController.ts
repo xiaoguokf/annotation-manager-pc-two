@@ -97,6 +97,7 @@ export interface BookImgDeliverVO {
 export interface ChapterDeliverVO {
   text?: string
   type?: string
+  sub?: ChapterDeliverVO[]
 }
 
 export interface ChapterDeliverListVO {
@@ -108,7 +109,7 @@ export interface ChapterDeliverListVO {
 export interface QuestionChapterDeliverVO {
   text?: string
   type?: string
-  sub?: any
+  sub?: QuestionChapterDeliverVO
 }
 
 export interface QuestionDeliverVO {
@@ -178,9 +179,10 @@ export interface ResultDeliverVO {
  * @returns Promise<ResultVoid>
  */
 export const postDeliverSubmitApi = (params: {
-  projectId: string
+  projectId: string,
+  isSingle?: boolean
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/deliver/submit/${params?.projectId}`, config)
+  return http.post<ResultVoid>(`/deliver/submit/${params.projectId}`, null, { params, ...config })
 }
 
 /**
@@ -193,7 +195,7 @@ export const postDeliverSubmitSignApi = (params: {
   projectId: string,
   step: number
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/deliver/submit/sign/${params?.projectId}/${params?.step}`, config)
+  return http.post<ResultVoid>(`/deliver/submit/sign/${params.projectId}/${params.step}`, null, config)
 }
 
 /**
@@ -206,7 +208,7 @@ export const postDeliverSubmitSignApi = (params: {
 export const postDeliverMaterialApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/deliver/material/${params?.projectId}`, config)
+  return http.post<ResultVoid>(`/deliver/material/${params.projectId}`, null, config)
 }
 
 /**
@@ -218,20 +220,20 @@ export const postDeliverMaterialApi = (params: {
 export const getDeliverRecordsApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultListProjectSummitRecordVO>(`/deliver/records/${params?.projectId}`, config)
+  return http.get<ResultListProjectSummitRecordVO>(`/deliver/records/${params.projectId}`, config)
 }
 
 /**
- * 下载导出项目成果交付数据为ZIP
- * 下载导出项目成果交付数据为ZIP
+ * 【旧】旧百度格式导出。新格式见 <code>DocxDeliverController</code> 的 <code>/deliver/docx/export/{projectId</code>}
+ * 【旧】旧百度格式导出。新格式见 <code>DocxDeliverController</code> 的 <code>/deliver/docx/export/{projectId</code>}
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<any>
  */
-export const getDeliverExportApi = (params?: {
+export const getDeliverExportApi = (params: {
   projectId: string,
   validate?: boolean
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.download(`/deliver/export/${params?.projectId}`, { params, ...config })
+  return http.download(`/deliver/export/${params.projectId}`, { method: 'GET', params, ...config })
 }
 
 /**
@@ -243,6 +245,6 @@ export const getDeliverExportApi = (params?: {
 export const getDeliverDetailsApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultDeliverVO>(`/deliver/details/${params?.projectId}`, config)
+  return http.get<ResultDeliverVO>(`/deliver/details/${params.projectId}`, config)
 }
 

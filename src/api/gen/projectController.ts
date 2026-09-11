@@ -230,10 +230,10 @@ export interface ResultPageVOProjectClaimHistoryVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putProjectSubmitProblemApi = (data: ProjectProblemSubmitCmd, params?: {
+export const putProjectSubmitProblemApi = (data: ProjectProblemSubmitCmd, params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/submit/problem/${params?.projectId}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/project/submit/problem/${params.projectId}`, data, config)
 }
 
 /**
@@ -245,7 +245,7 @@ export const putProjectSubmitProblemApi = (data: ProjectProblemSubmitCmd, params
 export const putProjectSubmitIncompleteApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/submit/incomplete/${params?.projectId}`, config)
+  return http.put<ResultVoid>(`/project/submit/incomplete/${params.projectId}`, null, config)
 }
 
 /**
@@ -257,7 +257,7 @@ export const putProjectSubmitIncompleteApi = (params: {
 export const putProjectSubmitCompleteApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/submit/complete/${params?.projectId}`, config)
+  return http.put<ResultVoid>(`/project/submit/complete/${params.projectId}`, null, config)
 }
 
 /**
@@ -266,10 +266,10 @@ export const putProjectSubmitCompleteApi = (params: {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putProjectReviewApi = (data: ProjectReviewCmd, params?: {
+export const putProjectReviewApi = (data: ProjectReviewCmd, params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/review/${params?.projectId}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/project/review/${params.projectId}`, data, config)
 }
 
 /**
@@ -281,7 +281,7 @@ export const putProjectReviewApi = (data: ProjectReviewCmd, params?: {
 export const putProjectRejectApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/reject/${params?.projectId}`, config)
+  return http.put<ResultVoid>(`/project/reject/${params.projectId}`, null, config)
 }
 
 /**
@@ -293,7 +293,7 @@ export const putProjectRejectApi = (params: {
 export const putProjectReclaimApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/reclaim/${params?.projectId}`, config)
+  return http.put<ResultVoid>(`/project/reclaim/${params.projectId}`, null, config)
 }
 
 /**
@@ -312,10 +312,10 @@ export const putProjectReassignApi = (data: ProjectReassignCmd, config?: SshineA
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putProjectMaterialReviewApi = (data: MaterialReviewCmd, params?: {
+export const putProjectMaterialReviewApi = (data: MaterialReviewCmd, params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/project/material/review/${params?.projectId}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/project/material/review/${params.projectId}`, data, config)
 }
 
 /**
@@ -337,7 +337,7 @@ export const putProjectChangeSearchIdApi = (data: ProjectChangeSearchIdCmd, conf
  * @returns Promise<ResultVoid>
  */
 export const postProjectReviewClaimApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>('/project/review/claim', config)
+  return http.post<ResultVoid>('/project/review/claim', null, config)
 }
 
 /**
@@ -349,7 +349,7 @@ export const postProjectReviewClaimApi = (config?: SshineAdminRequestConfig<any>
 export const postProjectReviewClaimSearchIdApi = (params: {
   searchId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/project/review/claim/search-id/${params?.searchId}`, config)
+  return http.post<ResultVoid>(`/project/review/claim/search-id/${params.searchId}`, null, config)
 }
 
 /**
@@ -380,7 +380,7 @@ export const postProjectMaterialSubmitApi = (data: SubmitMaterialReviewCmd, conf
  * @returns Promise<ResultVoid>
  */
 export const postProjectClaimApi = (config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>('/project/claim', config)
+  return http.post<ResultVoid>('/project/claim', null, config)
 }
 
 /**
@@ -392,7 +392,7 @@ export const postProjectClaimApi = (config?: SshineAdminRequestConfig<any>) => {
 export const postProjectClaimSearchIdApi = (params: {
   searchId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/project/claim/search-id/${params?.searchId}`, config)
+  return http.post<ResultVoid>(`/project/claim/search-id/${params.searchId}`, null, config)
 }
 
 /**

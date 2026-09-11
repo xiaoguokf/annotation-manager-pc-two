@@ -128,6 +128,7 @@ export class SchemaRegistry {
     schema: OpenAPISchema | undefined,
     name: string,
     usedTypes?: Set<string>,
+    visitedRefs = new Set<string>(),
   ): string {
     if (schema && usedTypes) this.collect(schema, usedTypes)
 
@@ -135,8 +136,19 @@ export class SchemaRegistry {
 
     // 内联展开 $ref，确保 File 字段能被识别
     if (schema.$ref) {
+      const refName = schema.$ref.replace('#/components/schemas/', '')
+
+      // 自引用（如 QuestionCreateCmd.subQuestionList）无法内联展开，
+      // 否则会无限递归；退回类型名并保证该类型被渲染出来
+      if (visitedRefs.has(refName)) {
+        usedTypes?.add(refName)
+        return refName
+      }
+
       const refSchema = this.resolveRef(schema.$ref)
-      return refSchema ? this.resolveUploadType(refSchema, name, usedTypes) : name
+      return refSchema
+        ? this.resolveUploadType(refSchema, name, usedTypes, new Set(visitedRefs).add(refName))
+        : refName
     }
 
     switch (schema.type) {
@@ -155,13 +167,13 @@ export class SchemaRegistry {
         return 'boolean'
 
       case 'array':
-        return `${this.resolveUploadType(schema.items, this.inferItemName(name))}[]`
+        return `${this.resolveUploadType(schema.items, this.inferItemName(name), usedTypes, visitedRefs)}[]`
 
       case 'object':
         return this.resolveObjectType(schema, (prop, key) => {
           const isFile =
             /file$|upload$/i.test(key) || prop.format === 'binary'
-          return isFile ? 'File' : this.resolveUploadType(prop, key)
+          return isFile ? 'File' : this.resolveUploadType(prop, key, usedTypes, visitedRefs)
         })
 
       default:

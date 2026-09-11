@@ -183,16 +183,11 @@ export interface ResultListAnnotationVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAnnotationUpdateTypeApi = (params: {
-  /* 标注ID */
-  annotationId: string
-  /* 题类：题干-1，题干图-2，选项-3，选项图-4，解析-5，解析图-6，答案-7，答案图-8，表格-9 */
-  type: number
-  /* 文件（裁剪后的图片，可选） */
-  file?: File
-  /* 输入类型：1-图片，2-文本，3-表格（可选，不传则根据type自动判断） */
-  inputType?: number
-  /* OCR模型：1-豆包，2-合合（可选） */
+export const putAnnotationUpdateTypeApi = (params?: {
+  annotationId: string,
+  type: number,
+  file?: File,
+  inputType?: number,
   model?: number
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.putForm<ResultVoid>('/annotation/updateType', params, config)
@@ -244,14 +239,10 @@ export const postAnnotationProcessAnnotationApi = (data: ProcessAnnotationCmd, c
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const postAnnotationParseApi = (params: {
-  /* 标注ID */
-  annotationId: string
-  /* 输入类型：1-图片，2-文本，3-表格 */
-  inputType: number
-  /* OCR模型：1-豆包，2-合合 */
-  model: number
-  /* 文件 */
+export const postAnnotationParseApi = (params?: {
+  annotationId: string,
+  inputType: number,
+  model: number,
   file: File
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.postForm<ResultVoid>('/annotation/parse', params, config)
@@ -325,6 +316,6 @@ export const getAnnotationListByProjectAndPageApi = (params?: {
 export const deleteAnnotationDeleteApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.delete<ResultVoid>(`/annotation/delete/${params?.id}`, { ...config })
+  return http.delete<ResultVoid>(`/annotation/delete/${params.id}`, config)
 }
 

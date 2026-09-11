@@ -88,10 +88,10 @@ export interface ResultListProjectAuditVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putAuditProjectHandleApi = (data: ProjectAuditHandleCmd, params?: {
+export const putAuditProjectHandleApi = (data: ProjectAuditHandleCmd, params: {
   auditId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/audit/project/handle/${params?.auditId}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/audit/project/handle/${params.auditId}`, data, config)
 }
 
 /**
@@ -113,7 +113,7 @@ export const postAuditProjectCreateApi = (data: ProjectAuditCreateCmd, config?: 
 export const getAuditProjectListApi = (params: {
   projectId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultListProjectAuditVO>(`/audit/project/list/${params?.projectId}`, config)
+  return http.get<ResultListProjectAuditVO>(`/audit/project/list/${params.projectId}`, config)
 }
 
 /**
@@ -125,6 +125,6 @@ export const getAuditProjectListApi = (params: {
 export const deleteAuditProjectDeleteApi = (params: {
   auditId: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.delete<ResultVoid>(`/audit/project/delete/${params?.auditId}`, { ...config })
+  return http.delete<ResultVoid>(`/audit/project/delete/${params.auditId}`, config)
 }
 

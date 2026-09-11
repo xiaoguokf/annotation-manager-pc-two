@@ -32,6 +32,20 @@ export interface BookUpdateCmd {
   cityId?: string
   /* 专版描述 */
   specialVersionDesc?: string
+  /* 学段：1-小学，2-初中，3-高中 */
+  phase?: number
+  /* docx 学科枚举（1语文 2数学 3英语 4物理 5化学 6生物 7历史 8地理 9思想政治/道德与法治 10日语 11俄语） */
+  subjectCode?: number
+  /* 册次中文（上册/下册/全一册） */
+  volume?: string
+  /* 版本中文（人教版/北师大版） */
+  edition?: string
+  /* 教辅版本号（supTreeVersion） */
+  supTreeVersion?: string
+  /* 原始学校名称（originSchoolName） */
+  originSchoolName?: string
+  /* 教辅树状态（supStatus） */
+  supStatus?: number
 }
 
 export interface ResultVoid {
@@ -123,6 +137,20 @@ export interface BookVO {
   pdfName: string
   /* 专版描述 */
   specialVersionDesc?: string
+  /* 学段：1-小学，2-初中，3-高中 */
+  phase?: number
+  /* docx 学科枚举（1语文 2数学 3英语 4物理 5化学 6生物 7历史 8地理 9思想政治/道德与法治 10日语 11俄语） */
+  subjectCode?: number
+  /* 册次中文（上册/下册/全一册） */
+  volume?: string
+  /* 版本中文（人教版/北师大版） */
+  edition?: string
+  /* 教辅版本号（supTreeVersion） */
+  supTreeVersion?: string
+  /* 原始学校名称（originSchoolName） */
+  originSchoolName?: string
+  /* 教辅树状态（supStatus） */
+  supStatus?: number
 }
 
 export interface ResultBookVO {
@@ -140,10 +168,10 @@ export interface ResultBookVO {
  * @param config 可选配置，包含 timeout、loading 等选项
  * @returns Promise<ResultVoid>
  */
-export const putBookInfoUpdateApi = (data: BookUpdateCmd, params?: {
+export const putBookInfoUpdateApi = (data: BookUpdateCmd, params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.put<ResultVoid>(`/book/info/update/${params?.id}`, data, params ? { params, ...config } : config)
+  return http.put<ResultVoid>(`/book/info/update/${params.id}`, data, config)
 }
 
 /**
@@ -155,6 +183,6 @@ export const putBookInfoUpdateApi = (data: BookUpdateCmd, params?: {
 export const getBookInfoDetailsApi = (params: {
   id: string
 }, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultBookVO>(`/book/info/details/${params?.id}`, config)
+  return http.get<ResultBookVO>(`/book/info/details/${params.id}`, config)
 }
 
