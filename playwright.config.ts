@@ -11,6 +11,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
+  // 登录含 RSA 公钥获取与重试，单个用例放宽到 2 分钟
+  timeout: 120_000,
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
