@@ -6,8 +6,9 @@ import { test, expect } from '@playwright/test'
 import { BASE_URL, login } from './utils'
 
 /**
- * 交付导出端到端：登录 → 交付预览页 → 预览 JSON → 导出 zip → 解压校验。
+ * 交付导出端到端：登录 → 审核详情页「导出JSON」→ 下载 zip → 解压校验。
  *
+ * 走业务里原有的导出入口（task/review-detail.vue），不额外新增页面。
  * 账号与项目来自环境变量，未配置时跳过，避免污染通用 e2e：
  *   E2E_USERNAME / E2E_PASSWORD / E2E_PROJECT_ID
  */
@@ -21,27 +22,18 @@ test.describe('交付导出（docx 新格式）', () => {
     '未配置 E2E_USERNAME / E2E_PASSWORD / E2E_PROJECT_ID，跳过导出端到端',
   )
 
-  test('预览并导出 zip', async ({ page }) => {
+  test('审核详情页导出 zip', async ({ page }) => {
     // playwright 的 setup 工程已登录并写入 storageState，这里只在会话失效时按环境变量重新登录
     await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' })
     if (page.url().includes('/login')) {
       await login(page, BASE_URL, USERNAME as string, PASSWORD as string)
     }
 
-    await page.goto(`${BASE_URL}/deliver/docx-preview`, { waitUntil: 'networkidle' })
-    await page.getByPlaceholder('请输入项目ID').fill(PROJECT_ID as string)
-    await page.getByRole('button', { name: '预览' }).click()
-
-    // 预览区出现完整 docx 结构（项目题量较大，给足等待时间）
-    const jsonArea = page.locator('.json-area textarea')
-    await expect(jsonArea).not.toHaveValue('', { timeout: 60_000 })
-    const json = await jsonArea.inputValue()
-    expect(json).toContain('supTreeName')
-    expect(json).toContain('supTreeDetail')
+    await page.goto(`${BASE_URL}/task/review/${PROJECT_ID}`, { waitUntil: 'networkidle' })
 
     const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 30_000 }),
-      page.getByRole('button', { name: '导出ZIP' }).click(),
+      page.waitForEvent('download', { timeout: 60_000 }),
+      page.getByRole('button', { name: '导出JSON' }).click(),
     ])
 
     expect(download.suggestedFilename()).toMatch(/\.zip$/)
