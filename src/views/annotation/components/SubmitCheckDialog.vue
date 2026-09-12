@@ -360,14 +360,9 @@ const checkBookInfo = async () => {
       if (response.data.code === 200 && response.data.data) {
         const data = response.data.data
         if (!data.title) messages.push('书籍名称')
-        if (!data.isbn) messages.push('ISBN')
-        if (!data.seriesTitle) messages.push('丛书名')
-        if (!data.year) messages.push('出版年份')
-        if (!data.gradeId) messages.push('年级')
         if (!data.subjectId) messages.push('学科')
         if (!data.volumeId) messages.push('册别')
         if (!data.bookVersionId) messages.push('版本')
-        if (!data.publisherId) messages.push('出版社')
       }
     } else {
       const response = await getDocInfoDetailsApi({ id: props.projectId })

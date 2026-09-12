@@ -31,20 +31,6 @@
               <el-descriptions-item label="书籍名称" :span="2">
                 <el-input v-model="editForm.title" placeholder="请输入书籍名称" />
               </el-descriptions-item>
-              <el-descriptions-item label="ISBN" :span="2">
-                <el-input v-model="editForm.isbn" placeholder="请输入ISBN（13位）" maxlength="13" @input="editForm.isbn = (editForm.isbn ?? '').replace(/\D/g, '')" />
-              </el-descriptions-item>
-              <el-descriptions-item label="丛书名" :span="2">
-                <el-input v-model="editForm.seriesTitle" placeholder="请输入丛书名" />
-              </el-descriptions-item>
-              <el-descriptions-item label="出版年份">
-                <el-input-number v-model="editForm.year" :min="1900" :max="2100" controls-position="right" />
-              </el-descriptions-item>
-              <el-descriptions-item label="年级">
-                <el-select v-model="editForm.gradeId" placeholder="请选择年级" style="width: 100%" filterable>
-                  <el-option v-for="item in gradeList.filter(i => i.id)" :key="item.id" :label="item.gradeName" :value="item.id!" />
-                </el-select>
-              </el-descriptions-item>
               <el-descriptions-item label="学科">
                 <el-select v-model="editForm.subjectId" placeholder="请选择学科" style="width: 100%" filterable>
                   <el-option v-for="item in subjectList.filter(i => i.id)" :key="item.id" :label="item.subjectName" :value="item.id!" />
@@ -60,87 +46,16 @@
                   <el-option v-for="item in versionList.filter(i => i.id)" :key="item.id" :label="item.name" :value="item.id!" />
                 </el-select>
               </el-descriptions-item>
-              <el-descriptions-item label="出版社">
-                <el-select v-model="editForm.publisherId" placeholder="请选择出版社" style="width: 100%" filterable>
-                  <el-option v-for="item in publisherList.filter(i => i.id)" :key="item.id" :label="item.name" :value="item.id!" />
-                </el-select>
-              </el-descriptions-item>
-              <el-descriptions-item label="定价">
-                <el-input-number v-model="editForm.price" :min="0" :precision="2" :step="0.01" controls-position="right" placeholder="请输入定价" />
-              </el-descriptions-item>
-              <el-descriptions-item label="教辅内容标签">
-                <el-select v-model="editForm.bookLabelId" placeholder="请选择教辅内容标签" style="width: 100%" filterable clearable>
-                  <el-option
-                    v-for="item in bookLabelList.filter(i => i.id)"
-                    :key="item.id"
-                    :label="item.name"
-                    :value="String(item.id)"
-                  >
-                    <span class="option-name">{{ item.name }}</span>
-                    <span v-if="item.remark" class="option-remark">{{ item.remark }}</span>
-                  </el-option>
-                </el-select>
-              </el-descriptions-item>
-              <el-descriptions-item label="是否有专版">
-                <el-radio-group v-model="editForm.hasSpecialVersion">
-                  <el-radio :value="1">是</el-radio>
-                  <el-radio :value="0">否</el-radio>
-                </el-radio-group>
-              </el-descriptions-item>
-              <el-descriptions-item v-if="editForm.hasSpecialVersion === 1" label="专版省份" :span="2">
-                <el-select v-model="editForm.provinceId" placeholder="请选择省份" style="width: 100%" filterable multiple>
-                  <el-option v-for="item in provinceList.filter(item => item.level === 1 && item.id)" :key="item.id" :label="item.name"
-                    :value="item.id!" />
-                </el-select>
-              </el-descriptions-item>
-              <el-descriptions-item v-if="editForm.hasSpecialVersion === 1" label="专版城市" :span="2">
-                <el-select v-model="editForm.cityId" placeholder="请选择城市" style="width: 100%" :disabled="!editForm.provinceId || editForm.provinceId.length === 0"
-                  filterable multiple>
-                  <el-option v-for="item in cityList.filter(i => i.id)" :key="item.id" :label="item.name" :value="item.id!" />
-                </el-select>
-              </el-descriptions-item>
             </template>
             <!-- 只读模式（非编辑状态时才显示） -->
             <template v-else>
               <el-descriptions-item label="书籍名称">{{ rawImportData?.bookname || projectInfo.title }}</el-descriptions-item>
-                    <el-descriptions-item label="丛书名" :span="2">{{ rawImportData?.seriesTitle || projectInfo.seriesTitle || '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="ISBN">{{ rawImportData?.bookIsbn || projectInfo.isbn || '-'
-              }}</el-descriptions-item>
-            <el-descriptions-item label="出版年份">{{ rawImportData?.year || projectInfo.year || '-'
-              }}</el-descriptions-item>
-            <el-descriptions-item label="年级">{{ rawImportData?.grade || getGradeName(projectInfo.gradeId)
-              }}</el-descriptions-item>
             <el-descriptions-item label="学科">{{ rawImportData?.subject || getSubjectName(projectInfo.subjectId)
               }}</el-descriptions-item>
             <el-descriptions-item label="册别">{{ rawImportData?.volume || getVolumeName(projectInfo.volumeId)
               }}</el-descriptions-item>
             <el-descriptions-item label="版本">{{ rawImportData?.bookVersion || getVersionName(projectInfo.bookVersionId)
               }}</el-descriptions-item>
-            <el-descriptions-item label="出版社">{{ rawImportData?.publisher || getPublisherName(projectInfo.publisherId)
-              }}</el-descriptions-item>
-            <el-descriptions-item label="定价">{{ projectInfo.price !== undefined && projectInfo.price !== null ? `¥${projectInfo.price.toFixed(2)}` : (rawImportData?.price !== undefined && rawImportData?.price !== null ? `¥${rawImportData.price.toFixed(2)}` : '-')
-              }}</el-descriptions-item>
-            <el-descriptions-item label="教辅标签">{{ rawImportData?.bookLabel || getBookLabelName(projectInfo.bookLabelId)
-              }}</el-descriptions-item>
-            <el-descriptions-item label="是否有专版">
-              {{ projectInfo.hasSpecialVersion === 1 ? '是' : '否' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="专版省份" :span="2">
-              <el-tag
-                v-for="provinceId in (projectInfo.provinceId ? projectInfo.provinceId.split(',').filter(id => id) : [])"
-                :key="provinceId" size="small" style="margin-right: 5px;">
-                {{ getProvinceName(provinceId) }}
-              </el-tag>
-              <span v-if="!projectInfo.provinceId">-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="专版城市" :span="2">
-              <el-tag v-for="cityId in (projectInfo.cityId ? projectInfo.cityId.split(',').filter(id => id) : [])"
-                :key="cityId" size="small" type="success" style="margin-right: 5px;">
-                {{ getCityName(cityId) }}
-              </el-tag>
-              <span v-if="!projectInfo.cityId">-</span>
-            </el-descriptions-item>
             </template>
           </template>
           <!-- 试卷信息 -->
@@ -219,7 +134,6 @@ import { ElMessage } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { getBookInfoDetailsApi, putBookInfoUpdateApi, type BookVO, type BookUpdateCmd } from '@/api/gen/bookController'
 import { getDocInfoDetailsApi, type DocVO } from '@/api/gen/docController'
-import type { DicBookLabelVO } from '@/api/gen/dicController'
 import type { ProjectAuditVO } from '@/api/gen/projectAuditController'
 
 const props = defineProps<{
@@ -230,9 +144,7 @@ const props = defineProps<{
   subjectList?: { id?: string; subjectName?: string }[]
   volumeList?: { id?: string; name?: string }[]
   versionList?: { id?: string; name?: string }[]
-  publisherList?: { id?: string; name?: string }[]
   provinceList?: { id?: string; name?: string; code?: string; level?: number; parentCode?: string }[]
-  bookLabelList?: DicBookLabelVO[]
   readonly?: boolean
 }>()
 
@@ -257,32 +169,11 @@ const editMode = ref(false)
 const editSubmitting = ref(false)
 
 // 编辑表单数据
-const currentYear = new Date().getFullYear()
-const editForm = reactive<Omit<BookUpdateCmd, 'provinceId' | 'cityId'> & { provinceId: string[]; cityId: string[] }>({
+const editForm = reactive<Omit<BookUpdateCmd, 'provinceId' | 'cityId'>>({
   title: '',
-  isbn: '',
-  seriesTitle: '',
-  year: currentYear,
-  gradeId: undefined,
   subjectId: undefined,
   volumeId: undefined,
-  bookVersionId: undefined,
-  publisherId: undefined,
-  price: undefined,
-  bookLabelId: undefined,
-  hasSpecialVersion: 0,
-  provinceId: [],
-  cityId: []
-})
-
-// 城市列表计算属性
-const cityList = computed(() => {
-  if (!editForm.provinceId || editForm.provinceId.length === 0) return []
-  const provinceCodes = editForm.provinceId
-    .map(provinceId => provinceList.value.find(p => p.id === provinceId))
-    .filter(p => p)
-    .map(p => p!.code)
-  return provinceList.value.filter(item => provinceCodes.includes(item.parentCode!))
+  bookVersionId: undefined
 })
 
 // 使用父组件传递的字典数据
@@ -290,9 +181,7 @@ const gradeList = computed(() => props.gradeList || [])
 const subjectList = computed(() => props.subjectList || [])
 const volumeList = computed(() => props.volumeList || [])
 const versionList = computed(() => props.versionList || [])
-const publisherList = computed(() => props.publisherList || [])
 const provinceList = computed(() => props.provinceList || [])
-const bookLabelList = computed(() => props.bookLabelList || [])
 
 // 获取年级名称
 const getGradeName = (id: string | undefined) => {
@@ -322,13 +211,6 @@ const getVersionName = (id: string | undefined) => {
   return item?.name || id
 }
 
-// 获取出版社名称
-const getPublisherName = (id: string | undefined) => {
-  if (!id) return '-'
-  const item = publisherList.value.find(p => p.id === id)
-  return item?.name || id
-}
-
 // 获取省份名称
 const getProvinceName = (id: string | undefined) => {
   if (!id) return '-'
@@ -340,13 +222,6 @@ const getProvinceName = (id: string | undefined) => {
 const getCityName = (id: string | undefined) => {
   if (!id) return '-'
   const item = provinceList.value.find(c => c.id === id)
-  return item?.name || id
-}
-
-// 获取教辅标签名称
-const getBookLabelName = (id: string | undefined) => {
-  if (!id) return '-'
-  const item = bookLabelList.value.find(b => String(b.id) === id)
   return item?.name || id
 }
 
@@ -463,19 +338,9 @@ const toggleEditMode = async () => {
     if (projectInfo.value) {
       Object.assign(editForm, {
         title: projectInfo.value.title,
-        isbn: projectInfo.value.isbn,
-        seriesTitle: projectInfo.value.seriesTitle,
-        year: projectInfo.value.year,
-        gradeId: projectInfo.value.gradeId != null ? String(projectInfo.value.gradeId) : undefined,
         subjectId: projectInfo.value.subjectId != null ? String(projectInfo.value.subjectId) : undefined,
         volumeId: projectInfo.value.volumeId != null ? String(projectInfo.value.volumeId) : undefined,
-        bookVersionId: projectInfo.value.bookVersionId != null ? String(projectInfo.value.bookVersionId) : undefined,
-        publisherId: projectInfo.value.publisherId != null ? String(projectInfo.value.publisherId) : undefined,
-        price: projectInfo.value.price,
-        bookLabelId: projectInfo.value.bookLabelId != null ? String(projectInfo.value.bookLabelId) : undefined,
-        hasSpecialVersion: projectInfo.value.hasSpecialVersion || 0,
-        provinceId: projectInfo.value.provinceId ? projectInfo.value.provinceId.split(',').filter(id => id) : [],
-        cityId: projectInfo.value.cityId ? projectInfo.value.cityId.split(',').filter(id => id) : []
+        bookVersionId: projectInfo.value.bookVersionId != null ? String(projectInfo.value.bookVersionId) : undefined
       })
     }
     editMode.value = true
@@ -491,19 +356,9 @@ const cancelEdit = () => {
   // 重置表单数据
   Object.assign(editForm, {
     title: '',
-    isbn: '',
-    seriesTitle: '',
-    year: currentYear,
-    gradeId: undefined,
     subjectId: undefined,
     volumeId: undefined,
-    bookVersionId: undefined,
-    publisherId: undefined,
-    price: undefined,
-    bookLabelId: undefined,
-    hasSpecialVersion: 0,
-    provinceId: [],
-    cityId: []
+    bookVersionId: undefined
   })
 }
 
@@ -514,18 +369,6 @@ const saveEdit = async () => {
   // 验证必填字段
   if (!editForm.title?.trim()) {
     ElMessage.warning('书籍名称不能为空')
-    return
-  }
-  if (!editForm.isbn || !/^\d{13}$/.test(editForm.isbn)) {
-    ElMessage.warning('ISBN必须是13位数字')
-    return
-  }
-  if (!editForm.seriesTitle?.trim()) {
-    ElMessage.warning('丛书名不能为空')
-    return
-  }
-  if (!editForm.gradeId) {
-    ElMessage.warning('请选择年级')
     return
   }
   if (!editForm.subjectId) {
@@ -540,71 +383,11 @@ const saveEdit = async () => {
     ElMessage.warning('请选择版本')
     return
   }
-  if (!editForm.publisherId) {
-    ElMessage.warning('请选择出版社')
-    return
-  }
-  if (editForm.hasSpecialVersion === 1 && editForm.provinceId.length === 0 && editForm.cityId.length === 0) {
-    ElMessage.warning('专版省份和城市至少提供一个')
-    return
-  }
 
   try {
     editSubmitting.value = true
 
-    const finalProvinceIds: string[] = [...editForm.provinceId]
-    const finalCityIds: string[] = [...editForm.cityId]
-
-    if (editForm.hasSpecialVersion === 1) {
-      // 只提供市：自动填补市所在的省
-      if (finalCityIds.length > 0 && finalProvinceIds.length === 0) {
-        const cityItems = provinceList.value.filter(item => finalCityIds.includes(item.id!))
-        const provinceCodes = [...new Set(cityItems.map(city => city.parentCode ?? ''))]
-        const provinces = provinceList.value.filter(item => provinceCodes.includes(item.code ?? '') && item.level === 1)
-        finalProvinceIds.push(...provinces.map(p => p.id!))
-      }
-
-      // 既提供省，又提供市：过滤掉没有对应城市的省份
-      if (finalProvinceIds.length > 0 && finalCityIds.length > 0) {
-        const cityItems = provinceList.value.filter(item => finalCityIds.includes(item.id!))
-        const usedProvinceCodes = [...new Set(cityItems.map(city => city.parentCode ?? ''))]
-        const usedProvinces = provinceList.value.filter(item => usedProvinceCodes.includes(item.code ?? '') && item.level === 1)
-        const filteredProvinceIds = usedProvinces.map(p => p.id!)
-        const removedProvinceIds = finalProvinceIds.filter(id => !filteredProvinceIds.includes(id))
-
-        if (removedProvinceIds.length > 0) {
-          const removedProvinceNames = removedProvinceIds
-            .map(id => provinceList.value.find(p => p.id === id)?.name)
-            .filter(name => name)
-            .join('、')
-          ElMessage.warning(`已过滤掉没有对应城市选择的省份：${removedProvinceNames}`)
-        }
-
-        finalProvinceIds.splice(0, finalProvinceIds.length, ...filteredProvinceIds)
-        editForm.provinceId = [...finalProvinceIds]
-      }
-
-      // 只提供省：市为当前省的所有市
-      if (finalProvinceIds.length > 0 && finalCityIds.length === 0) {
-        const provinceCodes = finalProvinceIds
-          .map(id => provinceList.value.find(p => p.id === id))
-          .filter(p => p)
-          .map(p => p!.code)
-        const cities = provinceList.value
-          .filter(item => provinceCodes.includes(item.parentCode!) && item.level === 2)
-          .map(c => c.id!)
-        finalCityIds.push(...cities)
-      }
-    }
-
-    // 将省份和城市数组转换为逗号分隔的字符串
-    const submitData = {
-      ...editForm,
-      provinceId: finalProvinceIds.join(','),
-      cityId: finalCityIds.join(',')
-    }
-
-    const response = await putBookInfoUpdateApi(submitData, { id: props.projectId })
+    const response = await putBookInfoUpdateApi({ ...editForm }, { id: props.projectId })
     if (response.data.code === 200) {
       ElMessage.success('保存成功')
       editMode.value = false
@@ -637,10 +420,6 @@ const formatTime = (time: string | undefined) => {
 
 onMounted(() => {
   fetchProjectInfo()
-})
-
-defineExpose({
-  getIsbn: () => projectInfo.value?.isbn || ''
 })
 </script>
 

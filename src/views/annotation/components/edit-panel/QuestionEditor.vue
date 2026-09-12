@@ -54,6 +54,38 @@
               @change="handleKnowledgeChange"
             />
           </el-form-item>
+          <el-form-item label="标签题型">
+            <el-select
+              v-model="questionForm.labelQuestionType"
+              placeholder="请选择标签题型"
+              style="width: 100%"
+              filterable
+              clearable
+              @change="triggerAutoSave"
+            >
+              <el-option
+                v-for="item in questionTypeOptions"
+                :key="item.typeCode"
+                :label="item.typeName"
+                :value="item.typeCode"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="作答方式">
+            <el-select
+              v-model="questionForm.questionAnswerMode"
+              placeholder="请选择作答方式"
+              style="width: 100%"
+              @change="triggerAutoSave"
+            >
+              <el-option
+                v-for="item in answerModeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
         <el-form-item label="点评">
           <el-input
             v-model="questionForm.questionComment"
@@ -160,6 +192,7 @@
         :question-id="props.selectedQuestion.id"
         :project-id="props.selectedQuestion.projectId"
         :catalogue-id="props.selectedQuestion.catalogueId"
+        :subject-code="bookSubjectCode"
         :level="0"
         @changed="emit('refreshQuestion')"
       />
@@ -198,6 +231,14 @@
           <div class="info-item">
             <span class="label">无答案:</span>
             <span class="value">{{ questionForm.noAnswer ? '是' : '否' }}</span>
+          </div>
+          <div class="info-item" v-if="questionForm.labelQuestionType != null">
+            <span class="label">标签题型:</span>
+            <span class="value">{{ (questionTypeOptions.find(t => t.typeCode === questionForm.labelQuestionType)?.typeName) || questionForm.labelQuestionType }}</span>
+          </div>
+          <div class="info-item" v-if="questionForm.questionAnswerMode != null">
+            <span class="label">作答方式:</span>
+            <span class="value">{{ (answerModeOptions.find(t => t.value === questionForm.questionAnswerMode)?.label) || questionForm.questionAnswerMode }}</span>
           </div>
         </div>
         <div v-if="questionForm.questionComment" class="info-item-full">
@@ -243,10 +284,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { type QuestionVO, type QuestionDetailsVO, getQuestionDetailsApi, putQuestionUpdateApi } from '@/api/gen/questionController'
+import { getBookInfoDetailsApi } from '@/api/gen/bookController'
+import { getDicQuestionTypeListApi, getDicSubjectListApi, type DicQuestionTypeVO } from '@/api/gen/dicController'
 import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotationController'
 import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
@@ -310,8 +353,63 @@ const questionForm = ref({
   choice: '',
   answer: '',
   analysis: '',
-  tishi: ''
+  tishi: '',
+  labelQuestionType: undefined as number | undefined,
+  questionAnswerMode: undefined as number | undefined
 })
+
+// 标签题型字典（按当前书籍学科过滤）与作答方式选项
+const questionTypeList = ref<DicQuestionTypeVO[]>([])
+const bookSubjectCode = ref<number | undefined>(undefined)
+
+// 一次性拉取全部标签题型字典（按学科 code 前端过滤）
+const loadQuestionTypeDict = async () => {
+  if (questionTypeList.value.length > 0) return
+  try {
+    const res = await getDicQuestionTypeListApi()
+    if (res.data.code === 200) {
+      questionTypeList.value = res.data.data || []
+    }
+  } catch (error) {
+    console.error('获取标签题型字典失败', error)
+  }
+}
+
+// 获取当前书籍的 docx 学科枚举（subjectCode），优先用 book.subjectCode，缺失时由 subjectId 推导
+const loadBookSubjectCode = async (projectId: string) => {
+  try {
+    const res = await getBookInfoDetailsApi({ id: projectId })
+    if (res.data.code === 200 && res.data.data) {
+      const book = res.data.data
+      let code = book.subjectCode && book.subjectCode > 0 ? book.subjectCode : undefined
+      if (!code && book.subjectId) {
+        const sres = await getDicSubjectListApi({ type: 1 })
+        const subject = (sres.data.data || []).find(s => String(s.id) === String(book.subjectId))
+        code = subject?.docxCode
+      }
+      bookSubjectCode.value = code
+    }
+  } catch (error) {
+    console.error('获取书籍学科枚举失败', error)
+  }
+}
+
+// 当前书籍学科下的标签题型选项（typeCode 为 docx 标签题型枚举）
+const questionTypeOptions = computed(() =>
+  questionTypeList.value
+    .filter(t => t.subjectCode === bookSubjectCode.value && t.typeCode != null)
+    .map(t => ({ typeCode: t.typeCode as number, typeName: t.typeName || '' }))
+)
+
+// 作答方式选项（docx questionAnswerMode：0=综合母题/1=单选/2=多选/3=填空/4=判断/5=解答）
+const answerModeOptions = [
+  { label: '综合母题', value: 0 },
+  { label: '单选', value: 1 },
+  { label: '多选', value: 2 },
+  { label: '填空', value: 3 },
+  { label: '判断', value: 4 },
+  { label: '解答', value: 5 }
+]
 
 // 知识点标签（用于多选下拉框）
 const knowledgeTags = ref<string[]>([])
@@ -382,7 +480,9 @@ const autoSaveQuestion = async () => {
       question: questionForm.value.question,
       choice: choiceJson,
       answer: questionForm.value.answer,
-      analysis: questionForm.value.analysis
+      analysis: questionForm.value.analysis,
+      labelQuestionType: questionForm.value.labelQuestionType,
+      questionAnswerMode: questionForm.value.questionAnswerMode
     }
 
     // 如果有题干标注，设置页码
@@ -840,7 +940,9 @@ const loadQuestionDetails = async (questionId: string) => {
         choice: choiceValue,
         answer: response.data.data.answer || '',
         analysis: response.data.data.analysis || '',
-        tishi: tishiValue
+        tishi: tishiValue,
+        labelQuestionType: response.data.data.labelQuestionType != null ? response.data.data.labelQuestionType : undefined,
+        questionAnswerMode: response.data.data.questionAnswerMode != null ? response.data.data.questionAnswerMode : undefined
       }
 
       // 初始化知识点标签
@@ -915,6 +1017,9 @@ const loadAnnotations = async (questionId: string) => {
 // 监听选中的题目变化
 watch(() => props.selectedQuestion, (newQuestion, oldQuestion) => {
   if (newQuestion) {
+    // 标签题型字典与书籍学科枚举（用于过滤标签题型下拉），与题目加载并行
+    loadQuestionTypeDict()
+    loadBookSubjectCode(newQuestion.projectId)
     // 检查是否是同一个题目但题型发生变化
     if (oldQuestion && newQuestion.id === oldQuestion.id && newQuestion.tishi !== oldQuestion.tishi) {
       // 同一题目题型变化，只更新 tishi 并触发相关逻辑

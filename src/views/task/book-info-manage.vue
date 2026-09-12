@@ -136,8 +136,8 @@
         <template v-else>
           <BookInfoAudit ref="bookInfoAuditRef" :project-id="String(projectId)" :type="projectType"
             :audit-records="getSectionAuditRecords(1)" :grade-list="gradeList" :subject-list="subjectList"
-            :volume-list="volumeList" :version-list="versionList" :publisher-list="publisherList"
-            :province-list="provinceList" :book-label-list="bookLabelList" :readonly="isPreviewMode"
+            :volume-list="volumeList" :version-list="versionList"
+            :province-list="provinceList" :readonly="isPreviewMode"
             @add-audit="handleAddAudit" />
 
           <PagesAudit v-if="projectType === 'book'" ref="pagesAuditRef" :project-id="String(projectId)"
@@ -202,29 +202,10 @@
         还有 {{ unhandledFeedbackCount }} 条反馈未处理，请先处理所有反馈后再提交。
         <el-button type="primary" link size="small" @click="feedbackDialogVisible = true">去处理</el-button>
       </el-alert>
-      <el-form :model="materialSubmitForm" label-width="80px">
-        <el-form-item v-if="materialSubmitForm.isbn" label="ISBN">
-          <el-input v-model="materialSubmitForm.isbn" readonly />
-        </el-form-item>
-        <el-form-item v-if="!materialSubmitForm.isbn" label="提示">
-          <span class="text-gray-500 text-sm">当前书籍未填写ISBN，提交时将跳过查重</span>
-        </el-form-item>
-      </el-form>
-      <!-- 查重结果展示 -->
-      <div v-if="materialSubmitForm.isbn && isbnCheckLoading" class="flex items-center justify-center py-4">
-        <el-icon class="is-loading mr-2"><i-ep-loading /></el-icon>
-        <span class="text-gray-500">正在查重...</span>
-      </div>
-      <el-alert v-else-if="materialSubmitForm.isbn && isbnCheckResult"
-        :title="isbnCheckResult.title" :type="isbnCheckResult.type" :closable="false" show-icon class="mt-4">
-        <template #default>
-          <div v-html="isbnCheckResult.content"></div>
-        </template>
-      </el-alert>
       <template #footer>
         <el-button @click="materialSubmitDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleMaterialSubmit" :loading="materialSubmitting"
-          :disabled="isbnCheckLoading || unhandledFeedbackCount > 0">确认提交</el-button>
+          :disabled="unhandledFeedbackCount > 0">确认提交</el-button>
       </template>
     </el-dialog>
 
@@ -241,39 +222,28 @@
           请审核该资料的书籍信息和内容页，选择通过或不通过。
         </el-alert>
       </template>
-      <!-- 查重结果展示 -->
-      <div v-if="isReviewCheckLoading" class="flex items-center justify-center py-4">
-        <el-icon class="is-loading mr-2"><i-ep-loading /></el-icon>
-        <span class="text-gray-500">正在查重...</span>
-      </div>
-      <el-alert v-else-if="reviewCheckResult"
-        :title="reviewCheckResult.title" :type="reviewCheckResult.type" :closable="false" show-icon class="mt-4">
-        <template #default>
-          <div v-html="reviewCheckResult.content"></div>
-        </template>
-      </el-alert>
-<template #footer>
+      <template #footer>
         <el-button @click="reviewConfirmDialogVisible = false">取消</el-button>
         <template v-if="isMaterialProblemStatus">
           <el-button type="danger" @click="handleReviewConfirm(false)" :loading="reviewSubmitting"
-            :disabled="isReviewCheckLoading">
+            >
             <Icon icon="ep:close-bold" class="mr-1" />
             否定问题（打回资料阶段）
           </el-button>
           <el-button type="success" @click="handleReviewConfirm(true)" :loading="reviewSubmitting"
-            :disabled="isReviewCheckLoading">
+            >
             <Icon icon="ep:check" class="mr-1" />
             确认问题（审核通过）
           </el-button>
         </template>
         <template v-else>
           <el-button type="danger" @click="handleReviewConfirm(false)" :loading="reviewSubmitting"
-            :disabled="isReviewCheckLoading">
+            >
             <Icon icon="ep:close-bold" class="mr-1" />
             审核不通过
           </el-button>
           <el-button type="success" @click="handleReviewConfirm(true)" :loading="reviewSubmitting"
-            :disabled="isReviewCheckLoading">
+            >
             <Icon icon="ep:check" class="mr-1" />
             审核通过
           </el-button>
@@ -297,7 +267,6 @@ import {
   postProjectMaterialSubmitApi,
   putProjectSubmitProblemApi,
   putProjectMaterialReviewApi,
-  getProjectMaterialIsbnCheckApi,
   type ProjectProblemSubmitCmd,
   type MaterialReviewCmd,
 } from '@/api/gen/projectController'
@@ -311,10 +280,7 @@ import {
   getDicSubjectListApi,
   getDicVolumeListApi,
   getDicVersionListApi,
-  getDicPublisherListApi,
   getDicAdministrativeDivisionListApi,
-  getDicBookLabelListApi,
-  type DicBookLabelVO,
   type DicGradeVO,
   type DicSubjectVO,
 } from '@/api/gen/dicController'
@@ -426,16 +392,6 @@ const problemRules = {
 
 // 提交资料审核对话框
 const materialSubmitDialogVisible = ref(false)
-const isbnCheckLoading = ref(false)
-const isbnCheckResult = ref<{
-  title: string
-  content: string
-  type: 'success' | 'warning' | 'error' | 'info'
-  duplicate: boolean
-} | null>(null)
-const materialSubmitForm = reactive({
-  isbn: ''
-})
 
 // 反馈相关状态
 const feedbackDialogVisible = ref(false)
@@ -445,13 +401,6 @@ const unhandledFeedbackCount = ref(0)
 
 // 审核资料对话框
 const reviewConfirmDialogVisible = ref(false)
-const isReviewCheckLoading = ref(false)
-const reviewCheckResult = ref<{
-  title: string
-  content: string
-  type: 'success' | 'warning' | 'error' | 'info'
-  duplicate: boolean
-} | null>(null)
 
 // 审核记录（审核模式）
 const auditRecords = ref<ProjectAuditVO[]>([])
@@ -461,9 +410,7 @@ const gradeList = ref<DicGradeVO[]>([])
 const subjectList = ref<DicSubjectVO[]>([])
 const volumeList = ref<{ id?: string; name?: string }[]>([])
 const versionList = ref<{ id?: string; name?: string }[]>([])
-const publisherList = ref<{ id?: string; name?: string }[]>([])
 const provinceList = ref<{ id?: string; name?: string; code?: string; level?: number; parentCode?: string }[]>([])
-const bookLabelList = ref<DicBookLabelVO[]>([])
 
 // 组件引用
 const bookInfoFormRef = ref()
@@ -511,22 +458,18 @@ const fetchAuditRecords = async () => {
 const fetchDictData = async () => {
   if (!isReviewMode.value) return
   try {
-    const [gradeRes, subjectRes, volumeRes, versionRes, publisherRes, provinceRes, bookLabelRes] = await Promise.all([
+    const [gradeRes, subjectRes, volumeRes, versionRes, provinceRes] = await Promise.all([
       getDicGradeListApi(),
       getDicSubjectListApi({ type: projectType.value === 'book' ? 1 : 2 }),
       getDicVolumeListApi(),
       getDicVersionListApi(),
-      getDicPublisherListApi(),
-      getDicAdministrativeDivisionListApi(),
-      getDicBookLabelListApi()
+      getDicAdministrativeDivisionListApi()
     ])
     if (gradeRes.data.code === 200) gradeList.value = gradeRes.data.data || []
     if (subjectRes.data.code === 200) subjectList.value = subjectRes.data.data || []
     if (volumeRes.data.code === 200) volumeList.value = volumeRes.data.data || []
     if (versionRes.data.code === 200) versionList.value = versionRes.data.data || []
-    if (publisherRes.data.code === 200) publisherList.value = publisherRes.data.data || []
     if (provinceRes.data.code === 200) provinceList.value = provinceRes.data.data || []
-    if (bookLabelRes.data.code === 200) bookLabelList.value = bookLabelRes.data.data || []
   } catch (error) {
     console.error('获取字典数据失败', error)
   }
@@ -630,19 +573,11 @@ const handleFeedbackHandled = () => {
   checkAndAutoOpenFeedback()
 }
 
-// 打开提交资料审核对话框 - 打开时执行查重
+// 打开提交资料审核对话框
 const handleOpenMaterialSubmitDialog = async () => {
   // 先检查是否有未处理的反馈（不自动弹出反馈对话框）
   await checkFeedbackStatus()
-  const isbn = bookInfoFormRef.value?.getIsbn?.() || ''
-  materialSubmitForm.isbn = isbn
-  isbnCheckResult.value = null
   materialSubmitDialogVisible.value = true
-
-  // 如果有ISBN，打开对话框后立即查重
-  if (isbn) {
-    await performIsbnCheck(isbn)
-  }
 }
 
 // 提交资料审核
@@ -667,115 +602,12 @@ const handleMaterialSubmit = async () => {
   }
 }
 
-// 执行ISBN查重，结果展示在对话框中
-const performIsbnCheck = async (isbn: string) => {
-  isbnCheckLoading.value = true
-  isbnCheckResult.value = null
-
-  try {
-    const response = await getProjectMaterialIsbnCheckApi({ isbn })
-    const data = response.data?.data
-    if (response.data?.code === 200 && data) {
-      const checkTime = data.checkTime || ''
-      if (data.isbnDuplicate) {
-        // 查重发现重复
-        isbnCheckResult.value = {
-          title: 'ISBN查重结果 - 发现重复',
-          content: `<p style="margin-bottom: 8px; color: #F56C6C; font-weight: 500;">ISBN <strong>${data.isbn}</strong> 已存在重复书籍！</p>${checkTime ? `<p style="color: #909399; font-size: 13px;">检查时间：${checkTime}</p>` : ''}<p style="margin-top: 12px;">查重结果仅供参考，回传信息后可能已上传</p>`,
-          type: 'warning',
-          duplicate: true
-        }
-      } else {
-        // 查重通过
-        isbnCheckResult.value = {
-          title: 'ISBN查重结果',
-          content: `<p style="margin-bottom: 8px;">ISBN <strong>${data.isbn}</strong> 查重通过，未发现重复书籍。</p>${checkTime ? `<p style="color: #909399; font-size: 13px;">检查时间：${checkTime}</p>` : ''}`,
-          type: 'success',
-          duplicate: false
-        }
-      }
-    } else {
-      // 查重接口返回异常
-      isbnCheckResult.value = {
-        title: 'ISBN查重结果',
-        content: `<p style="margin-bottom: 8px;">ISBN <strong>${isbn}</strong> 查重服务暂不可用，无法确认是否重复。</p>`,
-        type: 'warning',
-        duplicate: false
-      }
-    }
-  } catch (error) {
-    console.error('ISBN查重失败', error)
-    isbnCheckResult.value = {
-      title: 'ISBN查重结果',
-      content: `<p style="margin-bottom: 8px;">ISBN <strong>${isbn}</strong> 查重服务暂不可用，无法确认是否重复。</p>`,
-      type: 'warning',
-      duplicate: false
-    }
-  } finally {
-    isbnCheckLoading.value = false
-  }
-}
-
-// 打开审核资料对话框 - 打开时执行查重
+// 打开审核资料对话框
 const handleOpenReviewDialog = async () => {
-reviewCheckResult.value = null
   reviewConfirmDialogVisible.value = true
-
-  if (projectType.value === 'book') {
-    const isbn = bookInfoAuditRef.value?.getIsbn?.() || ''
-    if (isbn) {
-      await performReviewIsbnCheck(isbn)
-    }
-  }
 }
 
-// 审核弹框内执行ISBN查重
-const performReviewIsbnCheck = async (isbn: string) => {
-  isReviewCheckLoading.value = true
-  reviewCheckResult.value = null
-
-  try {
-    const response = await getProjectMaterialIsbnCheckApi({ isbn })
-    const data = response.data?.data
-    if (response.data?.code === 200 && data) {
-      const checkTime = data.checkTime || ''
-      if (data.isbnDuplicate) {
-        reviewCheckResult.value = {
-          title: 'ISBN查重结果 - 发现重复',
-          content: `<p style="margin-bottom: 8px; color: #F56C6C; font-weight: 500;">ISBN <strong>${data.isbn}</strong> 已存在重复书籍！</p>${checkTime ? `<p style="color: #909399; font-size: 13px;">检查时间：${checkTime}</p>` : ''}<p style="margin-top: 12px;">查重结果仅供参考，回传信息后可能已上传</p>`,
-          type: 'warning',
-          duplicate: true
-        }
-      } else {
-        reviewCheckResult.value = {
-          title: 'ISBN查重结果',
-          content: `<p style="margin-bottom: 8px;">ISBN <strong>${data.isbn}</strong> 查重通过，未发现重复书籍。</p>${checkTime ? `<p style="color: #909399; font-size: 13px;">检查时间：${checkTime}</p>` : ''}`,
-          type: 'success',
-          duplicate: false
-        }
-      }
-    } else {
-      reviewCheckResult.value = {
-        title: 'ISBN查重结果',
-        content: `<p style="margin-bottom: 8px;">ISBN <strong>${isbn}</strong> 查重服务暂不可用，无法确认是否重复。</p>`,
-        type: 'warning',
-        duplicate: false
-      }
-    }
-  } catch (error) {
-    console.error('ISBN查重失败', error)
-    reviewCheckResult.value = {
-      title: 'ISBN查重结果',
-      content: `<p style="margin-bottom: 8px;">ISBN <strong>${isbn}</strong> 查重服务暂不可用，无法确认是否重复。</p>`,
-      type: 'warning',
-      duplicate: false
-    }
-  } finally {
-    isReviewCheckLoading.value = false
-  }
-}
-
-// 确认审核（查重已在弹框内展示，直接提交）
+// 确认审核（直接提交）
 const handleReviewConfirm = async (pass: boolean) => {
   reviewSubmitting.value = true
   try {

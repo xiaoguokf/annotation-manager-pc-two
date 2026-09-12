@@ -4,34 +4,12 @@ import type { SshineAdminRequestConfig } from '@/utils/http'
 export interface BookUpdateCmd {
   /* 书籍名称 */
   title: string
-  /* ISBN（13位） */
-  isbn?: string
-  /* 丛书名 */
-  seriesTitle?: string
-  /* 出版年份（4位数字） */
-  year?: number
-  /* 年级ID（枚举） */
-  gradeId?: string
   /* 学科ID（枚举，与amis平台一致） */
   subjectId?: string
   /* 册别ID（枚举） */
   volumeId?: string
   /* 书籍版本ID（枚举） */
   bookVersionId?: string
-  /* 出版社ID（枚举） */
-  publisherId?: string
-  /* 定价 */
-  price?: number
-  /* 教辅标签ID */
-  bookLabelId?: string
-  /* 是否有专版（1=是，0=否） */
-  hasSpecialVersion: number
-  /* 专版省份ID（多省用英文逗号分隔） */
-  provinceId?: string
-  /* 专版城市ID（多市用英文逗号分隔） */
-  cityId?: string
-  /* 专版描述 */
-  specialVersionDesc?: string
   /* 学段：1-小学，2-初中，3-高中 */
   phase?: number
   /* docx 学科枚举（1语文 2数学 3英语 4物理 5化学 6生物 7历史 8地理 9思想政治/道德与法治 10日语 11俄语） */
