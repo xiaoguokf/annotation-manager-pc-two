@@ -2,7 +2,7 @@
 {
   $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   appId: "ltd.sshine.at",
-  productName: "annotation-admin-pc",
+  productName: "annotation-admin-pc-two",
   copyright: "Copyright © 2026-present, annotation-admin",
   publish: {
     provider: "generic",

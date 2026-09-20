@@ -14,8 +14,8 @@ import pkg from './package.json'
 // 从 package.json 读取应用名称，生成全局常量
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const PKG_NAME: string = pkg.name || 'annotation-admin-pc'
-// 生成显示名称: annotation-admin-pc → Annotation Admin Pc
+const PKG_NAME: string = pkg.name || 'annotation-admin-pc-two'
+// 生成显示名称: annotation-admin-pc-two → Annotation Admin Pc
 const APP_DISPLAY_NAME = PKG_NAME.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
 // 后端代理地址：本地联调可用 VITE_PROXY_TARGET=http://127.0.0.1:8080 覆盖

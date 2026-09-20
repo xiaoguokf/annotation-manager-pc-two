@@ -35,11 +35,11 @@ jobs:
       - name: Build
         run: pnpm build -- --mac --universal
       - name: mv file
-        run: mv release/*/annotation-admin-pc_*.dmg ./ &&  mv release/*/latest-mac.yml ./
+        run: mv release/*/annotation-admin-pc-two_*.dmg ./ &&  mv release/*/latest-mac.yml ./
 
       - name: Upload files via FTP
         run: |
-          for file in annotation-admin-pc_*.dmg latest-mac.yml; do
+          for file in annotation-admin-pc-two_*.dmg latest-mac.yml; do
             curl -T "$file" "ftp://170.106.119.146/" --user "atsshine:c2xnyG6aCkFnhrSn"
           done
 

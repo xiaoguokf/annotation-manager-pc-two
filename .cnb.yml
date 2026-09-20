@@ -25,7 +25,7 @@ master:
         image: electronuserland/builder:wine
       env:
         BACKEND_NAME: annotation-manager-pc
-        PROJECT_PATH: /opt/1panel/apps/openresty/openresty/www/sites/at.sshine.ltd/index
+        PROJECT_PATH: /opt/1panel/apps/openresty/openresty/www/sites/bd.sshine.ltd/index
       services:
         - docker
       imports:
@@ -68,7 +68,7 @@ master:
         - name: 同步到GitHub
           image: tencentcom/git-sync
           settings:
-            target_url: https://github.com/xiaoguokf/annotation-manager-pc.git
+            target_url: https://github.com/xiaoguokf/annotation-manager-pc-two.git
             auth_type: https
             username: ${GIT_USERNAME}
             password: ${GIT_ACCESS_TOKEN}

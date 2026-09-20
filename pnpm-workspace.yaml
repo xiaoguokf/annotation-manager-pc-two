@@ -1,6 +1,8 @@
 allowBuilds:
+  electron: set this to true or false
   es5-ext: set this to true or false
   esbuild: true
+  sharp: set this to true or false
   vue-demi: true
 onlyBuiltDependencies:
   - esbuild
