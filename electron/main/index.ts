@@ -64,7 +64,7 @@ async function createWindow() {
   win = new BrowserWindow({
     width: 1024,
     height: 768,
-    title: "Main window",
+    title: "教辅采集系统2",
     icon: join(process.env.PUBLIC, "favicon.ico"),
     webPreferences: {
       preload,

@@ -1,7 +1,7 @@
 // @see https://www.electron.build/configuration/configuration
 {
   $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  appId: "ltd.sshine.at",
+  appId: "ltd.sshine.at2",
   productName: "annotation-admin-pc-two",
   copyright: "Copyright © 2026-present, annotation-admin",
   publish: {
@@ -17,7 +17,7 @@
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: "教材辅助采集系统",
+    shortcutName: "教辅采集系统2",
     perMachine: true,
     oneClick: false
   },

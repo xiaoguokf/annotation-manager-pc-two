@@ -1,19 +1,14 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 电脑管理端logo -->
+  <!-- 教辅采集系统 logo：翻开的书(教辅) + 绿色已采集对勾徽标(采集) -->
   <defs>
-    <!-- 主渐变 -->
-    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#FB923C;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#EA580C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F97316;stop-opacity:1" />
     </linearGradient>
-    
-    <!-- 屏幕渐变 -->
-    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FED7AA;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#FCD34D;stop-opacity:1" />
+    <linearGradient id="bookGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFEDD5;stop-opacity:1" />
     </linearGradient>
-    
-    <!-- 阴影滤镜 -->
     <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
       <feOffset dx="0" dy="2" result="offsetblur"/>
@@ -25,36 +20,29 @@
       </feMerge>
     </filter>
   </defs>
-  
+
   <!-- 背景圆角矩形 -->
-  <rect x="8" y="8" width="48" height="48" rx="16" fill="url(#orangeGradient)" filter="url(#shadow)"/>
-  
-  <!-- 电脑显示器 -->
-  <g transform="translate(32, 32)">
-    <!-- 显示器外框 -->
-    <rect x="-14" y="-10" width="28" height="18" rx="2" fill="white" stroke="white" stroke-width="1"/>
-    
-    <!-- 屏幕 -->
-    <rect x="-12" y="-8" width="24" height="14" rx="1" fill="url(#screenGradient)"/>
-    
-    <!-- 屏幕内容 - 数据图表 -->
-    <g opacity="0.7">
-      <!-- 柱状图 -->
-      <rect x="-9" y="2" width="3" height="4" fill="#EA580C"/>
-      <rect x="-5" y="-1" width="3" height="7" fill="#FB923C"/>
-      <rect x="-1" y="0" width="3" height="6" fill="#EA580C"/>
-      <rect x="3" y="-2" width="3" height="8" fill="#FB923C"/>
-      <rect x="7" y="1" width="3" height="5" fill="#EA580C"/>
-    </g>
-    
-    <!-- 显示器底座 -->
-    <rect x="-2" y="8" width="4" height="3" fill="white"/>
-    <rect x="-6" y="11" width="12" height="2" rx="1" fill="white"/>
-    
-    <!-- 顶部装饰点 - 状态指示灯 -->
-    <circle cx="10" cy="-8" r="1.5" fill="#10B981"/>
+  <rect x="8" y="8" width="48" height="48" rx="16" fill="url(#bgGradient)" filter="url(#shadow)"/>
+
+  <!-- 翻开的书（教辅） -->
+  <g transform="translate(32, 33)">
+    <path d="M0 -10 C -5 -14, -14 -14, -20 -11 L -20 11 C -14 8, -5 8, 0 12 C 5 8, 14 8, 20 11 L 20 -11 C 14 -14, 5 -14, 0 -10 Z" fill="url(#bookGradient)"/>
+    <path d="M0 -10 L 0 12" stroke="#F97316" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M-15 -4 L -4 -7" stroke="#FDBA74" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M-15 1 L -4 -2" stroke="#FDBA74" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M-15 6 L -4 3" stroke="#FDBA74" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M4 -7 L 15 -4" stroke="#FDBA74" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M4 -2 L 15 1" stroke="#FDBA74" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M4 3 L 15 6" stroke="#FDBA74" stroke-width="1.5" stroke-linecap="round"/>
   </g>
-  
+
+  <!-- 已采集对勾徽标（采集） -->
+  <g transform="translate(46, 20)">
+    <circle cx="0" cy="0" r="9" fill="#10B981"/>
+    <circle cx="0" cy="0" r="9" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+    <path d="M-3.5 0 L -1 2.5 L 4 -3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
   <!-- 顶部高光 -->
-  <ellipse cx="32" cy="16" rx="12" ry="4" fill="white" opacity="0.2"/>
+  <ellipse cx="32" cy="16" rx="12" ry="4" fill="white" opacity="0.18"/>
 </svg>
