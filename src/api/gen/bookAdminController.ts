@@ -64,34 +64,14 @@ export interface BookVO {
   id: string
   /* 书籍名称 */
   title: string
-  /* ISBN（13位） */
-  isbn?: string
   /* 书籍导入ID */
   importId?: string
-  /* 丛书名 */
-  seriesTitle?: string
-  /* 出版年份（4位数字） */
-  year?: number
-  /* 年级ID（枚举） */
-  gradeId?: string
   /* 学科ID（枚举，与amis平台一致） */
   subjectId?: string
   /* 册别ID（枚举） */
   volumeId?: string
   /* 书籍版本ID（枚举） */
   bookVersionId?: string
-  /* 出版社ID（枚举） */
-  publisherId?: string
-  /* 价格 */
-  price?: number
-  /* 教辅标签ID */
-  bookLabelId?: string
-  /* 是否有专版（1=是，0=否） */
-  hasSpecialVersion?: number
-  /* 专版省份ID（多省用英文逗号分隔） */
-  provinceId?: string
-  /* 专版城市ID（多市用英文逗号分隔） */
-  cityId?: string
   /* 状态：0-未解析，1-待发布，2-待领取，3-已领取，4-待审核，5-审核失败，6-审核成功，7-已回传，8-解析中，9-解析失败 */
   status?: number
   /* 创建人 */
@@ -128,8 +108,6 @@ export interface BookVO {
   summitTime?: string
   /* pdf名称 */
   pdfName: string
-  /* 专版描述 */
-  specialVersionDesc?: string
   /* 学段：1-小学，2-初中，3-高中 */
   phase?: number
   /* docx 学科枚举（1语文 2数学 3英语 4物理 5化学 6生物 7历史 8地理 9思想政治/道德与法治 10日语 11俄语） */

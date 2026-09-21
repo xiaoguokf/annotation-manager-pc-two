@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "1.1.1",
+      "date": "2026-09-22",
+      "optimizations": [
+        "优化题型选择：题目列表与编辑面板的题型选择改为按题型大类（categoryName）分组的级联选择器，仅可选叶子题型，并支持关键词搜索"
+      ]
+    },
+    {
       "version": "1.0.2",
       "date": "2026-09-21",
       "newFeatures": [

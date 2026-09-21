@@ -56,17 +56,13 @@
                   <span class="info-label">学段:</span>
                   <span class="info-value">{{ (projectInfo as DocVO).stepId }}</span>
                 </span>
-                <span v-if="projectInfo.gradeId" class="meta-info-item">
+                <span v-if="(projectInfo as DocVO).gradeId" class="meta-info-item">
                   <span class="info-label">年级:</span>
-                  <span class="info-value">{{ getGradeName(projectInfo.gradeId) }}</span>
+                  <span class="info-value">{{ getGradeName((projectInfo as DocVO).gradeId) }}</span>
                 </span>
                 <span v-if="type === 'book' && (projectInfo as BookVO).title" class="meta-info-item">
                   <span class="info-label">书本:</span>
                   <span class="info-value">{{ (projectInfo as BookVO).title }}</span>
-                </span>
-                <span v-if="type === 'book' && (projectInfo as BookVO).isbn" class="meta-info-item">
-                  <span class="info-label">ISBN:</span>
-                  <span class="info-value">{{ (projectInfo as BookVO).isbn }}</span>
                 </span>
               </div>
             </div>

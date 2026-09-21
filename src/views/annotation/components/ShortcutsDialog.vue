@@ -58,7 +58,7 @@ const dialogVisible = ref(false)
 const shortcutsGrouped = computed<ShortcutsGroup>(() => ({
   '题目操作': [
     { key: 'Q', name: '快速新增题目', description: '在当前目录下快速新增一个空白题目' },
-    { key: '1-6', name: '切换题目类型', description: '1-选择题 2-多选题 3-填空题 4-判断题 5-问答题 6-组合题' },
+    { key: '1-6', name: '切换题目类型', description: '按当前学科题型顺序 1-6 切换' },
     { key: 'B', name: '编辑模式', description: '切换到题目编辑模式（仅在编辑面板打开时生效）' },
     { key: 'Y', name: '预览模式', description: '切换到题目预览模式（仅在编辑面板打开时生效）' }
   ],

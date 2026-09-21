@@ -55,21 +55,17 @@
             />
           </el-form-item>
           <el-form-item label="标签题型">
-            <el-select
+            <el-cascader
               v-model="questionForm.labelQuestionType"
+              :options="questionTypeCascaderOptions"
+              :props="questionTypeCascaderProps"
               placeholder="请选择标签题型"
               style="width: 100%"
               filterable
               clearable
+              :show-all-levels="false"
               @change="triggerAutoSave"
-            >
-              <el-option
-                v-for="item in questionTypeOptions"
-                :key="item.typeCode"
-                :label="item.typeName"
-                :value="item.typeCode"
-              />
-            </el-select>
+            />
           </el-form-item>
           <el-form-item label="作答方式">
             <el-select
@@ -123,7 +119,7 @@
             @input="triggerAutoSave"
           />
         </el-form-item>
-        <el-form-item label="选项" v-if="isChoiceType(questionForm.tishi)" required :error="formErrors.options">
+        <el-form-item label="选项" v-if="isChoiceType(questionForm.labelQuestionType, questionForm.tishi)" required :error="formErrors.options">
           <div class="options-container">
             <div v-for="(option, index) in choiceOptions" :key="index" class="option-item">
               <div class="option-input-wrapper">
@@ -255,7 +251,7 @@
             <div class="preview-content">
               <div v-if="questionForm.question" v-html="renderContent(questionForm.question, true)"></div>
             </div>
-            <div v-if="isChoiceType(questionForm.tishi) && choiceOptions.some(o => o)" class="mt-4 pt-4 border-t border-gray-200">
+            <div v-if="isChoiceType(questionForm.labelQuestionType, questionForm.tishi) && choiceOptions.some(o => o)" class="mt-4 pt-4 border-t border-gray-200">
               <div class="preview-content choice-content">
                 <div v-for="(option, index) in choiceOptions.filter(o => o)" :key="index" class="choice-item">
                   <div v-html="renderContent(option, true)"></div>
@@ -289,7 +285,8 @@ import { ElMessage } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { type QuestionVO, type QuestionDetailsVO, getQuestionDetailsApi, putQuestionUpdateApi } from '@/api/gen/questionController'
 import { getBookInfoDetailsApi } from '@/api/gen/bookController'
-import { getDicQuestionTypeListApi, getDicSubjectListApi, type DicQuestionTypeVO } from '@/api/gen/dicController'
+import { getDicSubjectListApi } from '@/api/gen/dicController'
+import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotationController'
 import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
@@ -359,21 +356,8 @@ const questionForm = ref({
 })
 
 // 标签题型字典（按当前书籍学科过滤）与作答方式选项
-const questionTypeList = ref<DicQuestionTypeVO[]>([])
+const { isChoiceQuestion, ensureLoaded, getOptionsBySubject } = useQuestionTypeDict()
 const bookSubjectCode = ref<number | undefined>(undefined)
-
-// 一次性拉取全部标签题型字典（按学科 code 前端过滤）
-const loadQuestionTypeDict = async () => {
-  if (questionTypeList.value.length > 0) return
-  try {
-    const res = await getDicQuestionTypeListApi()
-    if (res.data.code === 200) {
-      questionTypeList.value = res.data.data || []
-    }
-  } catch (error) {
-    console.error('获取标签题型字典失败', error)
-  }
-}
 
 // 获取当前书籍的 docx 学科枚举（subjectCode），优先用 book.subjectCode，缺失时由 subjectId 推导
 const loadBookSubjectCode = async (projectId: string) => {
@@ -396,10 +380,25 @@ const loadBookSubjectCode = async (projectId: string) => {
 
 // 当前书籍学科下的标签题型选项（typeCode 为 docx 标签题型枚举）
 const questionTypeOptions = computed(() =>
-  questionTypeList.value
-    .filter(t => t.subjectCode === bookSubjectCode.value && t.typeCode != null)
+  getOptionsBySubject(bookSubjectCode.value)
+    .filter(t => t.typeCode != null)
     .map(t => ({ typeCode: t.typeCode as number, typeName: t.typeName || '' }))
 )
+
+// 题型大类 -> 叶子题型，构建 el-cascader 选项（仅叶子可选）
+const questionTypeCascaderOptions = computed<Array<{ value: string; label: string; children: Array<{ value: number; label: string }> }>>(() => {
+  const raw = getOptionsBySubject(bookSubjectCode.value).filter(t => t.typeCode != null)
+  const map = new Map<string, Array<{ value: number; label: string }>>()
+  for (const t of raw) {
+    const key = t.categoryName || '其他'
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push({ value: t.typeCode as number, label: t.typeName || '' })
+  }
+  return Array.from(map.entries()).map(([categoryName, children]) => ({ value: categoryName, label: categoryName, children }))
+})
+
+// 级联选择：emitPath=false 只返回叶子节点值；父节点不可选，只能选叶子
+const questionTypeCascaderProps = { emitPath: false, expandTrigger: 'hover' as const }
 
 // 作答方式选项（docx questionAnswerMode：0=综合母题/1=单选/2=多选/3=填空/4=判断/5=解答）
 const answerModeOptions = [
@@ -526,7 +525,7 @@ const validateField = (fieldName: 'question' | 'options' | 'answer'): string => 
       return '题干不能为空'
     }
   } else if (fieldName === 'options') {
-    if (isChoiceType(questionForm.value.tishi)) {
+    if (isChoiceType(questionForm.value.labelQuestionType, questionForm.value.tishi)) {
       const validOptions = choiceOptions.value.filter(o => o.trim())
       if (validOptions.length === 0) {
         return '选择题必须要有选项'
@@ -844,10 +843,9 @@ const getDifficultyLabel = (value: number) => {
   return '难'
 }
 
-// 判断是否为选择题类型
-const isChoiceType = (tishi?: string) => {
-  return tishi === 'xuanze' || tishi === 'duoxuan'
-}
+// 判断是否为选择题类型（优先用学科题型字典 isChoice，回退旧版 tishi 字符串）
+const isChoiceType = (labelQuestionType?: number | null, tishi?: string | null) =>
+  isChoiceQuestion({ labelQuestionType, tishi })
 
 // 监听无答案选项变化
 watch(() => questionForm.value.noAnswer, () => {
@@ -857,9 +855,9 @@ watch(() => questionForm.value.noAnswer, () => {
 
 // 监听题目类型变化，非选择题类型时清空选项
 watch(() => questionForm.value.tishi, (newTishi, oldTishi) => {
-  if (isChoiceType(newTishi)) {
+  if (isChoiceType(questionForm.value.labelQuestionType, newTishi)) {
     // 是选择题类型
-    if (!isChoiceType(oldTishi)) {
+    if (!isChoiceType(questionForm.value.labelQuestionType, oldTishi)) {
       // 从非选择题切换到选择题，初始化选项
       choiceOptions.value = ['', '', '', '']
     }
@@ -968,7 +966,7 @@ const loadQuestionDetails = async (questionId: string) => {
       await nextTick()
 
       // 初始化选项数组（仅对选择题类型）
-      if (isChoiceType(tishiValue) && choiceValue) {
+      if (isChoiceType(response.data.data.labelQuestionType, tishiValue) && choiceValue) {
         let choices: string[] = []
         try {
           // 尝试解析为 JSON 数组
@@ -1018,7 +1016,7 @@ const loadAnnotations = async (questionId: string) => {
 watch(() => props.selectedQuestion, (newQuestion, oldQuestion) => {
   if (newQuestion) {
     // 标签题型字典与书籍学科枚举（用于过滤标签题型下拉），与题目加载并行
-    loadQuestionTypeDict()
+    ensureLoaded()
     loadBookSubjectCode(newQuestion.projectId)
     // 检查是否是同一个题目但题型发生变化
     if (oldQuestion && newQuestion.id === oldQuestion.id && newQuestion.tishi !== oldQuestion.tishi) {

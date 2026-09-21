@@ -11,6 +11,7 @@ interface ChangeLogVersion {
   date: string;
   newFeatures?: string[];
   fixes?: string[];
+  optimizations?: string[];
 }
 
 interface ChangeLogData {
@@ -113,6 +114,17 @@ watch(() => props.modelValue, (newVal) => {
             <ul class="changelog-features">
               <li v-for="(fix, index) in log.fixes" :key="'fx-' + index">
                 {{ fix }}
+              </li>
+            </ul>
+          </div>
+          <div v-if="log.optimizations && log.optimizations.length > 0" class="changelog-section">
+            <div class="section-title">
+              <Icon icon="ep:refresh" class="optimize-icon" />
+              <span>体验优化</span>
+            </div>
+            <ul class="changelog-features">
+              <li v-for="(opt, index) in log.optimizations" :key="'opt-' + index">
+                {{ opt }}
               </li>
             </ul>
           </div>
