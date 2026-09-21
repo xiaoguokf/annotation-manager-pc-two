@@ -110,24 +110,6 @@ export interface ResultPageVOProjectReviewListVO {
   data?: PageVOProjectReviewListVO
 }
 
-export interface IsbnCheckVO {
-  /* ISBN编号 */
-  isbn: string
-  /* 是否重复（true-书籍已存在，false-书籍不存在） */
-  isbnDuplicate: boolean
-  /* 检查时间 */
-  checkTime: string
-}
-
-export interface ResultIsbnCheckVO {
-  /* 状态码：200-成功，非200-失败 */
-  code?: number
-  /* 消息 */
-  msg?: string
-  /* 数据(如果存在) */
-  data?: IsbnCheckVO
-}
-
 export interface ProjectClaimQuery {
   /* 页面大小 */
   size?: number
@@ -403,19 +385,6 @@ export const postProjectClaimSearchIdApi = (params: {
  */
 export const getProjectReviewListApi = (params?: ProjectReviewQuery, config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultPageVOProjectReviewListVO>('/project/review/list', { params, ...config })
-}
-
-/**
- * ISBN查重
- * ISBN查重
- 单独调用百度查重接口，方便提交资料审核前核对ISBN
- * @param config 可选配置，包含 timeout、loading 等选项
- * @returns Promise<ResultIsbnCheckVO>
- */
-export const getProjectMaterialIsbnCheckApi = (params?: {
-  isbn: string
-}, config?: SshineAdminRequestConfig<any>) => {
-  return http.get<ResultIsbnCheckVO>('/project/material/isbnCheck', { params, ...config })
 }
 
 /**

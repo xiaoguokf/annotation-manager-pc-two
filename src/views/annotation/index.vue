@@ -203,6 +203,7 @@ import { getQuestionListApi } from '@/api/gen/questionController'
 import { getBookInfoDetailsApi } from '@/api/gen/bookController'
 import { getDocInfoDetailsApi } from '@/api/gen/docController'
 import { getDicSubjectListApi, type DicSubjectVO } from '@/api/gen/dicController'
+import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 
 defineOptions({
   name: 'AnnotationSystem'
@@ -230,6 +231,18 @@ const projectTitle = ref('标注工作台')
 
 // 学科名称（用于OCR识别时注入学科相关提示词）
 const subjectName = ref<string | undefined>(undefined)
+// 学科枚举（docx code，用于按学科动态加载题目类型字典）
+const subjectCode = ref<number | undefined>(undefined)
+const { ensureLoaded, getOptionsBySubject } = useQuestionTypeDict()
+// 数字键 1-6 → 当前学科前 6 个题型 typeCode（按学科动态）
+const typeCodeShortcuts = computed<Record<string, number>>(() => {
+  const opts = getOptionsBySubject(subjectCode.value)
+  const map: Record<string, number> = {}
+  opts.slice(0, 6).forEach((t, i) => {
+    if (t.typeCode != null) map[String(i + 1)] = t.typeCode as number
+  })
+  return map
+})
 
 // 题目总数
 const totalQuestionCount = ref(0)
@@ -258,10 +271,12 @@ const fetchSubjectName = async () => {
 
     // 根据类型获取书籍/试卷信息中的subjectId
     let subjectId: string | undefined
+    let code: number | undefined
     if (type.value === 'book') {
       const res = await getBookInfoDetailsApi({ id: String(projectId.value) })
       if (res.data.code === 200 && res.data.data) {
         subjectId = res.data.data.subjectId
+        code = res.data.data.subjectCode && res.data.data.subjectCode > 0 ? res.data.data.subjectCode : undefined
       }
     } else {
       const res = await getDocInfoDetailsApi({ id: String(projectId.value) })
@@ -274,7 +289,9 @@ const fetchSubjectName = async () => {
     if (subjectId) {
       const subject = subjectList.find(s => s.id === subjectId)
       subjectName.value = subject?.subjectName || undefined
+      if (code == null && subject?.docxCode != null) code = subject.docxCode
     }
+    subjectCode.value = code
   } catch (error) {
     console.error('[AnnotationSystem] 获取学科信息失败:', error)
   }
@@ -693,19 +710,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
     questionsListRef.value?.handleAddQuestion()
   }
 
-  // 数字键 1-6 - 切换当前选中题目的类型
-  const typeKeyMap: Record<string, string> = {
-    '1': 'xuanze',     // 选择题
-    '2': 'duoxuan',    // 多选题
-    '3': 'tiankong',   // 填空题
-    '4': 'panduan',    // 判断题
-    '5': 'wenda',      // 问答题
-    '6': 'zuhe'        // 组合题
-  }
-
-  if (typeKeyMap[event.key]) {
+  // 数字键 1-6 - 切换当前选中题目的类型（按学科题型顺序动态映射）
+  const shortcutTypeCode = typeCodeShortcuts.value[event.key]
+  if (shortcutTypeCode != null) {
     event.preventDefault()
-    questionsListRef.value?.handleChangeQuestionType(typeKeyMap[event.key])
+    questionsListRef.value?.handleChangeQuestionType(shortcutTypeCode)
   }
 
   // B 键 - 切换到编辑模式（仅在编辑面板打开时生效）
@@ -737,6 +746,8 @@ onMounted(async () => {
   await fetchTotalQuestionCount()
   // 获取学科信息
   await fetchSubjectName()
+  // 加载学科题型字典（按学科动态显示题目类型）
+  await ensureLoaded()
   // 加载反馈列表并检查是否自动弹出
   await checkAndAutoOpenFeedback()
   // 添加键盘事件监听

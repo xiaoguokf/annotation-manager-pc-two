@@ -12,6 +12,8 @@ export interface QuestionTypeCmd {
   sortNo?: number
   /* 状态：1-启用，0-停用 */
   status?: number
+  /* 基础题型：0-填空型，1-选择型（可选；为空时按 typeCode 自动推导：单选/多选=1，其余=0） */
+  baseType?: number
 }
 
 export interface ResultVoid {
@@ -33,15 +35,24 @@ export interface ResultObject {
 }
 
 export interface QuestionTypeVO {
-  id?: string
+  /* 主键 */
+  id: string
   /* 学科枚举（1~11） */
-  subjectCode?: number
+  subjectCode: number
   /* 题型枚举值（docx） */
-  typeCode?: number
+  typeCode: number
   /* 题型名 */
-  typeName?: string
+  typeName: string
   /* 排序 */
-  sortNo?: number
+  sortNo: number
+  /* 基础题型：0-填空型，1-选择型 */
+  baseType: number
+  /* 题型大类ID，关联 atd_dic_question_category */
+  categoryId: string
+  /* 题型大类名（听力/阅读/写作表达/语法词汇/实验探究/综合/基础概念/其他） */
+  categoryName: string
+  /* 是否选择类型：1-选择型，0-填空型（由 baseType 派生，等于 baseType，仅作兼容暴露） */
+  isChoice: number
 }
 
 export interface ResultListQuestionTypeVO {

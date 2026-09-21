@@ -199,19 +199,6 @@ export const postDeliverSubmitSignApi = (params: {
 }
 
 /**
- * 资料审核回传书籍信息和内容页
- * 资料审核通过后管理员回传书籍信息和内容页
- 回传成功后进入做题阶段，每步回传成功后保存回传记录
- * @param config 可选配置，包含 timeout、loading 等选项
- * @returns Promise<ResultVoid>
- */
-export const postDeliverMaterialApi = (params: {
-  projectId: string
-}, config?: SshineAdminRequestConfig<any>) => {
-  return http.post<ResultVoid>(`/deliver/material/${params.projectId}`, null, config)
-}
-
-/**
  * 获取项目回传记录列表
  * 获取项目回传记录列表
  * @param config 可选配置，包含 timeout、loading 等选项

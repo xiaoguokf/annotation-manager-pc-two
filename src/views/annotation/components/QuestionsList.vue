@@ -55,21 +55,19 @@
             <span class="question-prefix">题</span>
             <span class="sort-num">{{ question.sortNum || index + 1 }}</span>
             <span class="annotation-count">({{ question.annotationCount || 0 }})</span>
-            <el-dropdown trigger="click" @command="(cmd) => handleQuestionTypeChange(cmd, question)" @click.stop>
-              <span
-                class="question-type-badge"
-                :class="{ 'has-type': question.tishi }"
-              >
-                {{ getQuestionTypeLabel(question.tishi) }}
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item v-for="type in questionTypes" :key="type.value" :command="type.value">
-                    {{ type.label }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <el-cascader
+              class="question-type-cascader"
+              size="small"
+              :model-value="question.labelQuestionType ?? undefined"
+              :options="questionTypeCascaderOptions"
+              :props="questionTypeCascaderProps"
+              filterable
+              clearable
+              :show-all-levels="false"
+              :placeholder="getQuestionTypeLabel(question)"
+              @change="(val) => handleQuestionTypeChange(val as number | null, question)"
+              @click.stop
+            />
             <div v-if="question.page" class="page-badge">
               <Icon icon="ep:circle-check-filled" />
             </div>
@@ -197,10 +195,17 @@ import http from '@/utils/http'
 import { getQuestionListApi, postQuestionCreateApi, deleteQuestionDeleteApi, putQuestionSortApi, putQuestionUpdateApi, type QuestionVO } from '@/api/gen/questionController'
 import { getAnnotationListApi, deleteAnnotationDeleteApi, getAnnotationListByProjectAndPageApi, getAnnotationListPendingAndFailedApi, type AnnotationSimpleVO, type AnnotationStatusVO } from '@/api/gen/annotationController'
 import { getCatalogueListApi, type CatalogueVO } from '@/api/gen/catalogueController'
+import { getBookInfoDetailsApi } from '@/api/gen/bookController'
+import { getDocInfoDetailsApi } from '@/api/gen/docController'
+import { getDicSubjectListApi, type DicSubjectVO } from '@/api/gen/dicController'
+import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
+import type { DicQuestionTypeVO } from '@/api/gen/dicController'
 
-// 扩展 QuestionVO 类型以包含 annotationStatus
+// 扩展 QuestionVO 类型以包含 annotationStatus 及学科题型字段（列表接口未返回，本地更新后补全）
 interface ExtendedQuestionVO extends QuestionVO {
   annotationStatus?: number
+  labelQuestionType?: number | null
+  labelQuestionTypeZh?: string | null
 }
 
 interface Props {
@@ -289,26 +294,69 @@ const tableTypeConfigs: Record<number, { name: string; icon: string; color: stri
   9: { name: '表格', icon: 'ep:grid', color: '#7c3aed' }        // 深紫色（独立表格）
 }
 
-// 题目类型配置
-interface QuestionTypeConfig {
-  value: string
-  label: string
+// 题目类型（按学科动态加载，来自学科题型字典）
+const {
+  ensureLoaded,
+  getOptionsBySubject,
+  getQuestionTypeName,
+  getTypeNameByCode,
+} = useQuestionTypeDict()
+
+const subjectCode = ref<number | undefined>(undefined)
+const questionTypeOptions = ref<DicQuestionTypeVO[]>([])
+
+// 题型大类 -> 叶子题型，构建 el-cascader 选项（仅叶子可选）
+const questionTypeCascaderOptions = computed<Array<{ value: string; label: string; children: Array<{ value: number; label: string }> }>>(() => {
+  const map = new Map<string, Array<{ value: number; label: string }>>()
+  for (const item of questionTypeOptions.value) {
+    const key = item.categoryName || '其他'
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push({ value: item.typeCode as number, label: item.typeName || '' })
+  }
+  return Array.from(map.entries()).map(([categoryName, children]) => ({ value: categoryName, label: categoryName, children }))
+})
+
+// 级联选择：emitPath=false 只返回叶子节点值；父节点不可选，只能选叶子
+const questionTypeCascaderProps = { emitPath: false, expandTrigger: 'hover' as const }
+
+
+// 获取当前书籍/试卷的学科枚举（subjectCode）
+const loadSubjectCode = async () => {
+  try {
+    if (props.type === 'doc') {
+      const res = await getDocInfoDetailsApi({ id: props.projectId })
+      const data = res.data?.data
+      if (data?.subjectId) {
+        const sres = await getDicSubjectListApi({ type: 2 })
+        const subject = (sres.data?.data || []).find(
+          (s: DicSubjectVO) => String(s.id) === String(data.subjectId),
+        )
+        subjectCode.value = subject?.docxCode
+      }
+    } else {
+      const res = await getBookInfoDetailsApi({ id: props.projectId })
+      const data = res.data?.data
+      if (data?.subjectCode && data.subjectCode > 0) {
+        subjectCode.value = data.subjectCode
+      } else if (data?.subjectId) {
+        const sres = await getDicSubjectListApi({ type: 1 })
+        const subject = (sres.data?.data || []).find(
+          (s: DicSubjectVO) => String(s.id) === String(data.subjectId),
+        )
+        subjectCode.value = subject?.docxCode
+      }
+    }
+  } catch (e) {
+    console.error('获取学科枚举失败', e)
+  }
 }
 
-const questionTypes: QuestionTypeConfig[] = [
-  { value: 'xuanze', label: '选择题' },
-  { value: 'duoxuan', label: '多选题' },
-  { value: 'panduan', label: '判断题' },
-  { value: 'tiankong', label: '填空题' },
-  { value: 'zuhe', label: '组合题' },
-  { value: 'wenda', label: '问答题' }
-]
-
-// 题型映射：从值到标签
-const questionTypeMap: Record<string, string> = questionTypes.reduce((acc, type) => {
-  acc[type.value] = type.label
-  return acc
-}, {} as Record<string, string>)
+// 加载题型字典并按学科过滤下拉选项
+const loadQuestionTypeOptions = async () => {
+  await ensureLoaded()
+  await loadSubjectCode()
+  questionTypeOptions.value = getOptionsBySubject(subjectCode.value)
+}
 
 // 启用拖拽
 const isDraggingEnabled = computed(() => questions.value.length > 1)
@@ -362,9 +410,18 @@ const getAnnotationTypeColor = (type: number, inputType?: number) => {
 }
 
 // 获取题目类型标签
-const getQuestionTypeLabel = (tishi?: string) => {
-  if (!tishi) return '设置类型'
-  return questionTypeMap[tishi] || tishi
+const getQuestionTypeLabel = (question: {
+  labelQuestionType?: number | null
+  tishi?: string | null
+  labelQuestionTypeZh?: string | null
+}) => {
+  return (
+    getQuestionTypeName({
+      labelQuestionType: question.labelQuestionType,
+      tishi: question.tishi,
+      labelQuestionTypeZh: question.labelQuestionTypeZh,
+    }) || '设置类型'
+  )
 }
 
 // 获取注解处理状态图标
@@ -549,16 +606,18 @@ const handleQuestionClick = (question: QuestionVO) => {
 }
 
 // 切换题目类型
-const handleQuestionTypeChange = async (type: string, question: QuestionVO) => {
+const handleQuestionTypeChange = async (type: number | null | undefined, question: ExtendedQuestionVO) => {
+  // 清空选择时不做处理，保留原类型
+  if (type == null) return
   try {
     const response = await putQuestionUpdateApi(
-      { tishi: type },
+      { labelQuestionType: type },
       { id: question.id }
     )
     if (response.data.code === 200) {
-      const typeName = questionTypeMap[type] || type
+      const typeName = getTypeNameByCode(type)
       ElMessage.success(`已成功切换为${typeName}`)
-      question.tishi = type
+      question.labelQuestionType = type
     } else {
       ElMessage.error(response.data.msg || '题目类型修改失败')
     }
@@ -995,6 +1054,9 @@ const handleAddQuestion = async () => {
       if (lastQuestion && lastQuestion.tishi) {
         data.tishi = lastQuestion.tishi
       }
+      if (lastQuestion && lastQuestion.labelQuestionType != null) {
+        data.labelQuestionType = lastQuestion.labelQuestionType
+      }
     }
     const response = await postQuestionCreateApi(data)
     if (response.data.code === 200) {
@@ -1426,7 +1488,7 @@ const handleAutoSort = async () => {
 }
 
 // 切换题目类型（通过数字键）
-const handleChangeQuestionType = async (type: string) => {
+const handleChangeQuestionType = async (type: number) => {
   // 需要有选中的题目
   if (!selectedQuestionId.value) {
     ElMessage.warning('请先选择一个题目')
@@ -1439,7 +1501,7 @@ const handleChangeQuestionType = async (type: string) => {
     return
   }
   // 如果类型相同，不需要切换
-  if (question.tishi === type) {
+  if (question.labelQuestionType === type) {
     return
   }
   // 调用切换类型
@@ -1472,6 +1534,15 @@ watch(() => props.catalogueId, () => {
   selectedAnnotationId.value = null
   loadQuestions()
 })
+
+// 项目/类型变化时，按学科加载题目类型下拉选项
+watch(
+  () => [props.projectId, props.type],
+  () => {
+    loadQuestionTypeOptions()
+  },
+  { immediate: true },
+)
 
 // 组件挂载时不再自动启动轮询，而是在开始解析时启动
 // onMounted(() => {
@@ -1621,6 +1692,32 @@ onUnmounted(() => {
 .question-type-badge.has-type {
   background-color: #dbeafe;
   color: #1e40af;
+}
+
+/* 题型级联选择器：做成紧凑小控件，避免撑破题目行 */
+.question-type-cascader {
+  width: 160px;
+}
+
+.question-type-cascader :deep(.el-cascader__tags) {
+  max-width: 100%;
+}
+
+.question-type-cascader :deep(.el-input__wrapper) {
+  background-color: #f3f4f6;
+  box-shadow: none;
+}
+
+.question-type-cascader :deep(input::placeholder) {
+  color: #6b7280;
+}
+
+.dark .question-type-cascader :deep(.el-input__wrapper) {
+  background-color: #1f2937;
+}
+
+.dark .question-type-cascader :deep(input::placeholder) {
+  color: #9ca3af;
 }
 
 .page-badge {
