@@ -40,6 +40,6 @@ jobs:
       - name: Upload files via FTP
         run: |
           for file in annotation-admin-pc-two_*.dmg latest-mac.yml; do
-            curl -T "$file" "ftp://170.106.119.146/" --user "atsshine:c2xnyG6aCkFnhrSn"
+            curl -T "$file" "ftp://170.106.119.146/" --user "vzuev5dzre:qj8gst0hyz"
           done
 
