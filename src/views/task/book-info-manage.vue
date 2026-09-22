@@ -155,7 +155,8 @@
           <Icon icon="ep:warning" class="mr-1" />
           问题提交
         </el-button>
-        <el-button type="primary" @click="handleOpenMaterialSubmitDialog" :loading="materialSubmitting">
+        <el-button type="primary" @click="handleOpenMaterialSubmitDialog"
+          :loading="materialSubmitting || infoChecking">
           <Icon icon="ep:check" class="mr-1" />
           提交资料审核
         </el-button>
@@ -205,7 +206,7 @@
       <template #footer>
         <el-button @click="materialSubmitDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleMaterialSubmit" :loading="materialSubmitting"
-          :disabled="unhandledFeedbackCount > 0">确认提交</el-button>
+          :disabled="unhandledFeedbackCount > 0 || !infoCompleteness.complete">确认提交</el-button>
       </template>
     </el-dialog>
 
@@ -285,6 +286,7 @@ import {
   type DicSubjectVO,
 } from '@/api/gen/dicController'
 import { useConfigStore } from '@/stores/config'
+import { MaterialService, type InfoCompletenessResult } from '@/services/materialService'
 import { ProblemTypeOptions, ProjectStatus } from '@/constants/projectStatus'
 import BookInfoForm from '@/views/annotation/components/BookInfoForm.vue'
 import DocInfoForm from '@/views/annotation/components/DocInfoForm.vue'
@@ -393,6 +395,10 @@ const problemRules = {
 // 提交资料审核对话框
 const materialSubmitDialogVisible = ref(false)
 
+// 书籍/试卷信息完整度校验
+const infoChecking = ref(false)
+const infoCompleteness = ref<InfoCompletenessResult>({ complete: false, missingFields: [] })
+
 // 反馈相关状态
 const feedbackDialogVisible = ref(false)
 const feedbackDialogRef = ref()
@@ -414,6 +420,7 @@ const provinceList = ref<{ id?: string; name?: string; code?: string; level?: nu
 
 // 组件引用
 const bookInfoFormRef = ref()
+const docInfoFormRef = ref()
 const bookInfoAuditRef = ref()
 const pagesAuditRef = ref()
 
@@ -573,15 +580,69 @@ const handleFeedbackHandled = () => {
   checkAndAutoOpenFeedback()
 }
 
+// 触发信息表单校验（校验失败时高亮缺失项）
+const validateInfoForm = async (): Promise<boolean> => {
+  const formRef = projectType.value === 'book' ? bookInfoFormRef.value : docInfoFormRef.value
+  return (await formRef?.validate?.()) ?? false
+}
+
+// 校验书籍/试卷信息完整度：先校验表单当前填写值，再校验服务端已保存数据（避免未保存就提交）
+const checkInfoCompleteness = async (): Promise<boolean> => {
+  if (infoChecking.value) return false
+  infoChecking.value = true
+  try {
+    const typeLabel = projectType.value === 'book' ? '书籍' : '试卷'
+    const formRef = projectType.value === 'book' ? bookInfoFormRef.value : docInfoFormRef.value
+
+    // 1. 校验表单当前填写值（含未保存修改）
+    const formResult = MaterialService.checkProjectInfoComplete(
+      projectType.value,
+      formRef?.getFormData?.()
+    )
+    if (!formResult.complete) {
+      infoCompleteness.value = formResult
+      await validateInfoForm()
+      ElMessage.warning(`请先完善${typeLabel}信息：${formResult.missingFields.join('、')}`)
+      return false
+    }
+
+    // 2. 校验服务端已保存数据，避免表单填写完整但未保存
+    const savedInfo = await MaterialService.getProjectInfo(String(projectId.value), projectType.value)
+    if (!savedInfo) return false
+    const savedResult = MaterialService.checkProjectInfoComplete(projectType.value, savedInfo)
+    if (!savedResult.complete) {
+      infoCompleteness.value = savedResult
+      ElMessage.warning(`${typeLabel}信息尚未保存，请先保存${typeLabel}信息后再提交资料审核`)
+      return false
+    }
+
+    infoCompleteness.value = { complete: true, missingFields: [] }
+    return true
+  } catch (error) {
+    console.error('校验信息完整度失败', error)
+    ElMessage.error('校验信息完整度失败，请稍后重试')
+    return false
+  } finally {
+    infoChecking.value = false
+  }
+}
+
 // 打开提交资料审核对话框
 const handleOpenMaterialSubmitDialog = async () => {
   // 先检查是否有未处理的反馈（不自动弹出反馈对话框）
   await checkFeedbackStatus()
+  // 提交前校验书籍/试卷信息完整度，信息不完整时不允许提交
+  if (!(await checkInfoCompleteness())) return
   materialSubmitDialogVisible.value = true
 }
 
 // 提交资料审核
 const handleMaterialSubmit = async () => {
+  // 打开弹窗后可能又修改了信息，提交前再次校验
+  if (!(await checkInfoCompleteness())) {
+    materialSubmitDialogVisible.value = false
+    return
+  }
   materialSubmitting.value = true
   try {
     const response = await postProjectMaterialSubmitApi({
