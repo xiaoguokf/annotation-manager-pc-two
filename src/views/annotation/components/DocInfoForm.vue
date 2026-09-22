@@ -290,6 +290,17 @@ const handleReset = () => {
   fetchDocDetail()
 }
 
+// 表单校验，供父组件提交资料前调用（校验失败时高亮缺失项）
+const validate = async (): Promise<boolean> => {
+  if (!formRef.value) return false
+  return await formRef.value.validate().catch(() => false)
+}
+
+// 暴露当前表单数据（含未保存修改），供父组件校验信息完整度
+const getFormData = () => ({ ...form })
+
+defineExpose({ validate, getFormData })
+
 watch(() => props.docId, (newVal) => {
   if (newVal && newVal !== 'undefined') {
     fetchDocDetail()
