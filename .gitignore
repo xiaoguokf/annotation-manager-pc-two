@@ -45,3 +45,4 @@ release
 screenshots/
 test-results/
 playwright-report/
+.codegraph/

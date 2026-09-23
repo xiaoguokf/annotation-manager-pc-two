@@ -15,7 +15,7 @@
         <el-form :model="questionForm" label-width="80px" size="small">
           <div class="form-row">
             <el-form-item label="题类">
-              <el-select v-model="questionForm.tilei" placeholder="请选择题类" style="width: 100%" @change="triggerAutoSave">
+              <el-select v-model="questionForm.tilei" placeholder="请选择题类" style="width: 100%" @change="() => triggerAutoSave(true)">
                 <el-option label="常考题" value="changkaoti" />
                 <el-option label="易错题" value="yicuoti" />
                 <el-option label="好题" value="haoti" />
@@ -23,11 +23,11 @@
               </el-select>
             </el-form-item>
             <el-form-item label="无答案">
-              <el-checkbox v-model="questionForm.noAnswer" @change="triggerAutoSave" />
+              <el-checkbox v-model="questionForm.noAnswer" @change="() => triggerAutoSave(true)" />
             </el-form-item>
           </div>
           <el-form-item label="难度">
-            <el-select v-model="questionForm.difficulty" placeholder="请选择难度" style="width: 100%" @change="triggerAutoSave">
+            <el-select v-model="questionForm.difficulty" placeholder="请选择难度" style="width: 100%" @change="() => triggerAutoSave(true)">
               <el-option label="0（容易）" :value="0" />
               <el-option label="0.1（容易）" :value="0.1" />
               <el-option label="0.2（容易）" :value="0.2" />
@@ -64,7 +64,7 @@
               filterable
               clearable
               :show-all-levels="false"
-              @change="triggerAutoSave"
+              @change="() => triggerAutoSave(true)"
             />
           </el-form-item>
           <el-form-item label="作答方式">
@@ -72,7 +72,7 @@
               v-model="questionForm.questionAnswerMode"
               placeholder="请选择作答方式"
               style="width: 100%"
-              @change="triggerAutoSave"
+              @change="() => triggerAutoSave(true)"
             >
               <el-option
                 v-for="item in answerModeOptions"
@@ -88,7 +88,7 @@
             type="textarea"
             :rows="3"
             placeholder="请输入点评"
-            @input="triggerAutoSave"
+            @input="() => triggerAutoSave(true)"
           />
         </el-form-item>
         </el-form>
@@ -116,7 +116,7 @@
             :rows="4"
             placeholder="请输入标题，支持 Markdown 和 LaTeX 公式"
             @blur="handleQuestionBlur"
-            @input="triggerAutoSave"
+            @input="() => triggerAutoSave()"
           />
         </el-form-item>
         <el-form-item label="选项" v-if="isChoiceType(questionForm.labelQuestionType, questionForm.tishi)" required :error="formErrors.options">
@@ -129,7 +129,7 @@
                   :rows="option.includes('<img') ? 3 : 1"
                   placeholder="请输入选项内容"
                   @blur="handleOptionBlur"
-                  @input="triggerAutoSave"
+                  @input="() => triggerAutoSave()"
                 />
                 <div v-if="option.includes('<img')" class="option-preview">
                   <div v-html="renderContent(option, false)"></div>
@@ -163,7 +163,7 @@
             :rows="3"
             placeholder="请输入答案，支持 Markdown 和 LaTeX 公式"
             @blur="handleAnswerBlur"
-            @input="triggerAutoSave"
+            @input="() => triggerAutoSave()"
           />
         </el-form-item>
         <el-form-item label="解析">
@@ -173,7 +173,7 @@
             :rows="3"
             placeholder="请输入解析，支持 Markdown 和 LaTeX 公式"
             @blur="handleAnalysisBlur"
-            @input="triggerAutoSave"
+            @input="() => triggerAutoSave()"
           />
         </el-form-item>
       </el-form>
@@ -313,6 +313,8 @@ const currentMode = ref<'edit' | 'preview'>('edit')
 // 保存状态
 const assembling = ref(false)
 const autoSaving = ref(false)
+// 保存进行中产生的改动标记，避免并发保存时改动被丢弃
+const pendingSave = ref(false)
 const saveTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // 表单错误提示
@@ -427,11 +429,17 @@ const wrapSupplement = (content: string): string => {
 }
 
 // 自动保存
-const autoSaveQuestion = async () => {
+// force = true：元信息字段（题类/难度/知识点/点评/无答案/标签题型/作答方式）改动，
+//   与内容完整性无关，跳过内容校验直接提交，避免出现"改了存不进去"的情况
+// force = false：题干/选项/答案/解析改动，校验不通过时不提交（错误由表单 :error 展示）
+const autoSaveQuestion = async (force: boolean = false) => {
   if (!props.selectedQuestion) return
 
-  // 如果正在保存，跳过
-  if (autoSaving.value) return
+  // 如果正在保存，标记待保存，等本次结束后补存一次
+  if (autoSaving.value) {
+    pendingSave.value = true
+    return
+  }
 
   // 校验必填字段并更新错误显示
   updateFieldError('question')
@@ -442,8 +450,8 @@ const autoSaveQuestion = async () => {
   const optionsError = formErrors.value.options
   const answerError = formErrors.value.answer
 
-  // 如果有错误，不进行保存
-  if (questionError || optionsError || answerError) {
+  // 内容类改动且存在校验错误时，不进行保存
+  if (!force && (questionError || optionsError || answerError)) {
     return
   }
 
@@ -494,28 +502,36 @@ const autoSaveQuestion = async () => {
       // 静默保存，不显示提示
       // 通知父组件刷新题目信息
       emit('refreshQuestion')
+    } else {
+      ElMessage.error(response.data.msg || '保存失败')
     }
   } catch (error) {
     console.error('自动保存失败:', error)
+    ElMessage.error('保存失败')
   } finally {
     autoSaving.value = false
+    // 保存期间又有改动，补存一次，避免最后一次改动丢失
+    if (pendingSave.value) {
+      pendingSave.value = false
+      await autoSaveQuestion(force)
+    }
   }
 }
 
 // 去抖自动保存
-const triggerAutoSave = () => {
+const triggerAutoSave = (force: boolean = false) => {
   if (saveTimer.value) {
     clearTimeout(saveTimer.value)
   }
   saveTimer.value = setTimeout(() => {
-    autoSaveQuestion()
+    autoSaveQuestion(force)
   }, 1000) // 1秒后自动保存
 }
 
 // 处理知识点变化
 const handleKnowledgeChange = (value: string[]) => {
   questionForm.value.knowledge = value.join(',')
-  triggerAutoSave()
+  triggerAutoSave(true)
 }
 
 // 校验单个字段
@@ -850,7 +866,7 @@ const isChoiceType = (labelQuestionType?: number | null, tishi?: string | null) 
 // 监听无答案选项变化
 watch(() => questionForm.value.noAnswer, () => {
   updateFieldError('answer')
-  triggerAutoSave()
+  triggerAutoSave(true)
 })
 
 // 监听题目类型变化，非选择题类型时清空选项
@@ -1029,9 +1045,9 @@ watch(() => props.selectedQuestion, (newQuestion, oldQuestion) => {
   }
 }, { immediate: true, deep: true })
 
-// 暴露方法
+// 暴露方法（外部切换题目/关闭面板时调用，强制提交，避免未保存的元信息丢失）
 defineExpose({
-  autoSaveQuestion,
+  autoSaveQuestion: (force: boolean = true) => autoSaveQuestion(force),
   setMode
 })
 </script>
