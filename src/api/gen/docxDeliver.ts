@@ -148,6 +148,8 @@ export interface AttachOutputVO {
 }
 
 export interface QuestionOutputVO {
+  /* 题目类型中文：单选题/多选题/填空题/判断题/解答题/完形填空/综合题/连线题/默认题 */
+  questionTypeZh?: string
   /* 标签题型中文 */
   labelQuestionTypeZh?: string
   /* 作答方式中文：单选/多选/填空/判断/解答 */

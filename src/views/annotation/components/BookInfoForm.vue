@@ -26,7 +26,7 @@
       </el-form-item>
 
       <el-form-item label="版本" prop="bookVersionId">
-        <el-select v-model="form.bookVersionId" placeholder="请选择版本" style="width: 100%" filterable @change="handleVersionChange">
+        <el-select v-model="form.bookVersionId" placeholder="请选择版本（选填）" style="width: 100%" filterable clearable @change="handleVersionChange">
           <el-option v-for="item in versionList.filter(i => i.id)" :key="item.id" :label="item.name" :value="item.id!" />
         </el-select>
       </el-form-item>
@@ -125,7 +125,7 @@ const rules = {
   title: [{ required: true, message: '请输入书籍名称', trigger: 'blur' }],
   subjectId: [{ required: true, message: '请选择学科', trigger: 'change' }],
   volumeId: [{ required: true, message: '请选择册别', trigger: 'change' }],
-  bookVersionId: [{ required: true, message: '请选择版本', trigger: 'change' }],
+  bookVersionId: [{ required: false }],
   phase: [{ required: true, message: '请选择学段', trigger: 'change' }]
 }
 

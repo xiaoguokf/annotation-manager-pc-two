@@ -362,7 +362,6 @@ const checkBookInfo = async () => {
         if (!data.title) messages.push('书籍名称')
         if (!data.subjectId) messages.push('学科')
         if (!data.volumeId) messages.push('册别')
-        if (!data.bookVersionId) messages.push('版本')
       }
     } else {
       const response = await getDocInfoDetailsApi({ id: props.projectId })
