@@ -63,6 +63,9 @@
               :class="{ active: isActiveFormat('cancel') }">
               <Icon icon="mdi:format-strikethrough-variant" :width="16" :height="16" />
             </button>
+            <button class="format-btn answer-blank-btn" @click="insertAnswerBlank" :title="'作答空白 (Ctrl+H)'">
+              <span class="answer-blank-icon">h</span>
+            </button>
             <div class="toolbar-group" :class="{ active: activeGroup === 'underline' }">
               <button class="format-btn" @click="toggleGroup('underline')" :title="'下划线/加点'">
                 <Icon icon="mdi:format-underline" :width="16" :height="16" />
@@ -591,6 +594,9 @@ const handleKeydown = (e: Event | KeyboardEvent) => {
   } else if ((keyboardEvent.ctrlKey || keyboardEvent.metaKey) && keyboardEvent.key === 'd') {
     e.preventDefault()
     toggleFormat('cancel')
+  } else if ((keyboardEvent.ctrlKey || keyboardEvent.metaKey) && keyboardEvent.key === 'h') {
+    e.preventDefault()
+    insertAnswerBlank()
   } else if ((keyboardEvent.ctrlKey || keyboardEvent.metaKey) && keyboardEvent.key === 'u') {
     e.preventDefault()
     toggleFormat('underline')
@@ -1203,6 +1209,22 @@ const insertFormula = (formula: { name: string, code: string, isFormat?: boolean
   }, 0)
 }
 
+// 插入作答空白标记（源码模式：直接在光标处插入 HTML 字符串）
+const insertAnswerBlank = () => {
+  const textarea = document.querySelector('.content-box textarea') as HTMLTextAreaElement
+  if (!textarea) return
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const text = editContent.value
+  const code = '<span data-tiptype="question-blank_filling"></span>'
+  editContent.value = text.slice(0, start) + code + text.slice(end)
+  handleEditChange(editContent.value)
+  setTimeout(() => {
+    textarea.focus()
+    textarea.setSelectionRange(start + code.length, start + code.length)
+  }, 0)
+}
+
 // 从弹窗插入公式并关闭弹窗
 const insertFormulaFromDialog = (formula: { name: string, code: string }) => {
   insertFormula(formula)
@@ -1708,5 +1730,26 @@ defineExpose({
 
 .formula-grid::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+
+/* 作答空白标记（预览渲染） */
+.rich-editor :deep([data-tiptype="question-blank_filling"]),
+.preview-content :deep([data-tiptype="question-blank_filling"]) {
+  display: inline-block;
+  min-width: 60px;
+  border-bottom: 1px solid currentColor;
+  height: 1em;
+  vertical-align: bottom;
+  margin: 0 2px;
+}
+
+.answer-blank-btn {
+  font-weight: 500;
+}
+
+.answer-blank-icon {
+  font-size: 13px;
+  line-height: 1;
 }
 </style>

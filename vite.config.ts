@@ -35,7 +35,7 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
       allowedHosts: true,
       proxy: {
         '/api': {
-          target: 'https://bd.xp163.com/api',
+          target: 'https://7h8ekgaptg-8080.cnb.run',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },

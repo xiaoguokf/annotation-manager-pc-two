@@ -15,8 +15,7 @@ const BOOK_REQUIRED_FIELDS: { field: string; label: string }[] = [
   { field: 'title', label: '书籍名称' },
   { field: 'subjectId', label: '学科' },
   { field: 'phase', label: '学段' },
-  { field: 'volumeId', label: '册别' },
-  { field: 'bookVersionId', label: '版本' }
+  { field: 'volumeId', label: '册别' }
 ]
 
 /** 试卷信息必填字段（field 对应 DocVO / DocUpdateCmd 字段） */

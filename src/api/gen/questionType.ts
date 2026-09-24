@@ -64,6 +64,22 @@ export interface ResultListQuestionTypeVO {
   data?: QuestionTypeVO[]
 }
 
+export interface BaseQuestionTypeVO {
+  /* docx 题型枚举：1~8 为基础题型，0 为其余非基础题型的兜底（默认题） */
+  typeCode: number
+  /* 题目类型中文：单选题/多选题/填空题/判断题/解答题/完形填空/综合题/连线题/默认题 */
+  questionTypeZh: string
+}
+
+export interface ResultListBaseQuestionTypeVO {
+  /* 状态码：200-成功，非200-失败 */
+  code?: number
+  /* 消息 */
+  msg?: string
+  /* 数据(如果存在) */
+  data?: BaseQuestionTypeVO[]
+}
+
 /**
  * 更新标签题型
  * @param config 可选配置，包含 timeout、loading 等选项
@@ -93,6 +109,15 @@ export const getQuestionTypeListApi = (params?: {
   subjectCode?: number
 }, config?: SshineAdminRequestConfig<any>) => {
   return http.get<ResultListQuestionTypeVO>('/question-type/list', { params, ...config })
+}
+
+/**
+ * 题目类型默认值表（docx questionTypeZh，前端按标签题型枚举推导）
+ * @param config 可选配置，包含 timeout、loading 等选项
+ * @returns Promise<ResultListBaseQuestionTypeVO>
+ */
+export const getQuestionTypeBaseTypeApi = (config?: SshineAdminRequestConfig<any>) => {
+  return http.get<ResultListBaseQuestionTypeVO>('/question-type/base-type', config)
 }
 
 /**

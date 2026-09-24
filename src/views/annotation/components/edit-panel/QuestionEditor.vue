@@ -82,6 +82,23 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item label="题目类型">
+            <el-select
+              v-model="questionForm.questionType"
+              placeholder="请选择题目类型"
+              style="width: 100%"
+              filterable
+              clearable
+              @change="() => triggerAutoSave(true)"
+            >
+              <el-option
+                v-for="item in baseTypeOptions"
+                :key="item.typeCode"
+                :label="item.questionTypeZh"
+                :value="item.typeCode"
+              />
+            </el-select>
+          </el-form-item>
         <el-form-item label="点评">
           <el-input
             v-model="questionForm.questionComment"
@@ -156,7 +173,7 @@
             </el-button>
           </div>
         </el-form-item>
-        <el-form-item label="答案" required :error="formErrors.answer">
+        <el-form-item v-if="questionForm.questionAnswerMode !== 0" label="答案" :required="!questionForm.noAnswer" :error="formErrors.answer">
           <el-input
             v-model="questionForm.answer"
             type="textarea"
@@ -260,7 +277,7 @@
             </div>
           </div>
           <!-- 答案 -->
-          <div v-if="questionForm.answer" class="content-box preview-box mb-4">
+          <div v-if="questionForm.questionAnswerMode !== 0 && questionForm.answer" class="content-box preview-box mb-4">
             <el-tag type="success" size="small" class="mb-2">答案</el-tag>
             <div class="preview-content" v-html="renderContent(questionForm.answer, true)"></div>
           </div>
@@ -286,6 +303,7 @@ import { Icon } from '@iconify/vue'
 import { type QuestionVO, type QuestionDetailsVO, getQuestionDetailsApi, putQuestionUpdateApi } from '@/api/gen/questionController'
 import { getBookInfoDetailsApi } from '@/api/gen/bookController'
 import { getDicSubjectListApi } from '@/api/gen/dicController'
+import { getQuestionTypeBaseTypeApi } from '@/api/gen/questionType'
 import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotationController'
 import { useConfigStore } from '@/stores/config'
@@ -354,11 +372,56 @@ const questionForm = ref({
   analysis: '',
   tishi: '',
   labelQuestionType: undefined as number | undefined,
-  questionAnswerMode: undefined as number | undefined
+  questionAnswerMode: undefined as number | undefined,
+  questionType: undefined as number | undefined,
+  questionExtra: ''
 })
 
 // 标签题型字典（按当前书籍学科过滤）与作答方式选项
 const { isChoiceQuestion, ensureLoaded, getOptionsBySubject } = useQuestionTypeDict()
+// 从 questionExtra（题目扩展 JSON）中读取题目类型 code
+const readQuestionTypeFromExtra = (extra?: string): number | undefined => {
+  if (!extra) return undefined
+  try {
+    const obj = JSON.parse(extra)
+    return typeof obj.questionType === 'number' ? obj.questionType : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// 将题目类型 code 合并写回 questionExtra（题目扩展 JSON），保留其它字段
+const mergeQuestionTypeToExtra = (extra: string | undefined, questionType: number | undefined): string => {
+  let obj: Record<string, unknown> = {}
+  if (extra) {
+    try {
+      obj = JSON.parse(extra)
+    } catch {
+      obj = {}
+    }
+  }
+  if (questionType != null) {
+    obj.questionType = questionType
+  } else {
+    delete obj.questionType
+  }
+  return JSON.stringify(obj)
+}
+
+const baseTypeOptions = ref<{ typeCode: number; questionTypeZh: string }[]>([])
+
+// 拉取题目类型（基础题型）下拉数据，来自 /question-type/base-type
+const fetchBaseTypes = async () => {
+  try {
+    const res = await getQuestionTypeBaseTypeApi()
+    if (res.data.code === 200 && res.data.data) {
+      baseTypeOptions.value = res.data.data
+    }
+  } catch (error) {
+    console.error('获取题目类型失败:', error)
+  }
+}
+
 const bookSubjectCode = ref<number | undefined>(undefined)
 
 // 获取当前书籍的 docx 学科枚举（subjectCode），优先用 book.subjectCode，缺失时由 subjectId 推导
@@ -489,7 +552,10 @@ const autoSaveQuestion = async (force: boolean = false) => {
       answer: questionForm.value.answer,
       analysis: questionForm.value.analysis,
       labelQuestionType: questionForm.value.labelQuestionType,
-      questionAnswerMode: questionForm.value.questionAnswerMode
+      questionAnswerMode: questionForm.value.questionAnswerMode,
+      questionType: questionForm.value.questionType,
+      // 后端 QuestionUpdateCmd 暂无 questionType 字段，临时持久化到 questionExtra（题目扩展）
+      questionExtra: mergeQuestionTypeToExtra(questionForm.value.questionExtra, questionForm.value.questionType)
     }
 
     // 如果有题干标注，设置页码
@@ -548,6 +614,9 @@ const validateField = (fieldName: 'question' | 'options' | 'answer'): string => 
       }
     }
   } else if (fieldName === 'answer') {
+    if (questionForm.value.questionAnswerMode === 0) {
+      return ''
+    }
     if (!questionForm.value.noAnswer) {
       if (!questionForm.value.answer || questionForm.value.answer.trim() === '') {
         return '答案不能为空'
@@ -956,7 +1025,10 @@ const loadQuestionDetails = async (questionId: string) => {
         analysis: response.data.data.analysis || '',
         tishi: tishiValue,
         labelQuestionType: response.data.data.labelQuestionType != null ? response.data.data.labelQuestionType : undefined,
-        questionAnswerMode: response.data.data.questionAnswerMode != null ? response.data.data.questionAnswerMode : undefined
+        questionAnswerMode: response.data.data.questionAnswerMode != null ? response.data.data.questionAnswerMode : undefined,
+        questionExtra: response.data.data.questionExtra || '',
+        // 后端当前未回传 questionType 字段，从 questionExtra（题目扩展）中读取本地持久化的题目类型
+        questionType: readQuestionTypeFromExtra(response.data.data.questionExtra)
       }
 
       // 初始化知识点标签
@@ -1033,6 +1105,7 @@ watch(() => props.selectedQuestion, (newQuestion, oldQuestion) => {
   if (newQuestion) {
     // 标签题型字典与书籍学科枚举（用于过滤标签题型下拉），与题目加载并行
     ensureLoaded()
+    fetchBaseTypes()
     loadBookSubjectCode(newQuestion.projectId)
     // 检查是否是同一个题目但题型发生变化
     if (oldQuestion && newQuestion.id === oldQuestion.id && newQuestion.tishi !== oldQuestion.tishi) {

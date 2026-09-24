@@ -42,7 +42,7 @@
                 </el-select>
               </el-descriptions-item>
               <el-descriptions-item label="版本">
-                <el-select v-model="editForm.bookVersionId" placeholder="请选择版本" style="width: 100%" filterable>
+                <el-select v-model="editForm.bookVersionId" placeholder="请选择版本（选填）" style="width: 100%" filterable>
                   <el-option v-for="item in versionList.filter(i => i.id)" :key="item.id" :label="item.name" :value="item.id!" />
                 </el-select>
               </el-descriptions-item>
@@ -377,10 +377,6 @@ const saveEdit = async () => {
   }
   if (!editForm.volumeId) {
     ElMessage.warning('请选择册别')
-    return
-  }
-  if (!editForm.bookVersionId) {
-    ElMessage.warning('请选择版本')
     return
   }
 
