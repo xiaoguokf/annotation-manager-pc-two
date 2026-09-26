@@ -17,6 +17,7 @@
               filterable
               placeholder="请选择题型"
               style="width: 100%"
+              @change="handleKindChange(item)"
             >
               <el-option
                 v-for="type in questionTypes"
@@ -27,7 +28,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="作答方式">
-            <el-select v-model="item.questionAnswerMode" placeholder="请选择" style="width: 100%">
+            <el-select v-model="item.questionAnswerMode" placeholder="请选择" style="width: 100%" @change="handleKindChange(item)">
               <el-option
                 v-for="mode in ANSWER_MODES"
                 :key="mode.value"
@@ -49,8 +50,73 @@
             placeholder="富文本 HTML，公式请使用 \(..\) 或 \[..\]"
           />
         </el-form-item>
+        <!-- 选择型（单选/多选）子题：可编辑选项，保存到 choice 字段 -->
+        <el-form-item v-if="getRowKind(item) === 'choice'" label="选项">
+          <div class="options-container">
+            <div v-for="(_, idx) in item.choiceOptions" :key="idx" class="option-item">
+              <span class="option-label">{{ optionLetter(idx) }}</span>
+              <el-input
+                v-model="item.choiceOptions[idx]"
+                type="textarea"
+                :rows="1"
+                placeholder="请输入选项内容"
+              />
+              <el-button
+                type="danger"
+                size="small"
+                circle
+                :disabled="item.choiceOptions.length <= 2"
+                @click="item.choiceOptions.splice(idx, 1)"
+              >
+                <Icon icon="ep:delete" />
+              </el-button>
+            </div>
+            <el-button
+              size="small"
+              type="primary"
+              :disabled="item.choiceOptions.length >= 8"
+              @click="item.choiceOptions.push('')"
+            >
+              <Icon icon="ep:plus" class="mr-1" />
+              添加选项
+            </el-button>
+          </div>
+        </el-form-item>
+        <!-- 判断题子题：固定 对/错 两个选项 -->
+        <el-form-item v-else-if="getRowKind(item) === 'judge'" label="选项">
+          <span class="judge-options">对 / 错</span>
+        </el-form-item>
+
         <el-form-item label="答案">
-          <el-input v-model="item.answer" type="textarea" :rows="2" placeholder="请输入答案" />
+          <!-- 判断题：对/错 单选 -->
+          <el-radio-group v-if="getRowKind(item) === 'judge'" v-model="item.answer">
+            <el-radio value="对">对</el-radio>
+            <el-radio value="错">错</el-radio>
+          </el-radio-group>
+          <!-- 单选：从选项中选一个字母 -->
+          <el-select
+            v-else-if="getRowKind(item) === 'choice' && item.questionAnswerMode !== 2"
+            v-model="item.answer"
+            placeholder="请选择答案"
+            clearable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="(_, idx) in item.choiceOptions"
+              :key="idx"
+              :label="optionLetter(idx)"
+              :value="optionLetter(idx)"
+            />
+          </el-select>
+          <el-input v-else v-model="item.answer" type="textarea" :rows="2" placeholder="请输入答案" />
+        </el-form-item>
+        <el-form-item label="解析">
+          <el-input
+            v-model="item.analysis"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入解析，支持 Markdown 和 LaTeX 公式"
+          />
         </el-form-item>
 
         <div class="item-actions">
@@ -136,11 +202,66 @@ interface SubQuestionRow {
   questionScore?: number
   questionStem: string
   answer: string
+  analysis: string
+  /** 选项内容（选择型/判断题使用），保存时序列化为 choice JSON 数组 */
+  choiceOptions: string[]
   saving?: boolean
 }
 
 const children = ref<SubQuestionRow[]>([])
-const questionTypes = ref<Array<{ typeCode: number; typeName?: string }>>([])
+const questionTypes = ref<Array<{ typeCode: number; typeName?: string; baseType?: number }>>([])
+
+/** 选项字母：0->A, 1->B ... */
+const optionLetter = (idx: number): string => String.fromCharCode(65 + idx)
+
+/**
+ * 子题题型类别：
+ * - choice：选择型（字典 baseType=1，即单选/多选），显示可编辑选项
+ * - judge：判断题，固定 对/错 选项，答案为单选
+ * - none：其余题型无选项
+ * 题型未选择时，回退用作答方式判断（1/2-单选多选，4-判断）
+ */
+const getRowKind = (row: SubQuestionRow): 'choice' | 'judge' | 'none' => {
+  const t = questionTypes.value.find((x) => x.typeCode === row.labelQuestionType)
+  if (t) {
+    if ((t.typeName || '').includes('判断')) return 'judge'
+    if (t.baseType === 1) return 'choice'
+    return 'none'
+  }
+  if (row.questionAnswerMode === 4) return 'judge'
+  if (row.questionAnswerMode === 1 || row.questionAnswerMode === 2) return 'choice'
+  return 'none'
+}
+
+/** 解析 choice JSON 字符串为选项数组，解析失败返回空数组 */
+const parseChoice = (choice?: string): string[] => {
+  if (!choice) return []
+  try {
+    const parsed = JSON.parse(choice)
+    return Array.isArray(parsed) ? parsed.map((c) => String(c)) : []
+  } catch {
+    return choice.split('\n').filter((c) => c.trim())
+  }
+}
+
+/** 按当前题型类别初始化选项（切换题型/作答方式时调用） */
+const initChoiceOptions = (row: SubQuestionRow) => {
+  const kind = getRowKind(row)
+  if (kind === 'judge') {
+    row.choiceOptions = ['对', '错']
+  } else if (kind === 'choice') {
+    if (row.choiceOptions.filter((o) => o.trim()).length < 2) {
+      row.choiceOptions = ['', '', '', '']
+    }
+  } else {
+    row.choiceOptions = []
+  }
+}
+
+/** 题型/作答方式变化后重新初始化选项 */
+const handleKindChange = (row: SubQuestionRow) => {
+  initChoiceOptions(row)
+}
 
 /** 本面板渲染的子题层级 */
 const childLevel = computed(() => props.level + 1)
@@ -157,7 +278,9 @@ const loadQuestionTypes = async () => {
     const res = await getQuestionTypeListApi({ subjectCode: props.subjectCode })
     // 下拉需要确定的枚举值，缺失 typeCode 的脏数据不参与渲染
     questionTypes.value = (res.data?.data || []).flatMap((item) =>
-      item.typeCode === undefined ? [] : [{ typeCode: item.typeCode, typeName: item.typeName }],
+      item.typeCode === undefined
+        ? []
+        : [{ typeCode: item.typeCode, typeName: item.typeName, baseType: item.baseType }],
     )
   } catch (error) {
     console.error('题型字典加载失败:', error)
@@ -165,15 +288,25 @@ const loadQuestionTypes = async () => {
 }
 
 /** 题目详情 → 编辑行 */
-const toRow = (detail: QuestionDetailsVO): SubQuestionRow => ({
-  key: detail.id,
-  id: detail.id,
-  labelQuestionType: detail.labelQuestionType,
-  questionAnswerMode: detail.questionAnswerMode,
-  questionScore: detail.questionContent?.questionScore,
-  questionStem: detail.questionContent?.questionStem || detail.question || '',
-  answer: detail.answer || '',
-})
+const toRow = (detail: QuestionDetailsVO): SubQuestionRow => {
+  const row: SubQuestionRow = {
+    key: detail.id,
+    id: detail.id,
+    labelQuestionType: detail.labelQuestionType,
+    questionAnswerMode: detail.questionAnswerMode,
+    questionScore: detail.questionContent?.questionScore,
+    questionStem: detail.questionContent?.questionStem || detail.question || '',
+    answer: detail.answer || '',
+    analysis: detail.analysis || '',
+    choiceOptions: [],
+  }
+  // 兼容旧数据：判断题答案可能以 true/false 存储
+  if (row.answer === 'true') row.answer = '对'
+  if (row.answer === 'false') row.answer = '错'
+  row.choiceOptions = parseChoice(detail.choice)
+  if (getRowKind(row) === 'judge') row.choiceOptions = ['对', '错']
+  return row
+}
 
 /**
  * 加载子题：详情接口已按层级递归返回 subQuestionList
@@ -197,7 +330,9 @@ const handleAdd = () => {
     key: `new-${Date.now()}`,
     questionStem: '',
     answer: '',
+    analysis: '',
     questionAnswerMode: 1,
+    choiceOptions: ['', '', '', ''],
   })
 }
 
@@ -208,6 +343,15 @@ const handleSave = async (row: SubQuestionRow) => {
     return
   }
 
+  const kind = getRowKind(row)
+
+  // 选择型子题必须至少有 2 个非空选项
+  const validOptions = row.choiceOptions.map((o) => o.trim()).filter((o) => o)
+  if (kind === 'choice' && validOptions.length < 2) {
+    ElMessage.warning('请至少填写 2 个选项内容')
+    return
+  }
+
   row.saving = true
   try {
     const payload = {
@@ -215,12 +359,20 @@ const handleSave = async (row: SubQuestionRow) => {
       questionAnswerMode: row.questionAnswerMode,
       question: row.questionStem,
       answer: row.answer,
+      analysis: row.analysis,
       parentId: props.questionId,
       level: childLevel.value,
       questionContent: {
         questionStem: row.questionStem,
         questionScore: row.questionScore,
       },
+      // 选项：判断题固定 对/错，选择型取填写内容，其余题型清空
+      choice:
+        kind === 'judge'
+          ? JSON.stringify(['对', '错'])
+          : kind === 'choice'
+            ? JSON.stringify(validOptions)
+            : '',
     }
 
     if (row.id) {
@@ -314,6 +466,35 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.option-label {
+  flex-shrink: 0;
+  width: 20px;
+  line-height: 32px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.option-item .el-button {
+  flex-shrink: 0;
+}
+
+.judge-options {
+  color: var(--el-text-color-secondary, #909399);
 }
 
 .nested-panel {

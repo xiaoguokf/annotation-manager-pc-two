@@ -1,0 +1,170 @@
+/* ========== 富文本内容样式（rich-*） ==========
+ * 由《教辅生产标准变动通知》第 4 节约定，表格 / 下划线 / 加点 / 文本格式
+ * 需全局覆盖。题干、答案、解析等内容经 v-html 渲染，样式必须全局生效。
+ * 深色模式通过 var(--theme-border-color) / var(--theme-content-bg) / var(--theme-sidebar-menu-text)
+ * 等主题变量自动适配。
+ */
+
+.rich-table {
+  display: table;
+  width: 99%;
+  max-width: 99%;
+  border-collapse: collapse;
+  table-layout: auto;
+  box-sizing: border-box;
+  margin: 12px 0;
+  border: 1px solid var(--theme-border-color);
+}
+
+.rich-thead {
+  display: table-header-group;
+}
+
+.rich-tbody {
+  display: table-row-group;
+}
+
+.rich-tr {
+  display: table-row;
+}
+
+.rich-th,
+.rich-td {
+  display: table-cell;
+  padding: 4px 4px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+  box-sizing: content-box;
+  border: 1px solid var(--theme-border-color);
+}
+
+.rich-th {
+  font-weight: 600;
+  text-align: left;
+  background-color: var(--theme-content-bg, #f5f7fa);
+}
+
+.rich-img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* 文本对齐 */
+.rich-text-left {
+  text-align: left;
+}
+
+.rich-text-center {
+  text-align: center;
+}
+
+.rich-text-right {
+  text-align: right;
+}
+
+/* 加粗 */
+.rich-text-bold {
+  font-weight: 700;
+}
+
+/* 斜体 */
+.rich-text-italic {
+  font-style: italic;
+}
+
+/* 上角标 */
+.rich-text-sup {
+  vertical-align: super;
+  font-size: 0.8em;
+  line-height: 1;
+}
+
+/* 下角标 */
+.rich-text-sub {
+  vertical-align: sub;
+  font-size: 0.8em;
+  line-height: 1;
+}
+
+/* 普通下划线 */
+.rich-underline {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-underline-offset: 2px;
+}
+
+/* 波浪下划线 */
+.rich-underline-wave {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-underline-offset: 2px;
+}
+
+/* 虚线下划线 */
+.rich-underline-dashed {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 2px;
+}
+
+/* 双下划线 */
+.rich-underline-double {
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-underline-offset: 2px;
+}
+
+/* 加点 */
+.rich-text-dot,
+.dian_down {
+  text-emphasis-style: dot;
+  text-emphasis-position: under;
+}
+
+/* 空心圆点 */
+.rich-text-dot-open {
+  text-emphasis-style: circle;
+  text-emphasis-position: under;
+}
+
+/* 实心圆点 */
+.rich-text-dot-filled {
+  text-emphasis-style: filled circle;
+  text-emphasis-position: under;
+}
+
+/* 删除线 */
+.rich-line-through {
+  text-decoration-line: line-through;
+}
+
+/* 高亮 */
+.rich-highlight {
+  background: #fff3b0;
+}
+
+@media (max-width: 768px) {
+  .rich-th,
+  .rich-td {
+    padding: 6px 8px;
+  }
+}
+
+/* ========== 深色模式适配 ========== */
+.dark .rich-table {
+  border-color: var(--theme-border-color);
+}
+
+.dark .rich-th,
+.dark .rich-td {
+  border-color: var(--theme-border-color);
+}
+
+.dark .rich-th {
+  background-color: var(--theme-content-bg, #1a1a2e);
+  color: var(--theme-sidebar-menu-text);
+}
