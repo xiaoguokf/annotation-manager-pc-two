@@ -347,7 +347,7 @@ const fetchReviewList = async () => {
     })
     if (response.data.code === 200) {
       tableData.value = response.data.data?.records || []
-      total.value = response.data.data?.total || 0
+      total.value = Number(response.data.data?.total) || 0
     } else {
       ElMessage.error(response.data.msg || '获取审核列表失败')
     }
