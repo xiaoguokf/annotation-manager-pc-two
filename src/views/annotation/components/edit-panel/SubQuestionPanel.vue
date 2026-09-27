@@ -1,11 +1,11 @@
 <template>
   <div class="sub-question-panel">
     <div class="panel-actions">
-      <el-button size="small" type="primary" :disabled="!canAdd" @click="handleAdd">
-        <Icon icon="ep:plus" class="mr-1" />
-        新增子题（{{ childLevelLabel }}）
+      <el-button size="small" type="primary" :disabled="!canAdd" :loading="creating" @click="handleAdd">
+        <Icon v-if="!creating" icon="ep:plus" class="mr-1" />
+        {{ creating ? '新增中…' : '新增子题' }}
       </el-button>
-      <span v-if="!canAdd" class="tip">已达最大层级（母题 + 两级子题）</span>
+      <span v-if="!canAdd" class="tip">该题已是二级子题，不能再挂子题</span>
     </div>
 
     <div v-for="item in children" :key="item.key" class="sub-question-item">
@@ -38,7 +38,8 @@
             </el-select>
           </el-form-item>
           <el-form-item label="分值">
-            <el-input-number v-model="item.questionScore" :min="0" :precision="1" controls-position="right" />
+            <el-input-number v-model="item.questionScore" :min="0" :precision="1" controls-position="right"
+              @change="triggerAutoSave(item, true)" />
           </el-form-item>
         </div>
 
@@ -48,6 +49,7 @@
             type="textarea"
             :rows="3"
             placeholder="富文本 HTML，公式请使用 \(..\) 或 \[..\]"
+            @input="triggerAutoSave(item)"
           />
         </el-form-item>
         <!-- 选择型（单选/多选）子题：可编辑选项，保存到 choice 字段 -->
@@ -60,13 +62,14 @@
                 type="textarea"
                 :rows="1"
                 placeholder="请输入选项内容"
+                @input="triggerAutoSave(item)"
               />
               <el-button
                 type="danger"
                 size="small"
                 circle
                 :disabled="item.choiceOptions.length <= 2"
-                @click="item.choiceOptions.splice(idx, 1)"
+                @click="item.choiceOptions.splice(idx, 1); triggerAutoSave(item, true)"
               >
                 <Icon icon="ep:delete" />
               </el-button>
@@ -75,7 +78,7 @@
               size="small"
               type="primary"
               :disabled="item.choiceOptions.length >= 8"
-              @click="item.choiceOptions.push('')"
+              @click="item.choiceOptions.push(''); triggerAutoSave(item, true)"
             >
               <Icon icon="ep:plus" class="mr-1" />
               添加选项
@@ -89,7 +92,8 @@
 
         <el-form-item label="答案">
           <!-- 判断题：对/错 单选 -->
-          <el-radio-group v-if="getRowKind(item) === 'judge'" v-model="item.answer">
+          <el-radio-group v-if="getRowKind(item) === 'judge'" v-model="item.answer"
+            @change="triggerAutoSave(item, true)">
             <el-radio value="对">对</el-radio>
             <el-radio value="错">错</el-radio>
           </el-radio-group>
@@ -100,6 +104,7 @@
             placeholder="请选择答案"
             clearable
             style="width: 100%"
+            @change="triggerAutoSave(item, true)"
           >
             <el-option
               v-for="(_, idx) in item.choiceOptions"
@@ -108,7 +113,8 @@
               :value="optionLetter(idx)"
             />
           </el-select>
-          <el-input v-else v-model="item.answer" type="textarea" :rows="2" placeholder="请输入答案" />
+          <el-input v-else v-model="item.answer" type="textarea" :rows="2" placeholder="请输入答案"
+            @input="triggerAutoSave(item)" />
         </el-form-item>
         <el-form-item label="解析">
           <el-input
@@ -116,29 +122,21 @@
             type="textarea"
             :rows="2"
             placeholder="请输入解析，支持 Markdown 和 LaTeX 公式"
+            @input="triggerAutoSave(item)"
           />
         </el-form-item>
 
         <div class="item-actions">
+          <span class="save-hint">
+            <Icon v-if="item.saving" icon="ep:loading" class="is-spinning" />
+            {{ item.saving ? '保存中…' : '已自动保存' }}
+          </span>
           <el-button size="small" type="primary" :loading="item.saving" @click="handleSave(item)">
             保存
           </el-button>
           <el-button size="small" @click="handleRemove(item)">删除</el-button>
         </div>
       </el-form>
-
-      <!-- 下一级子题：只有一级子题（level 1）还能再挂子题 -->
-      <SubQuestionPanel
-        v-if="item.id && childLevel < 2"
-        class="nested-panel"
-        :question-id="item.id"
-        :project-id="projectId"
-        :catalogue-id="catalogueId"
-        :subject-code="subjectCode"
-        :type="type"
-        :level="childLevel"
-        @changed="emit('changed')"
-      />
     </div>
 
     <el-empty v-if="children.length === 0" description="暂无子题" :image-size="60" />
@@ -146,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import {
@@ -157,9 +155,6 @@ import {
   type QuestionDetailsVO,
 } from '@/api/gen/questionController'
 import { getQuestionTypeListApi } from '@/api/gen/questionType'
-
-// 组件内递归引用自身，需要显式声明组件名
-defineOptions({ name: 'SubQuestionPanel' })
 
 const props = defineProps<{
   /** 母题ID */
@@ -172,12 +167,13 @@ const props = defineProps<{
   subjectCode?: number
   /** 0-书籍，1-试卷 */
   type?: number
-  /** 当前母题层级：0-母题，1-一级子题 */
+  /** 当前题目层级：0-母题，1-一级子题，2-二级子题；新增的子题层级为其 +1 */
   level: number
 }>()
 
 const emit = defineEmits<{
-  changed: []
+  /** 子题列表发生变化；参数为发生变化的父题目ID，供题目列表刷新后展开定位 */
+  changed: [parentId: string]
 }>()
 
 /** 作答方式：与后端 questionAnswerMode 一致 */
@@ -192,6 +188,9 @@ const ANSWER_MODES = [
 
 /** 最大层级（0 母题 / 1 一级子题 / 2 二级子题） */
 const LEVEL_MAX = 2
+
+/** 新增子题时的默认作答方式：综合母题，不带选项，避免默认单选却无选项 */
+const ANSWER_MODE_COMPREHENSIVE = 0
 
 /** 子题编辑行 */
 interface SubQuestionRow {
@@ -210,6 +209,15 @@ interface SubQuestionRow {
 
 const children = ref<SubQuestionRow[]>([])
 const questionTypes = ref<Array<{ typeCode: number; typeName?: string; baseType?: number }>>([])
+
+/** 新增子题请求进行中，避免重复点击创建出多条空子题 */
+const creating = ref(false)
+/** 每题一个去抖定时器：题目ID/行key → timer */
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+/** 保存期间又被编辑的行，保存结束后补存一次，避免最后一次改动丢失 */
+const pendingSaveKeys = new Set<string>()
+/** 去抖间隔，与母题编辑面板保持一致 */
+const AUTO_SAVE_DELAY = 1000
 
 /** 选项字母：0->A, 1->B ... */
 const optionLetter = (idx: number): string => String.fromCharCode(65 + idx)
@@ -258,19 +266,16 @@ const initChoiceOptions = (row: SubQuestionRow) => {
   }
 }
 
-/** 题型/作答方式变化后重新初始化选项 */
+/** 题型/作答方式变化后重新初始化选项，并立即保存该字段 */
 const handleKindChange = (row: SubQuestionRow) => {
   initChoiceOptions(row)
+  triggerAutoSave(row, true)
 }
 
 /** 本面板渲染的子题层级 */
 const childLevel = computed(() => props.level + 1)
 
 const canAdd = computed(() => childLevel.value <= LEVEL_MAX)
-
-const childLevelLabel = computed(() =>
-  childLevel.value === 1 ? '一级' : childLevel.value === 2 ? '二级' : `第 ${childLevel.value} 级`,
-)
 
 /** 题型字典：按学科加载，未传学科时返回全部 */
 const loadQuestionTypes = async () => {
@@ -308,10 +313,18 @@ const toRow = (detail: QuestionDetailsVO): SubQuestionRow => {
   return row
 }
 
+/** 清空所有待执行的去抖保存（刷新/卸载前调用，避免用旧行对象回写） */
+const clearSaveTimers = () => {
+  saveTimers.forEach(timer => clearTimeout(timer))
+  saveTimers.clear()
+  pendingSaveKeys.clear()
+}
+
 /**
  * 加载子题：详情接口已按层级递归返回 subQuestionList
  */
 const loadChildren = async () => {
+  clearSaveTimers()
   try {
     const res = await getQuestionDetailsApi({ id: props.questionId })
     children.value = (res.data?.data?.subQuestionList || []).map(toRow)
@@ -320,103 +333,164 @@ const loadChildren = async () => {
   }
 }
 
-const handleAdd = () => {
+/**
+ * 新增子题：点击即入库，不再需要先加草稿行再点保存。
+ * 创建后由服务端返回的数据渲染行，题目列表同步刷新并展开出现该子题。
+ */
+const handleAdd = async () => {
   if (!canAdd.value) {
     ElMessage.warning('最多支持两级子题')
     return
   }
+  if (creating.value) return
 
-  children.value.push({
-    key: `new-${Date.now()}`,
-    questionStem: '',
-    answer: '',
-    analysis: '',
-    questionAnswerMode: 1,
-    choiceOptions: ['', '', '', ''],
-  })
+  creating.value = true
+  try {
+    const response = await postQuestionCreateApi({
+      projectId: props.projectId,
+      catalogueId: props.catalogueId,
+      type: props.type ?? 0,
+      parentId: props.questionId,
+      level: childLevel.value,
+      // 新建时用中性的「综合母题」，避免默认单选却无选项导致的保存拦截
+      questionAnswerMode: ANSWER_MODE_COMPREHENSIVE,
+    })
+    if (response.data.code === 200) {
+      await loadChildren()
+      emit('changed', props.questionId)
+    } else {
+      ElMessage.error(response.data.msg || '新增子题失败')
+    }
+  } catch (error) {
+    console.error('新增子题失败:', error)
+    ElMessage.error('新增子题失败')
+  } finally {
+    creating.value = false
+  }
 }
 
-/** 保存：新建走 create，已存在走 update */
-const handleSave = async (row: SubQuestionRow) => {
-  if (!row.questionStem.trim()) {
-    ElMessage.warning('请先填写题干')
-    return
+/** 组装保存载荷；选项按题型归一化 */
+const buildSavePayload = (row: SubQuestionRow) => {
+  const kind = getRowKind(row)
+  const validOptions = row.choiceOptions.map((o) => o.trim()).filter((o) => o)
+  return {
+    labelQuestionType: row.labelQuestionType,
+    questionAnswerMode: row.questionAnswerMode,
+    question: row.questionStem,
+    answer: row.answer,
+    analysis: row.analysis,
+    parentId: props.questionId,
+    level: childLevel.value,
+    questionContent: {
+      questionStem: row.questionStem,
+      questionScore: row.questionScore,
+    },
+    // 选项：判断题固定 对/错，选择型取填写内容，其余题型清空
+    choice:
+      kind === 'judge'
+        ? JSON.stringify(['对', '错'])
+        : kind === 'choice'
+          ? JSON.stringify(validOptions)
+          : '',
+  }
+}
+
+/**
+ * 保存子题。
+ * @param silent 自动保存模式：不弹提示、不做"必填"拦截（未填完也先落库），也不整体重载行以免打断输入
+ */
+const handleSave = async (row: SubQuestionRow, silent = false) => {
+  if (!row.id) return
+
+  // 显式保存才做完整性校验；自动保存允许半成品，避免打字过程中反复报错
+  if (!silent) {
+    if (!row.questionStem.trim()) {
+      ElMessage.warning('请先填写题干')
+      return
+    }
+    const kind = getRowKind(row)
+    const validOptions = row.choiceOptions.map((o) => o.trim()).filter((o) => o)
+    if (kind === 'choice' && validOptions.length < 2) {
+      ElMessage.warning('请至少填写 2 个选项内容')
+      return
+    }
   }
 
-  const kind = getRowKind(row)
-
-  // 选择型子题必须至少有 2 个非空选项
-  const validOptions = row.choiceOptions.map((o) => o.trim()).filter((o) => o)
-  if (kind === 'choice' && validOptions.length < 2) {
-    ElMessage.warning('请至少填写 2 个选项内容')
+  // 保存中再次触发，标记待补存
+  if (row.saving) {
+    pendingSaveKeys.add(row.key)
     return
   }
 
   row.saving = true
   try {
-    const payload = {
-      labelQuestionType: row.labelQuestionType,
-      questionAnswerMode: row.questionAnswerMode,
-      question: row.questionStem,
-      answer: row.answer,
-      analysis: row.analysis,
-      parentId: props.questionId,
-      level: childLevel.value,
-      questionContent: {
-        questionStem: row.questionStem,
-        questionScore: row.questionScore,
-      },
-      // 选项：判断题固定 对/错，选择型取填写内容，其余题型清空
-      choice:
-        kind === 'judge'
-          ? JSON.stringify(['对', '错'])
-          : kind === 'choice'
-            ? JSON.stringify(validOptions)
-            : '',
+    const response = await putQuestionUpdateApi(buildSavePayload(row), { id: row.id })
+    if (response.data.code === 200) {
+      if (!silent) {
+        ElMessage.success('保存成功')
+        await loadChildren()
+      }
+      // 题型等字段会体现在题目列表上，通知父组件刷新（不重载本面板，避免打断输入）
+      emit('changed', props.questionId)
+    } else if (!silent) {
+      ElMessage.error(response.data.msg || '保存失败')
     }
-
-    if (row.id) {
-      await putQuestionUpdateApi(payload, { id: row.id })
-    } else {
-      await postQuestionCreateApi({
-        projectId: props.projectId,
-        catalogueId: props.catalogueId,
-        type: props.type ?? 0,
-        ...payload,
-      })
-    }
-
-    ElMessage.success('保存成功')
-    await loadChildren()
-    emit('changed')
   } catch (error) {
     console.error('子题保存失败:', error)
-    ElMessage.error('保存失败，请重试')
+    if (!silent) {
+      ElMessage.error('保存失败，请重试')
+    }
   } finally {
     row.saving = false
+    if (pendingSaveKeys.has(row.key)) {
+      pendingSaveKeys.delete(row.key)
+      triggerAutoSave(row)
+    }
   }
 }
 
+/** 去抖自动保存；immediate 用于下拉/单选框这类一次性动作 */
+const triggerAutoSave = (row: SubQuestionRow, immediate = false) => {
+  if (!row.id) return
+  const prev = saveTimers.get(row.key)
+  if (prev) clearTimeout(prev)
+  if (immediate) {
+    saveTimers.delete(row.key)
+    handleSave(row, true)
+    return
+  }
+  saveTimers.set(
+    row.key,
+    setTimeout(() => {
+      saveTimers.delete(row.key)
+      handleSave(row, true)
+    }, AUTO_SAVE_DELAY),
+  )
+}
+
 const handleRemove = async (row: SubQuestionRow) => {
-  // 未保存的新增行直接移除
   if (!row.id) {
     children.value = children.value.filter((item) => item.key !== row.key)
     return
   }
 
-  try {
-    await ElMessageBox.confirm('删除后该子题及其下级子题都会移除，确认删除？', '提示', {
-      type: 'warning',
-    })
-  } catch {
-    return
+  // 新增即入库，未填内容的行视为误点，直接删除不打扰用户
+  const isBlank = !row.questionStem.trim() && !row.answer.trim() && !row.analysis.trim()
+  if (!isBlank) {
+    try {
+      await ElMessageBox.confirm('删除后该子题及其下级子题都会移除，确认删除？', '提示', {
+        type: 'warning',
+      })
+    } catch {
+      return
+    }
   }
 
   try {
     await deleteQuestionDeleteApi({ id: row.id })
     ElMessage.success('删除成功')
     await loadChildren()
-    emit('changed')
+    emit('changed', props.questionId)
   } catch (error) {
     console.error('子题删除失败:', error)
     ElMessage.error('删除失败，请重试')
@@ -426,6 +500,16 @@ const handleRemove = async (row: SubQuestionRow) => {
 onMounted(async () => {
   await loadQuestionTypes()
   await loadChildren()
+})
+
+// 卸载前清掉待执行的自动保存，避免对已销毁组件的行回写
+onUnmounted(() => {
+  clearSaveTimers()
+})
+
+defineExpose({
+  /** 供快捷键调用：新增一条子题（内部已做层级校验与防重） */
+  handleAdd
 })
 </script>
 
@@ -460,6 +544,15 @@ onMounted(async () => {
 
 .form-row :deep(.el-form-item) {
   flex: 1;
+}
+
+.save-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  color: var(--el-text-color-secondary, #909399);
+  font-size: 12px;
 }
 
 .item-actions {
@@ -497,9 +590,4 @@ onMounted(async () => {
   color: var(--el-text-color-secondary, #909399);
 }
 
-.nested-panel {
-  margin-top: 12px;
-  padding-left: 12px;
-  border-left: 2px solid var(--el-color-primary-light-7, #c6e2ff);
-}
 </style>

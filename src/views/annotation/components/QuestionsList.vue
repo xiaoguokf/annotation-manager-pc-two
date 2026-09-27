@@ -20,83 +20,90 @@
     <!-- 题目列表 -->
     <div ref="questionListRef" class="question-list flex-1 overflow-y-auto min-h-0">
       <div
-        v-for="(question, index) in questions"
-        :key="question.id"
+        v-for="item in renderList"
+        :key="item.question.id"
+        :data-qid="item.question.id"
         class="question-item"
         :class="{
-          active: selectedQuestionId === question.id,
-          'is-dragging': draggedItem?.id === question.id,
-          expanded: expandedQuestionId === question.id,
-          'drop-target': dropTargetIndex === index
+          active: selectedQuestionId === item.question.id,
+          'is-dragging': draggedItem?.id === item.question.id,
+          'is-child': item.depth > 0,
+          expanded: item.expanded,
+          'drop-target': item.depth === 0 && dropTargetIndex === item.parentIndex
         }"
-        @mouseenter="handleDragEnter(index)"
+        @mouseenter="item.depth === 0 && handleDragEnter(item.parentIndex)"
         @mouseleave="handleDragLeave"
       >
         <!-- 插入线 -->
-        <div v-if="isSortMode && dropTargetIndex === index" class="drop-indicator"></div>
-        <div class="question-content flex items-center justify-between">
-          <!-- 拖拽手柄 -->
+        <div v-if="isSortMode && item.depth === 0 && dropTargetIndex === item.parentIndex" class="drop-indicator"></div>
+        <div class="question-content flex items-center justify-between" :style="{ paddingLeft: `${item.depth * 16}px` }">
+          <!-- 拖拽手柄：仅母题可拖动排序，子题顺序由编辑面板的子题区维护 -->
           <div
-            v-if="isSortMode"
+            v-if="isSortMode && item.depth === 0"
             class="drag-handle"
-            :class="{ 'is-dragging': isDragging && draggedItem?.id === question.id }"
-            @mousedown.stop="handleDragStart($event, question, index)"
+            :class="{ 'is-dragging': isDragging && draggedItem?.id === item.question.id }"
+            @mousedown.stop="handleDragStart($event, item.question, item.parentIndex)"
             title="拖动以交换顺序"
           >
             <Icon icon="ep:rank" />
           </div>
-          <div class="question-info flex-1 min-w-0" @click.stop="handleQuestionClick(question)">
+          <div class="question-info flex-1 min-w-0" @click.stop="handleQuestionClick(item.question)">
+            <!-- 展开箭头：仅有子题的节点显示，占位保持缩进对齐 -->
             <Icon
+              v-if="hasChildren(item.question.id)"
               icon="ep:arrow-right"
               class="expand-icon"
-              :class="{ expanded: expandedQuestionId === question.id }"
-              @click.stop="handleToggleQuestion(question)"
+              :class="{ expanded: isNodeExpanded(item.question.id) }"
+              @click.stop="handleToggleNode(item.question)"
             />
+            <span v-else class="expand-icon-placeholder"></span>
             <span class="question-prefix">题</span>
-            <span class="sort-num">{{ question.sortNum || index + 1 }}</span>
-            <span class="annotation-count">({{ question.annotationCount || 0 }})</span>
+            <span class="sort-num">{{ item.no }}</span>
+            <span class="annotation-count">({{ item.question.annotationCount || 0 }})</span>
             <el-cascader
               class="question-type-cascader"
               size="small"
-              :model-value="question.labelQuestionType ?? undefined"
+              :model-value="item.question.labelQuestionType ?? undefined"
               :options="questionTypeCascaderOptions"
               :props="questionTypeCascaderProps"
               filterable
               clearable
               :show-all-levels="false"
-              :placeholder="getQuestionTypeLabel(question)"
-              @change="(val) => handleQuestionTypeChange(val as number | null, question)"
+              :placeholder="getQuestionTypeLabel(item.question)"
+              @change="(val) => handleQuestionTypeChange(val as number | null, item.question)"
               @click.stop
             />
-            <div v-if="question.page" class="page-badge">
+            <div v-if="item.question.page" class="page-badge">
               <Icon icon="ep:circle-check-filled" />
             </div>
-            <!-- 注解处理状态图标 -->
+            <!-- 注解处理状态图标（母题按子树汇总） -->
             <div
-              v-if="question.annotationCount && question.annotationCount > 0"
+              v-if="item.question.annotationCount && item.question.annotationCount > 0"
               class="annotation-status-badge"
-              :class="`status-${question.annotationStatus !== undefined ? question.annotationStatus : 0}`"
-              :title="getAnnotationStatusText(question.annotationStatus !== undefined ? question.annotationStatus : 0)"
+              :class="`status-${item.question.annotationStatus !== undefined ? item.question.annotationStatus : 0}`"
+              :title="getAnnotationStatusText(item.question.annotationStatus !== undefined ? item.question.annotationStatus : 0)"
             >
-              <Icon :icon="getAnnotationStatusIcon(question.annotationStatus !== undefined ? question.annotationStatus : 0)" />
+              <Icon :icon="getAnnotationStatusIcon(item.question.annotationStatus !== undefined ? item.question.annotationStatus : 0)" />
             </div>
           </div>
-          <el-dropdown trigger="click" @command="(cmd) => handleMenuCommand(cmd, question, index)">
+          <el-dropdown trigger="click" @command="(cmd) => handleMenuCommand(cmd, item.question, item.parentIndex)">
             <el-button type="primary" link>
               <Icon icon="ep:more-filled" />
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="moveToCatalogue">移动到目录</el-dropdown-item>
-                <el-dropdown-item command="insertBefore" divided>在此前插入题目</el-dropdown-item>
-                <el-dropdown-item command="insertAfter">在此后插入题目</el-dropdown-item>
-                <el-dropdown-item command="delete" divided>删除题目</el-dropdown-item>
+                <el-dropdown-item v-if="item.depth === 0" command="moveToCatalogue">移动到目录</el-dropdown-item>
+                <el-dropdown-item v-if="item.depth === 0" command="insertBefore" divided>在此前插入题目</el-dropdown-item>
+                <el-dropdown-item v-if="item.depth === 0" command="insertAfter">在此后插入题目</el-dropdown-item>
+                <el-dropdown-item command="delete" divided>
+                  {{ item.depth === 0 ? '删除题目' : '删除子题' }}
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
         <!-- 标注列表展开区域 -->
-        <div v-if="expandedQuestionId === question.id" class="annotations-expand">
+        <div v-if="item.expanded" class="annotations-expand">
           <div class="annotations-list">
             <div
               v-for="annotation in questionAnnotations"
@@ -124,7 +131,7 @@
                 type="danger"
                 link
                 size="small"
-                @click.stop="handleDeleteAnnotation(annotation, question)"
+                @click.stop="handleDeleteAnnotation(annotation, item.question)"
                 :title="annotation.result === 0 ? '解析中，删除后将停止解析' : '删除'"
               >
                 <Icon icon="ep:delete" />
@@ -201,12 +208,42 @@ import { getDicSubjectListApi, type DicSubjectVO } from '@/api/gen/dicController
 import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import type { DicQuestionTypeVO } from '@/api/gen/dicController'
 
-// 扩展 QuestionVO 类型以包含 annotationStatus 及学科题型字段（列表接口未返回，本地更新后补全）
+// 扩展 QuestionVO 类型以包含本地维护的字段
+// 说明：parentId/level/questionOrder 已由 generate-api 生成进 QuestionVO，
+// annotationStatus/labelQuestionType* 为接口未返回、由前端本地补全的字段
 interface ExtendedQuestionVO extends QuestionVO {
   annotationStatus?: number
   labelQuestionType?: number | null
   labelQuestionTypeZh?: string | null
 }
+
+/** 题目树渲染项：扁平化后的单行，供模板按顺序渲染并保留缩进/题号 */
+interface QuestionRenderItem {
+  question: ExtendedQuestionVO
+  /** 在母题数组中的下标；子题为 -1，用于限制拖拽只作用于母题 */
+  parentIndex: number
+  /** 缩进层级：0-母题，1-一级子题，2-二级子题 */
+  depth: number
+  /** 展示题号：母题 1，子题 1.1、1.1.2 */
+  no: string
+  /** 是否为当前展示标注的题目 */
+  expanded: boolean
+}
+
+/** 题目元信息：题号路径、层级、父题ID、题型 */
+interface QuestionMeta {
+  /** 题号路径：母题 1，子题 1.1、1.1.2 */
+  no: string
+  /** 层级：0-母题，1-一级子题，2-二级子题 */
+  level: number
+  /** 父题目ID，母题为 '0' */
+  parentId: string
+  /** 标签题型枚举，用于改绑候选的文案 */
+  labelQuestionType?: number
+}
+
+/** 最大层级：0-母题，1-一级子题，2-二级子题 */
+const LEVEL_MAX = 2
 
 interface Props {
   projectId: string
@@ -218,12 +255,16 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits(['select', 'refreshAnnotations', 'locateAnnotation', 'refreshAnnotationCount', 'questionsLoaded', 'selectAnnotation', 'editQuestion', 'goToPage', 'retry-parse', 'refresh-catalog-count', 'clearAnnotationSelection'])
+const emit = defineEmits(['select', 'refreshAnnotations', 'locateAnnotation', 'refreshAnnotationCount', 'questionsLoaded', 'questionMetaChanged', 'selectAnnotation', 'editQuestion', 'goToPage', 'retry-parse', 'refresh-catalog-count', 'clearAnnotationSelection'])
 
 // 注入目录树组件的引用
 const catalogTreeRefParent = inject<any>('catalogTreeRef')
 
 const questions = ref<(ExtendedQuestionVO & { annotationCount?: number })[]>([])
+// 子题按 parentId 归组，母题与各级子题共用一张映射（键为父题目ID）
+const childrenMap = ref<Record<string, ExtendedQuestionVO[]>>({})
+// 已展开子题的节点ID集合
+const expandedNodeIds = ref<Set<string>>(new Set())
 const selectedQuestionId = ref<string | null>(null)
 const expandedQuestionId = ref<string | null>(null)
 const selectedAnnotationId = ref<string | null>(null)
@@ -361,6 +402,154 @@ const loadQuestionTypeOptions = async () => {
 // 启用拖拽
 const isDraggingEnabled = computed(() => questions.value.length > 1)
 
+/** 节点是否有子题（决定是否显示展开箭头） */
+const hasChildren = (questionId: string): boolean => (childrenMap.value[questionId]?.length || 0) > 0
+
+/** 节点是否已展开 */
+const isNodeExpanded = (questionId: string): boolean => expandedNodeIds.value.has(questionId)
+
+/** 展开/收起节点子题 */
+const toggleNodeExpand = (questionId: string) => {
+  const next = new Set(expandedNodeIds.value)
+  if (next.has(questionId)) {
+    next.delete(questionId)
+  } else {
+    next.add(questionId)
+  }
+  expandedNodeIds.value = next
+}
+
+/** 收集节点自身及其全部后代ID（用于标注状态按子树汇总） */
+const collectSubtreeQuestionIds = (questionId: string): Set<string> => {
+  const ids = new Set<string>([questionId])
+  const walk = (nodeId: string) => {
+    for (const child of childrenMap.value[nodeId] || []) {
+      ids.add(child.id)
+      walk(child.id)
+    }
+  }
+  walk(questionId)
+  return ids
+}
+
+/** 全部已加载题目（母题 + 各级子题）按ID索引，供父组件按ID取题目 */
+const questionNodeMap = computed<Record<string, ExtendedQuestionVO>>(() => {
+  const map: Record<string, ExtendedQuestionVO> = {}
+  const walk = (question: ExtendedQuestionVO) => {
+    map[question.id] = question
+    for (const child of childrenMap.value[question.id] || []) {
+      walk(child)
+    }
+  }
+  questions.value.forEach(walk)
+  return map
+})
+
+/** 按题目ID取节点（母题或已加载子题） */
+const findQuestionById = (questionId?: string | null): ExtendedQuestionVO | undefined =>
+  questionId ? questionNodeMap.value[questionId] : undefined
+
+/** 收集目标节点的全部祖先ID（不含自身），最多回溯到母题 */
+const collectAncestorIds = (questionId: string): Set<string> => {
+  const ids = new Set<string>()
+  let parentId = findQuestionById(questionId)?.parentId
+  let guard = 0
+  while (parentId && parentId !== '0' && guard <= LEVEL_MAX) {
+    ids.add(parentId)
+    parentId = findQuestionById(parentId)?.parentId
+    guard++
+  }
+  return ids
+}
+
+/** 展开目标节点的全部祖先，保证其在树中可见 */
+const expandAncestors = (questionId: string) => {
+  const next = new Set(expandedNodeIds.value)
+  collectAncestorIds(questionId).forEach(id => next.add(id))
+  expandedNodeIds.value = next
+}
+
+/**
+ * 展开目标节点自身及其全部祖先。
+ * 用于新增/删除子题后，让变化的那层节点立即在题目列表中可见。
+ */
+const expandNodeWithAncestors = (questionId?: string | null) => {
+  if (!questionId) return
+  const next = new Set(expandedNodeIds.value)
+  next.add(questionId)
+  collectAncestorIds(questionId).forEach(id => next.add(id))
+  expandedNodeIds.value = next
+}
+
+/** 题目树扁平化渲染列表：仅展开的节点才展开其后代 */
+/** 题目ID → 题号路径：母题 1，子题 1.1、1.1.2（与是否展开无关，全量计算） */
+const questionNoMap = computed<Record<string, string>>(() => {
+  const map: Record<string, string> = {}
+  const walkChildren = (parentId: string, parentNo: string) => {
+    const children = childrenMap.value[parentId] || []
+    children.forEach((child, index) => {
+      const no = `${parentNo}.${index + 1}`
+      map[child.id] = no
+      walkChildren(child.id, no)
+    })
+  }
+  questions.value.forEach((question, index) => {
+    const no = String(question.sortNum || index + 1)
+    map[question.id] = no
+    walkChildren(question.id, no)
+  })
+  return map
+})
+
+/** 题目ID → 元信息：供标注区域显示题号、列出改绑候选 */
+const questionMetaMap = computed<Record<string, QuestionMeta>>(() => {
+  const map: Record<string, QuestionMeta> = {}
+  const walk = (question: ExtendedQuestionVO, no: string, level: number, parentId: string) => {
+    map[question.id] = { no, level, parentId, labelQuestionType: question.labelQuestionType ?? undefined }
+    ;(childrenMap.value[question.id] || []).forEach((child, index) => {
+      walk(child, `${no}.${index + 1}`, level + 1, question.id)
+    })
+  }
+  questions.value.forEach((question, index) => {
+    walk(question, String(question.sortNum || index + 1), 0, '0')
+  })
+  return map
+})
+
+const renderList = computed<QuestionRenderItem[]>(() => {
+  const list: QuestionRenderItem[] = []
+  const noMap = questionNoMap.value
+  // 递归展开子题：题号取自 questionNoMap，保证与标注区域显示一致
+  const walkChildren = (parentId: string, depth: number) => {
+    const children = childrenMap.value[parentId] || []
+    children.forEach(child => {
+      list.push({
+        question: child,
+        parentIndex: -1,
+        depth,
+        no: noMap[child.id] ?? '',
+        expanded: expandedQuestionId.value === child.id
+      })
+      if (expandedNodeIds.value.has(child.id)) {
+        walkChildren(child.id, depth + 1)
+      }
+    })
+  }
+  questions.value.forEach((question, index) => {
+    list.push({
+      question,
+      parentIndex: index,
+      depth: 0,
+      no: noMap[question.id] ?? String(question.sortNum || index + 1),
+      expanded: expandedQuestionId.value === question.id
+    })
+    if (expandedNodeIds.value.has(question.id)) {
+      walkChildren(question.id, 1)
+    }
+  })
+  return list
+})
+
 // 标注类型映射
 const annotationTypeMap: Record<number, string> = {
   1: '题干',
@@ -440,14 +629,15 @@ const getAnnotationStatusText = (status?: number) => {
 
 // 计算题目的注解处理状态（基于 pendingAnnotations 数据）
 const calculateQuestionAnnotationStatus = (question: ExtendedQuestionVO): number | undefined => {
-  // 1. 该道题没有标注，不显示
+  // 1. 该道题及其子树没有标注，不显示
   if (!question.annotationCount || question.annotationCount === 0) {
     question.annotationStatus = undefined
     return undefined
   }
 
-  // 使用 pendingAnnotations（只包含进行中和失败的标注）
-  const questionPendingAnnotations = pendingAnnotations.value.filter((a: any) => a.questionId === question.id)
+  // 使用 pendingAnnotations（只包含进行中和失败的标注），状态按整棵子树汇总
+  const subtreeIds = collectSubtreeQuestionIds(question.id)
+  const questionPendingAnnotations = pendingAnnotations.value.filter((a: any) => subtreeIds.has(a.questionId))
 
   // 3. 该题目存在失败标注，则整道题为失败状态
   if (questionPendingAnnotations.some((a: any) => a.result === 2)) {
@@ -467,9 +657,9 @@ const calculateQuestionAnnotationStatus = (question: ExtendedQuestionVO): number
   return 1
 }
 
-// 更新题目列表的注解状态
+// 更新题目列表的注解状态（含各级子题）
 const updateQuestionsAnnotationStatus = () => {
-  questions.value.forEach(question => {
+  Object.values(questionNodeMap.value).forEach(question => {
     question.annotationStatus = calculateQuestionAnnotationStatus(question)
   })
 }
@@ -534,7 +724,7 @@ const pollPendingAndFailedAnnotations = async () => {
 
         // 如果当前有展开的题目，刷新其标注列表
         if (expandedQuestionId.value) {
-          const question = questions.value.find(q => q.id === expandedQuestionId.value)
+          const question = findQuestionById(expandedQuestionId.value)
           if (question) {
             await loadQuestionAnnotations(question)
             console.log('[轮询] 已刷新题目标注列表，标注数量:', questionAnnotations.value.length)
@@ -594,7 +784,7 @@ const stopPolling = () => {
 }
 
 // 点击题目项 - 打开题目编辑并设置当前题目
-const handleQuestionClick = (question: QuestionVO) => {
+const handleQuestionClick = async (question: ExtendedQuestionVO) => {
   selectedQuestionId.value = question.id
   emit('editQuestion', question)
   // 同时也触发 select 事件，让标注区域知道当前选中的题目
@@ -603,6 +793,8 @@ const handleQuestionClick = (question: QuestionVO) => {
   if (question.page) {
     emit('goToPage', question.page)
   }
+  // 选中即展示该题标注（子题与母题一致）
+  await showQuestionAnnotations(question)
 }
 
 // 切换题目类型
@@ -628,27 +820,60 @@ const handleQuestionTypeChange = async (type: number | null | undefined, questio
 }
 
 // 加载题目列表
+const buildListParams = (): { projectId: string; catalogueId?: string } => {
+  const params: { projectId: string; catalogueId?: string } = {
+    projectId: props.projectId
+  }
+  // 书籍类型需要传catalogueId
+  if (props.type === 'book' && props.catalogueId) {
+    params.catalogueId = props.catalogueId
+  }
+  return params
+}
+
+/**
+ * 子题按 parentId 归组：一次取全量一级、二级子题（最多两级），
+ * 避免展开时逐题请求，同时保证母题折叠状态下也能拿到准确的子树标注数
+ */
+const loadSubQuestions = async (params: { projectId: string; catalogueId?: string }) => {
+  const levelList = Array.from({ length: LEVEL_MAX }, (_, index) => index + 1)
+  const responses = await Promise.all(
+    levelList.map(level => getQuestionListApi({ ...params, level }))
+  )
+  const children: ExtendedQuestionVO[] = []
+  responses.forEach(response => {
+    if (response.data.code === 200) {
+      children.push(...(response.data.data || []))
+    }
+  })
+  const grouped: Record<string, ExtendedQuestionVO[]> = {}
+  children.forEach(child => {
+    const parentId = child.parentId
+    if (!parentId) return
+    const siblings = grouped[parentId] ?? []
+    siblings.push(child)
+    grouped[parentId] = siblings
+  })
+  childrenMap.value = grouped
+}
+
 const loadQuestions = async () => {
-  console.log('loadQuestions called:', { projectId: props.projectId, type: props.type, catalogueId: props.catalogueId })
   loading.value = true
   try {
-    const params: { projectId: string; catalogueId?: string } = {
-      projectId: props.projectId
-    }
-    // 书籍类型需要传catalogueId
-    if (props.type === 'book' && props.catalogueId) {
-      params.catalogueId = props.catalogueId
-    }
-    console.log('request params:', params)
-    const response = await getQuestionListApi(params)
-    console.log('response:', response)
+    const params = buildListParams()
+    // 顶层只取母题，子题由 parentId/level 单独加载
+    const [response] = await Promise.all([
+      getQuestionListApi({ ...params, parentId: '0' }),
+      loadSubQuestions(params)
+    ])
     if (response.data.code === 200) {
       questions.value = response.data.data || []
-      console.log('questions loaded:', questions.value.length)
       // 初始化所有题目的注解状态
       updateQuestionsAnnotationStatus()
       // 通知父组件题目列表已加载
       emit('questionsLoaded', questions.value)
+      // 题号路径与题目元信息下发给标注区域（用于标注框题号显示与改绑候选）
+      emit('questionMetaChanged', { noMap: questionNoMap.value, metaMap: questionMetaMap.value })
       // 解析等待的 Promise
       if (questionsLoadedResolve) {
         questionsLoadedResolve()
@@ -663,6 +888,8 @@ const loadQuestions = async () => {
           applySelection(questionId, annotationId)
         }, 50)
       }
+    } else {
+      ElMessage.error(response.data.msg || '加载题目列表失败')
     }
   } catch (error) {
     ElMessage.error('加载题目列表失败')
@@ -672,30 +899,39 @@ const loadQuestions = async () => {
   }
 }
 
-// 重新加载当前题目的标注数量
-const refreshCurrentAnnotationCount = async () => {
-  if (expandedQuestionId.value) {
-    const question = questions.value.find(q => q.id === expandedQuestionId.value)
-    if (question) {
-      // 直接使用当前标注列表长度更新数量
-      question.annotationCount = questionAnnotations.value.length
-    }
+/**
+ * 标注增删后按子树口径同步标注数：自身与全部祖先各增减 delta
+ */
+const applyAnnotationCountDelta = (questionId: string, delta: number) => {
+  let current = findQuestionById(questionId)
+  let guard = 0
+  while (current && guard <= LEVEL_MAX + 1) {
+    current.annotationCount = Math.max((current.annotationCount || 0) + delta, 0)
+    current.annotationStatus = calculateQuestionAnnotationStatus(current)
+    const parentId = current.parentId
+    current = parentId && parentId !== '0' ? findQuestionById(parentId) : undefined
+    guard++
   }
 }
 
-const handleToggleQuestion = async (question: ExtendedQuestionVO) => {
-  if (expandedQuestionId.value === question.id) {
-    // 收起
-    expandedQuestionId.value = null
-    questionAnnotations.value = []
-  } else {
-    // 展开
-    expandedQuestionId.value = question.id
-    selectedQuestionId.value = question.id
-    emit('select', question)
-    // 加载标注列表
-    await loadQuestionAnnotations(question)
-  }
+// 重新加载当前题目的标注数量（当前加载的是该题自身的标注，仅叶子节点可直接推算）
+const refreshCurrentAnnotationCount = async () => {
+  const question = findQuestionById(expandedQuestionId.value)
+  if (!question || hasChildren(question.id)) return
+  applyAnnotationCountDelta(question.id, questionAnnotations.value.length - (question.annotationCount || 0))
+}
+
+// 展开/收起子题（仅有子题的节点显示箭头）
+const handleToggleNode = (question: ExtendedQuestionVO) => {
+  if (!hasChildren(question.id)) return
+  toggleNodeExpand(question.id)
+}
+
+// 展示指定题目的标注列表（同一时刻只展示一道题的标注）
+const showQuestionAnnotations = async (question: ExtendedQuestionVO) => {
+  if (expandedQuestionId.value === question.id) return
+  expandedQuestionId.value = question.id
+  await loadQuestionAnnotations(question)
 }
 
 // 加载题目标注列表
@@ -723,7 +959,7 @@ const loadQuestionAnnotations = async (question: ExtendedQuestionVO) => {
 const refreshAnnotationStatus = async (annotationId: string) => {
   if (!expandedQuestionId.value) return
 
-  const question = questions.value.find(q => q.id === expandedQuestionId.value)
+  const question = findQuestionById(expandedQuestionId.value)
   if (!question) return
 
   try {
@@ -842,7 +1078,7 @@ const quickDeleteAnnotation = async () => {
 
   // 查找选中的标注和题目
   const annotation = questionAnnotations.value.find(a => a.id === selectedAnnotationId.value)
-  const question = questions.value.find(q => q.id === expandedQuestionId.value)
+  const question = findQuestionById(expandedQuestionId.value)
 
   if (!annotation || !question) {
     return false
@@ -894,10 +1130,12 @@ const handleSelectQuestion = (question: QuestionVO) => {
 
 // 应用选中状态
 const applySelection = async (questionId: string, annotationId?: string) => {
-  const question = questions.value.find(q => q.id === questionId)
+  const question = findQuestionById(questionId)
   if (!question) return
 
-  // 展开该题目
+  // 先展开其全部祖先，保证目标节点已渲染在树中
+  expandAncestors(questionId)
+  // 选中该题目并展示其标注
   expandedQuestionId.value = question.id
   selectedQuestionId.value = question.id
 
@@ -912,16 +1150,13 @@ const applySelection = async (questionId: string, annotationId?: string) => {
   // 触发选中事件
   emit('select', question)
 
-  // 滚动到该题目位置
+  // 滚动到该题目位置（按题目ID定位，避免依赖扁平化后的下标）
   setTimeout(() => {
-    const questionElements = document.querySelectorAll('.question-item')
-    const questionIndex = questions.value.findIndex(q => q.id === questionId)
-    if (questionIndex !== -1 && questionElements[questionIndex]) {
-      questionElements[questionIndex].scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest'
-      })
-    }
+    const questionElement = questionListRef.value?.querySelector(`[data-qid="${questionId}"]`)
+    questionElement?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest'
+    })
   }, 100)
 }
 
@@ -954,7 +1189,7 @@ const refreshAnnotationsAndSelect = async (annotation: any) => {
   })
   // 只在当前选中的题目与标注所属题目一致时才刷新
   if (selectedQuestionId.value && selectedQuestionId.value === annotation.questionId) {
-    const question = questions.value.find(q => q.id === annotation.questionId)
+    const question = findQuestionById(annotation.questionId)
     if (question) {
       // 确保题目已展开
       if (expandedQuestionId.value !== annotation.questionId) {
@@ -964,10 +1199,8 @@ const refreshAnnotationsAndSelect = async (annotation: any) => {
       await loadQuestionAnnotations(question)
       // 选中新建的标注
       selectedAnnotationId.value = annotation.id
-      // 更新标注数量
-      question.annotationCount = questionAnnotations.value.length
-      // 新建标注后，重新计算题目状态（标注可能正在解析中）
-      question.annotationStatus = calculateQuestionAnnotationStatus(question)
+      // 新建标注后，自身与祖先题目的标注数各 +1，并重算子树状态（标注可能正在解析中）
+      applyAnnotationCountDelta(question.id, 1)
       // 触发 selectAnnotation 事件，让编辑面板显示新建的标注
       const selectedAnnotation = questionAnnotations.value.find(a => a.id === annotation.id)
       if (selectedAnnotation) {
@@ -978,13 +1211,7 @@ const refreshAnnotationsAndSelect = async (annotation: any) => {
   } else {
     console.log('[QuestionsList] 题目未选中或不匹配，跳过刷新编辑面板')
     // 即使题目未选中，也需要更新该题目的状态和数量
-    const question = questions.value.find(q => q.id === annotation.questionId)
-    if (question) {
-      // 增加标注数量
-      question.annotationCount = (question.annotationCount || 0) + 1
-      // 新建标注后，重新计算题目状态（标注可能正在解析中）
-      question.annotationStatus = calculateQuestionAnnotationStatus(question)
-    }
+    applyAnnotationCountDelta(annotation.questionId, 1)
   }
 }
 
@@ -1001,7 +1228,7 @@ const updateAnnotationStatus = (annotationId: string, result: number) => {
   }
   // 更新题目列表中该标注所属题目的注解状态
   if (annotation && annotation.questionId) {
-    const question = questions.value.find(q => q.id === annotation.questionId)
+    const question = findQuestionById(annotation.questionId)
     if (question) {
       // 重新计算题目状态，而不是直接设置为单个标注的状态
       question.annotationStatus = calculateQuestionAnnotationStatus(question)
@@ -1011,7 +1238,7 @@ const updateAnnotationStatus = (annotationId: string, result: number) => {
 
 // 更新题目的解析状态（直接设置为指定状态）
 const updateQuestionAnnotationStatus = (questionId: string, status: number) => {
-  const question = questions.value.find(q => q.id === questionId)
+  const question = findQuestionById(questionId)
   if (question) {
     question.annotationStatus = status
   }
@@ -1027,7 +1254,7 @@ const updateAnnotationContent = (annotationId: string, content: string) => {
 
 // 根据题目ID获取题目对象
 const getQuestionById = (questionId: string) => {
-  return questions.value.find(q => q.id === questionId)
+  return findQuestionById(questionId)
 }
 
 // 新增题目
@@ -1071,17 +1298,10 @@ const handleAddQuestion = async () => {
       const newQuestion = questions.value.find(q => q.sortNum === maxSortNum + 1)
       if (newQuestion) {
         handleSelectQuestion(newQuestion)
-        // 收起之前展开的题目（如果有的话）
-        if (expandedQuestionId.value && expandedQuestionId.value !== newQuestion.id) {
-          expandedQuestionId.value = null
-          questionAnnotations.value = []
-        }
-        // 立刻展开新添加的题目
-        expandedQuestionId.value = newQuestion.id
+        // 选中并展示新题目的标注（新题目暂无标注）
         selectedQuestionId.value = newQuestion.id
         emit('select', newQuestion)
-        // 加载标注列表（新题目暂时没有标注，但需要确保展开状态正确）
-        await loadQuestionAnnotations(newQuestion)
+        await showQuestionAnnotations(newQuestion)
       }
     } else {
       ElMessage.error(response.data.msg || '新增题目失败')
@@ -1270,17 +1490,10 @@ const handleInsertQuestion = async (index: number, before: boolean) => {
       const insertedQuestion = questions.value.find(q => q.sortNum === newSortNum)
       if (insertedQuestion) {
         handleSelectQuestion(insertedQuestion)
-        // 收起之前展开的题目（如果有的话）
-        if (expandedQuestionId.value && expandedQuestionId.value !== insertedQuestion.id) {
-          expandedQuestionId.value = null
-          questionAnnotations.value = []
-        }
-        // 立刻展开新插入的题目
-        expandedQuestionId.value = insertedQuestion.id
+        // 选中并展示新插入题目的标注（新题目暂无标注）
         selectedQuestionId.value = insertedQuestion.id
         emit('select', insertedQuestion)
-        // 加载标注列表（新题目暂时没有标注，但需要确保展开状态正确）
-        await loadQuestionAnnotations(insertedQuestion)
+        await showQuestionAnnotations(insertedQuestion)
       }
     } else {
       ElMessage.error(response.data.msg || '插入题目失败')
@@ -1292,13 +1505,18 @@ const handleInsertQuestion = async (index: number, before: boolean) => {
 }
 
 // 删除题目
-const handleDeleteQuestion = async (question: QuestionVO) => {
+const handleDeleteQuestion = async (question: ExtendedQuestionVO) => {
+  const isChild = !!question.parentId && question.parentId !== '0'
   try {
-    await ElMessageBox.confirm('确认删除该题目吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      isChild ? '删除后该子题及其下级子题都会移除，确认删除？' : '确认删除该题目吗？删除后其子题也会一并移除。',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
     const response = await deleteQuestionDeleteApi({ id: question.id })
     if (response.data.code === 200) {
       ElMessage.success('删除题目成功')
@@ -1495,7 +1713,7 @@ const handleChangeQuestionType = async (type: number) => {
     return
   }
   // 查找选中的题目
-  const question = questions.value.find(q => q.id === selectedQuestionId.value)
+  const question = findQuestionById(selectedQuestionId.value)
   if (!question) {
     ElMessage.warning('未找到选中的题目')
     return
@@ -1525,7 +1743,8 @@ defineExpose({
   handleChangeQuestionType,
   handleAutoSort,
   updateQuestionAnnotationStatus,
-  startPolling
+  startPolling,
+  expandNodeWithAncestors
 })
 
 watch(() => props.catalogueId, () => {
@@ -1655,6 +1874,29 @@ onUnmounted(() => {
 
 .expand-icon.expanded {
   transform: rotate(90deg);
+}
+
+/* 无子题的节点用同宽占位，保持题号对齐 */
+.expand-icon-placeholder {
+  display: inline-block;
+  width: 1em;
+  flex-shrink: 0;
+}
+
+/* 子题行：左侧竖线标识从属关系，深色模式同步 */
+.question-item.is-child {
+  background: #fafafa;
+  border-color: #f3f4f6;
+}
+
+.question-item.is-child.active {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+}
+
+html.dark .question-item.is-child {
+  background: #1f2937;
+  border-color: #374151;
 }
 
 .question-prefix {

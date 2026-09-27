@@ -129,9 +129,9 @@ const handleAnnotationParseStart = (data: { annotationId: string; questionId: st
   emit('annotationParseStart', data)
 }
 
-// 刷新题目
-const handleRefreshQuestion = () => {
-  emit('refreshQuestion')
+// 刷新题目（透传发生变化的父题目ID，供题目列表刷新后展开定位）
+const handleRefreshQuestion = (parentId?: string) => {
+  emit('refreshQuestion', parentId)
 }
 
 // 清除选中
@@ -171,6 +171,11 @@ const switchToPreviewMode = () => {
 }
 
 // 暴露方法
+/** 快捷新增子题：透传到当前打开的题目编辑面板 */
+const addSubQuestion = async () => {
+  await questionEditorRef.value?.addSubQuestion()
+}
+
 defineExpose({
   setSelectedAnnotation,
   setSelectedQuestion,
@@ -179,7 +184,8 @@ defineExpose({
   getSelectedAnnotation: () => selectedAnnotation.value?.id || null,
   getSelectedQuestion: () => selectedQuestion.value?.id || null,
   switchToEditMode,
-  switchToPreviewMode
+  switchToPreviewMode,
+  addSubQuestion
 })
 </script>
 

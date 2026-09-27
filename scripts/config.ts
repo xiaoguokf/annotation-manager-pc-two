@@ -56,6 +56,13 @@ export const config: ApiGeneratorConfig = {
       '/swagger-ui/**', // Swagger UI
       '/v3/api-docs/**', // OpenAPI 文档本身
       '/webjars/**', // WebJars 资源
+      // 公告功能已从前端移除（公告服务/组件/页面均不存在），后端接口保留但前端不再消费。
+      // 不排除的话每次 generate-api 都会重新产出无人引用的死文件。
+      // 带尾斜杠的精确路径也需单独列出：'/**' 至少匹配一段，匹配不到 '/admin/announcement' 本身
+      '/announcement',
+      '/announcement/**',
+      '/admin/announcement',
+      '/admin/announcement/**',
     ],
     // 如果需要只生成特定路径，取消下面的注释
     // include: [

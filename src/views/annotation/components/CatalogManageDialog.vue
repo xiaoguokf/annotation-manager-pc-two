@@ -392,8 +392,8 @@ const fetchCatalogList = async () => {
 // 获取所有目录的题目数量
 const fetchCatalogueQuestionCounts = async () => {
   try {
-    // 获取项目下所有题目
-    const response = await getQuestionListApi({ projectId: props.projectId })
+    // 获取项目下所有母题（子题不计入目录题目数，避免与题目列表数量不一致）
+    const response = await getQuestionListApi({ projectId: props.projectId, parentId: '0' })
     if (response.data.code === 200) {
       const questions = response.data.data || []
       // 统计每个目录下的题目数量

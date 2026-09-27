@@ -96,7 +96,7 @@
                     :style="{ ...getAnnotationLabelStyle(annotation, 'left'), color: getAnnotationTypeColor(annotation.type, annotation.inputType) }"
                     @mouseenter="handleLabelMouseEnter(annotation.id)"
                     @mouseleave="handleLabelMouseLeave(annotation.id)">
-                    题{{ annotation.sortNum || '?' }}
+                    题{{ getAnnotationQuestionNo(annotation) }}
                   </div>
                   <!-- 标注框 -->
                   <div class="annotation-box"
@@ -175,7 +175,7 @@
                     :style="{ ...getAnnotationLabelStyle(annotation, 'right'), color: getAnnotationTypeColor(annotation.type, annotation.inputType) }"
                     @mouseenter="handleLabelMouseEnter(annotation.id)"
                     @mouseleave="handleLabelMouseLeave(annotation.id)">
-                    题{{ annotation.sortNum || '?' }}
+                    题{{ getAnnotationQuestionNo(annotation) }}
                   </div>
                   <!-- 标注框 -->
                   <div class="annotation-box"
@@ -337,6 +337,31 @@
             </div>
           </div>
         </div>
+        <!-- 归属题目：改绑当前标注挂在母题还是某道子题上 -->
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" @click.stop="openQuestionMenu">
+          <Icon icon="ep:connection" />
+          <span>归属题目</span>
+          <span class="ml-auto text-xs text-gray-400">{{ currentAnnotationQuestionNo }}</span>
+        </div>
+      </div>
+
+      <!-- 归属题目候选面板 -->
+      <div v-if="questionMenuVisible" ref="questionMenuRef" class="context-menu-panel" :style="questionMenuStyle"
+        @click.stop>
+        <div class="context-menu-title">归属题目</div>
+        <div class="context-menu-items">
+          <div v-if="questionCandidates.length === 0" class="context-menu-item disabled">
+            <span class="text-xs text-gray-400">当前题目无可选子题</span>
+          </div>
+          <div v-for="item in questionCandidates" :key="item.id" class="context-menu-item"
+            :class="{ active: item.id === currentAnnotationQuestionId, disabled: rebindingQuestion }"
+            @click="rebindingQuestion ? null : handleRebindQuestion(item.id)">
+            <Icon :icon="item.level === 0 ? 'ep:document' : 'ep:share'" />
+            <span>{{ item.label }}</span>
+            <Icon v-if="item.id === currentAnnotationQuestionId" icon="ep:check" class="ml-auto" />
+          </div>
+        </div>
       </div>
     </teleport>
   </div>
@@ -347,7 +372,7 @@ import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { getPdfListApi, getPdfPageListApi, type PdfVO, type PdfPageVO } from '@/api/gen/pdfAdminController'
-import { getAnnotationListByProjectAndPageApi, postAnnotationCreateApi, postAnnotationParseApi, putAnnotationUpdateRectApi, putAnnotationUpdateTypeApi, putAnnotationUpdateTypeToTextApi, postAnnotationProcessAnnotationApi, type AnnotationVO, type AnnotationSimpleVO, type AnnotationUpdateCmd, type ProcessAnnotationCmd } from '@/api/gen/annotationController'
+import { getAnnotationListByProjectAndPageApi, postAnnotationCreateApi, postAnnotationParseApi, putAnnotationUpdateRectApi, putAnnotationUpdateTypeApi, putAnnotationUpdateTypeToTextApi, putAnnotationUpdateQuestionApi, postAnnotationProcessAnnotationApi, type AnnotationVO, type AnnotationSimpleVO, type AnnotationUpdateCmd, type ProcessAnnotationCmd } from '@/api/gen/annotationController'
 import { getModelListApi, type ModelVO } from '@/api/gen/modelController'
 import { useOcrStore } from '@/stores/ocr'
 import { useParseSettingsStore } from '@/stores/parseSettings'
@@ -476,7 +501,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits(['refreshAnnotations', 'annotationCreated', 'selectAnnotation', 'annotationParsed', 'annotationParseStart', 'deleteAnnotation'])
+const emit = defineEmits(['refreshAnnotations', 'annotationCreated', 'selectAnnotation', 'annotationParsed', 'annotationParseStart', 'deleteAnnotation', 'annotationRebound'])
 const ocrStore = useOcrStore()
 const parseSettingsStore = useParseSettingsStore()
 
@@ -504,17 +529,30 @@ const loadModelList = async () => {
 // 当前选中的题目ID
 const selectedQuestionId = ref<string | null>(null)
 
-// 题目索引映射（用于显示题号）
-const questionsIndexMap = ref<Record<string, number>>({})
-
-// 设置题目列表（用于生成题号映射）
-const setQuestionsList = (questions: Array<{ id: string; sortNum?: number }>) => {
-  const indexMap: Record<string, number> = {}
-  questions.forEach((q, index) => {
-    indexMap[q.id] = q.sortNum || index + 1
-  })
-  questionsIndexMap.value = indexMap
+/** 题目元信息：题号路径、层级、父题ID */
+interface QuestionMeta {
+  /** 题号路径：母题 1，子题 1.1、1.1.2 */
+  no: string
+  /** 层级：0-母题，1-一级子题，2-二级子题 */
+  level: number
+  /** 父题目ID，母题为 '0' */
+  parentId: string
 }
+
+/** 题目ID → 题号路径，由题目列表加载完成后下发 */
+const questionNoMap = ref<Record<string, string>>({})
+/** 题目ID → 题目元信息，用于改绑候选 */
+const questionMetaMap = ref<Record<string, QuestionMeta>>({})
+
+/** 接收题目列表下发的题号与元信息 */
+const setQuestionMeta = (payload: { noMap: Record<string, string>; metaMap: Record<string, QuestionMeta> }) => {
+  questionNoMap.value = payload?.noMap || {}
+  questionMetaMap.value = payload?.metaMap || {}
+}
+
+/** 标注所属题目的题号路径；题目列表未覆盖时回退到接口返回的 sortNum */
+const getAnnotationQuestionNo = (annotation: AnnotationVO) =>
+  questionNoMap.value[annotation.questionId] ?? (annotation.sortNum != null ? String(annotation.sortNum) : '?')
 
 // 电子书列表
 const pdfList = ref<PdfVO[]>([])
@@ -570,6 +608,99 @@ const updateTypeMenuVisible = ref(false)
 const updateTypeMenuPosition = ref({ x: 0, y: 0 })
 const updateTypeMenuRef = ref<HTMLElement | null>(null)
 const updatingAnnotationType = ref<number>(1)
+
+// 标注归属题目（改绑）相关
+const questionMenuVisible = ref(false)
+const questionMenuRef = ref<HTMLElement | null>(null)
+const questionMenuStyle = ref<Record<string, string>>({})
+const questionCandidates = ref<Array<{ id: string; label: string; level: number }>>([])
+const rebindingQuestion = ref(false)
+/** 改绑候选的最大向上回溯层数，防止脏数据下的死循环 */
+const LEVEL_GUARD = 4
+
+/** 当前选中标注归属的题目ID与题号 */
+const currentAnnotationQuestionId = computed(() =>
+  annotations.value.find(a => a.id === selectedAnnotationId.value)?.questionId || ''
+)
+const currentAnnotationQuestionNo = computed(() =>
+  questionNoMap.value[currentAnnotationQuestionId.value] || '-'
+)
+
+/**
+ * 以目标题目所在母题为根，列出整棵子树作为改绑候选。
+ * 只允许在同一母题内改绑，避免标注跨题挂靠导致归属错乱。
+ */
+const buildQuestionCandidates = (questionId: string) => {
+  const meta = questionMetaMap.value
+  if (!questionId || !meta[questionId]) return []
+  let rootId = questionId
+  let guard = 0
+  let node: QuestionMeta | undefined = meta[rootId]
+  while (node && node.parentId !== '0' && guard++ < LEVEL_GUARD) {
+    rootId = node.parentId
+    node = meta[rootId]
+  }
+  const childrenOf: Record<string, string[]> = {}
+  Object.entries(meta).forEach(([id, item]) => {
+    const parent = item.parentId || '0'
+    if (!childrenOf[parent]) childrenOf[parent] = []
+    childrenOf[parent].push(id)
+  })
+  const list: Array<{ id: string; label: string; level: number }> = []
+  const walk = (id: string) => {
+    const item = meta[id]
+    if (!item) return
+    const levelText = item.level === 0 ? '母题' : item.level === 1 ? '一级子题' : '二级子题'
+    list.push({ id, label: `${levelText} ${item.no}`, level: item.level })
+    ;(childrenOf[id] || []).forEach(walk)
+  }
+  walk(rootId)
+  return list
+}
+
+/** 从「修改标注类型」面板进入归属题目候选 */
+const openQuestionMenu = () => {
+  const annotation = annotations.value.find(a => a.id === selectedAnnotationId.value)
+  if (!annotation) {
+    ElMessage.error('未找到标注信息')
+    return
+  }
+  questionCandidates.value = buildQuestionCandidates(annotation.questionId)
+  questionMenuStyle.value = { ...updateTypeMenuStyle.value }
+  questionMenuVisible.value = true
+  updateTypeMenuVisible.value = false
+}
+
+/** 改绑标注到目标题目 */
+const handleRebindQuestion = async (questionId: string) => {
+  const annotation = annotations.value.find(a => a.id === selectedAnnotationId.value)
+  if (!annotation || questionId === annotation.questionId) {
+    questionMenuVisible.value = false
+    return
+  }
+  rebindingQuestion.value = true
+  try {
+    const response = await putAnnotationUpdateQuestionApi({
+      annotationId: annotation.id,
+      questionId
+    })
+    if (response.data.code === 200) {
+      annotation.questionId = questionId
+      ElMessage.success('已改绑到 ' + (questionNoMap.value[questionId] || '目标题目'))
+      // 归属变化会影响两侧题目的标注数汇总，通知父组件刷新
+      emit('refreshAnnotations')
+      emit('annotationRebound', { annotationId: annotation.id, questionId })
+    } else {
+      ElMessage.error(response.data.msg || '改绑失败')
+    }
+  } catch (error) {
+    console.error('改绑标注题目失败:', error)
+    ElMessage.error('改绑失败')
+  } finally {
+    rebindingQuestion.value = false
+    questionMenuVisible.value = false
+  }
+}
 
 // 计算修改标注类型菜单的智能定位样式
 const updateTypeMenuStyle = computed(() => {
@@ -2943,7 +3074,7 @@ defineExpose({
   locateAnnotation,
   refreshAnnotations,
   clearSelection,
-  setQuestionsList,
+  setQuestionMeta,
   retryParseAnnotation,
   goToPage,
   refreshModels
@@ -3415,6 +3546,17 @@ onUnmounted(() => {
   padding: 4px 8px 8px 8px;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 4px;
+}
+
+/* 菜单内的分组分隔线与深色模式适配 */
+.context-menu-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+html.dark .context-menu-divider {
+  background: #374151;
 }
 
 .context-menu-items {

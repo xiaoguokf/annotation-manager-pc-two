@@ -106,6 +106,7 @@
                       @edit-question="handleEditQuestion" @refresh-annotations="handleRefreshAnnotations"
                       @locate-annotation="handleLocateAnnotation"
                       @refresh-annotation-count="handleRefreshAnnotationCount" @questions-loaded="handleQuestionsLoaded"
+                      @question-meta-changed="handleQuestionMetaChanged"
                       @select-annotation="handleSelectAnnotationInEdit" @go-to-page="handleGoToPage"
                       @refresh-catalog-count="handleRefreshCatalogCount" @auto-sort="handleAutoSort"
                       @clear-annotation-selection="handleClearAnnotationSelection" />
@@ -133,6 +134,7 @@
             <AnnotationArea v-if="projectId" ref="annotationAreaRef" :project-id="String(projectId)"
               :subject="subjectName"
               @refresh-annotations="handleRefreshAnnotations" @annotation-created="handleAnnotationCreated"
+              @annotation-rebound="handleAnnotationRebound"
               @select-annotation="handleSelectAnnotation" @annotation-parsed="handleAnnotationParsed"
               @annotation-parse-start="handleAnnotationParseStart" @delete-annotation="handleDeleteAnnotation" />
           </div>
@@ -253,7 +255,8 @@ const questionsCount = ref(0)
 // 获取书籍总题目数量
 const fetchTotalQuestionCount = async () => {
   try {
-    const response = await getQuestionListApi({ projectId: String(projectId.value) })
+    // 题目总数只统计母题：子题通过 parentId 挂在母题下，不计入题号总数
+    const response = await getQuestionListApi({ projectId: String(projectId.value), parentId: '0' })
     if (response.data.code === 200) {
       totalQuestionCount.value = (response.data.data || []).length
     }
@@ -413,8 +416,17 @@ const handleRefreshCatalogCount = () => {
 const handleQuestionsLoaded = (questions: any[]) => {
   // 更新题目数量
   questionsCount.value = questions.length
-  // 更新 AnnotationArea 中的题目索引映射
-  annotationAreaRef.value?.setQuestionsList(questions)
+}
+
+// 题目元信息下发：把题号路径(1/1.1/1.1.2)与题目层级交给标注区域，用于标注框题号显示与改绑候选
+const handleQuestionMetaChanged = (payload: { noMap: Record<string, string>; metaMap: Record<string, any> }) => {
+  annotationAreaRef.value?.setQuestionMeta(payload)
+}
+
+// 标注改绑题目后，两侧题目的标注数汇总会变化，刷新题目列表与目录计数
+const handleAnnotationRebound = async () => {
+  await questionsListRef.value?.loadQuestions()
+  catalogTreeRef.value?.refreshQuestionCounts()
 }
 
 // 选中标注
@@ -662,9 +674,11 @@ const handleUpdateAnnotation = async (annotation: AnnotationSimpleVO) => {
 }
 
 // 刷新题目信息
-const handleRefreshQuestion = async () => {
+const handleRefreshQuestion = async (parentId?: string) => {
   // 重新加载题目列表以更新页码等信息
   await questionsListRef.value?.loadQuestions()
+  // 新增/删除子题后，展开变化的那层节点，让子题立即在列表中可见
+  questionsListRef.value?.expandNodeWithAncestors(parentId)
 }
 
 // 清除标注选中状态
@@ -691,27 +705,43 @@ const handleAutoSort = async () => {
 const keysPressed = ref<Set<string>>(new Set())
 
 // 快捷键处理
-const handleKeyDown = (event: KeyboardEvent) => {
+const handleKeyDown = async (event: KeyboardEvent) => {
   // 检查是否在输入框或文本域中，如果是则不处理快捷键
   const target = event.target as HTMLElement
   const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
     target.isContentEditable || target.closest('.el-textarea__inner')
 
-  // 如果在输入状态中，不触发快捷键
-  if (isInput) return
-
   // 如果按键已经在处理中，跳过（防止长按时重复触发）
   if (keysPressed.value.has(event.key.toLowerCase())) return
   keysPressed.value.add(event.key.toLowerCase())
 
-  // Q 键 - 快速新增题目
-  if (event.key === 'q' || event.key === 'Q') {
+  // 是否带修饰键：Ctrl/Cmd/Alt，用于区分数组合键与单键
+  const hasModifier = event.ctrlKey || event.metaKey || event.altKey
+
+  // Ctrl+Q - 快捷新增子题（挂到当前编辑的题目下）
+  // 放在输入态拦截之前：修饰键组合不产生字符，输入框内也应放行（点选题目后焦点常落在题型输入框里）
+  if ((event.ctrlKey || event.metaKey) && (event.key === 'q' || event.key === 'Q')) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (currentEditType.value !== 'question' || !currentEditItemId.value) {
+      ElMessage.warning('请先在题目列表中选中一道题目')
+      return
+    }
+    await editPanelRef.value?.addSubQuestion()
+    return
+  }
+
+  // 单键快捷键在输入状态中不触发，避免打字误触
+  if (isInput) return
+
+  // Q 键 - 快速新增题目（仅单键，避免与 Ctrl+Q 冲突）
+  if (!hasModifier && (event.key === 'q' || event.key === 'Q')) {
     event.preventDefault()
     questionsListRef.value?.handleAddQuestion()
   }
 
   // 数字键 1-6 - 切换当前选中题目的类型（按学科题型顺序动态映射）
-  const shortcutTypeCode = typeCodeShortcuts.value[event.key]
+  const shortcutTypeCode = hasModifier ? undefined : typeCodeShortcuts.value[event.key]
   if (shortcutTypeCode != null) {
     event.preventDefault()
     questionsListRef.value?.handleChangeQuestionType(shortcutTypeCode)
