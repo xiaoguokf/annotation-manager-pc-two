@@ -47,6 +47,13 @@ export interface AnnotationRectUpdateCmd {
   bottomRightY: number
 }
 
+export interface AnnotationQuestionUpdateCmd {
+  /* 标注ID */
+  annotationId: string
+  /* 目标题目ID（母题或子题均可） */
+  questionId: string
+}
+
 export interface AnnotationUpdateCmd {
   /* 标注ID */
   annotationId: string
@@ -211,6 +218,16 @@ export const putAnnotationUpdateTypeToTextApi = (data: AnnotationUpdate2Cmd, con
  */
 export const putAnnotationUpdateRectApi = (data: AnnotationRectUpdateCmd, config?: SshineAdminRequestConfig<any>) => {
   return http.put<ResultVoid>('/annotation/updateRect', data, config)
+}
+
+/**
+ * 更新标注归属的题目（母题或子题）
+ * 更新标注归属的题目（母题或子题）
+ * @param config 可选配置，包含 timeout、loading 等选项
+ * @returns Promise<ResultVoid>
+ */
+export const putAnnotationUpdateQuestionApi = (data: AnnotationQuestionUpdateCmd, config?: SshineAdminRequestConfig<any>) => {
+  return http.put<ResultVoid>('/annotation/updateQuestion', data, config)
 }
 
 /**

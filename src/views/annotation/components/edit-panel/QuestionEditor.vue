@@ -136,7 +136,11 @@
             @input="() => triggerAutoSave()"
           />
         </el-form-item>
-        <el-form-item label="选项" v-if="isChoiceType(questionForm.labelQuestionType, questionForm.tishi)" required :error="formErrors.options">
+        <!-- 判断题选项固定为 对/错，不可编辑 -->
+        <el-form-item v-if="questionKind === 'judge'" label="选项">
+          <span class="judge-options">对 / 错</span>
+        </el-form-item>
+        <el-form-item v-else-if="questionKind === 'choice'" label="选项" required :error="formErrors.options">
           <div class="options-container">
             <div v-for="(option, index) in choiceOptions" :key="index" class="option-item">
               <div class="option-input-wrapper">
@@ -174,7 +178,13 @@
           </div>
         </el-form-item>
         <el-form-item v-if="questionForm.questionAnswerMode !== 0" label="答案" :required="!questionForm.noAnswer" :error="formErrors.answer">
+          <!-- 判断题：对/错 单选 -->
+          <el-radio-group v-if="questionKind === 'judge'" v-model="questionForm.answer" @change="handleAnswerBlur">
+            <el-radio value="对">对</el-radio>
+            <el-radio value="错">错</el-radio>
+          </el-radio-group>
           <el-input
+            v-else
             v-model="questionForm.answer"
             type="textarea"
             :rows="3"
@@ -202,12 +212,13 @@
         <span>子题</span>
       </div>
       <SubQuestionPanel
+        ref="subQuestionPanelRef"
         :question-id="props.selectedQuestion.id"
         :project-id="props.selectedQuestion.projectId"
         :catalogue-id="props.selectedQuestion.catalogueId"
         :subject-code="bookSubjectCode"
-        :level="0"
-        @changed="emit('refreshQuestion')"
+        :level="props.selectedQuestion.level ?? 0"
+        @changed="(parentId: string) => emit('refreshQuestion', parentId)"
       />
     </div>
     </template>
@@ -292,6 +303,45 @@
           </div>
         </div>
       </div>
+
+      <!-- 子题（只读）：与编辑模式共用详情接口的 subQuestionList -->
+      <div v-if="previewSubRows.length > 0" class="detail-section mb-4">
+        <div class="section-title mb-3">子题（{{ previewSubRows.length }}）</div>
+        <div class="sub-preview-list">
+          <div v-for="row in previewSubRows" :key="row.id" class="sub-preview-item"
+            :style="{ marginLeft: `${row.depth * 16}px` }">
+            <div class="sub-preview-head">
+              <span class="sub-preview-no">{{ row.no }}</span>
+              <el-tag v-if="row.item.labelQuestionType != null" size="small" type="primary">
+                {{ questionTypeName(row.item.labelQuestionType) }}
+              </el-tag>
+              <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
+                {{ answerModeName(row.item.questionAnswerMode) }}
+              </el-tag>
+              <span v-if="row.item.questionContent?.questionScore != null" class="sub-preview-score">
+                {{ row.item.questionContent.questionScore }} 分
+              </span>
+            </div>
+            <div class="content-box preview-box">
+              <div v-if="subStem(row.item)" class="preview-content" v-html="renderContent(subStem(row.item), true)"></div>
+              <div v-else class="text-gray-400">暂无题干</div>
+              <div v-if="subOptions(row.item).length" class="mt-2 pt-2 border-t border-gray-200">
+                <div v-for="(option, oi) in subOptions(row.item)" :key="oi" class="preview-content choice-content">
+                  <div v-html="renderContent(option, true)"></div>
+                </div>
+              </div>
+              <div v-if="row.item.answer" class="mt-2 pt-2 border-t border-gray-200">
+                <el-tag type="success" size="small" class="mb-1">答案</el-tag>
+                <div class="preview-content" v-html="renderContent(row.item.answer, true)"></div>
+              </div>
+              <div v-if="row.item.analysis" class="mt-2 pt-2 border-t border-gray-200">
+                <el-tag type="warning" size="small" class="mb-1">解析</el-tag>
+                <div class="preview-content" v-html="renderContent(row.item.analysis, true)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -319,7 +369,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  refreshQuestion: []
+  /** 题目/子题内容变更，需要刷新题目列表；参数为发生变化的父题目ID（可选） */
+  refreshQuestion: [parentId?: string]
 }>()
 
 // 选项数组
@@ -327,6 +378,52 @@ const choiceOptions = ref<string[]>(['', '', '', ''])
 
 // 当前模式：edit 或 preview
 const currentMode = ref<'edit' | 'preview'>('edit')
+
+/** 子题面板（仅编辑模式下渲染），供快捷键快捷新增子题 */
+const subQuestionPanelRef = ref<InstanceType<typeof SubQuestionPanel> | null>(null)
+
+/** 详情接口返回的子题（递归结构），用于预览模式只读展示 */
+const subQuestionDetails = ref<QuestionDetailsVO[]>([])
+
+/** 预览用子题行：扁平化后按 depth 缩进，题号形如 子题1 / 子题1.1 */
+interface PreviewSubRow {
+  id: string
+  no: string
+  depth: number
+  item: QuestionDetailsVO
+}
+const previewSubRows = computed<PreviewSubRow[]>(() => {
+  const rows: PreviewSubRow[] = []
+  const walk = (list: QuestionDetailsVO[] | undefined, prefix: string, depth: number) => {
+    ;(list || []).forEach((item, index) => {
+      const no = prefix ? `${prefix}.${index + 1}` : String(index + 1)
+      rows.push({ id: item.id, no: `子题${no}`, depth, item })
+      walk(item.subQuestionList, no, depth + 1)
+    })
+  }
+  walk(subQuestionDetails.value, '', 0)
+  return rows
+})
+
+/** 子题题干：优先取结构化内容，回退到 question 字段 */
+const subStem = (item: QuestionDetailsVO) => item.questionContent?.questionStem || item.question || ''
+
+/** 子题选项：choice 为 JSON 数组字符串（判断题固定 对/错），解析失败按换行降级 */
+const subOptions = (item: QuestionDetailsVO): string[] => {
+  if (!item.choice) return []
+  try {
+    const parsed = JSON.parse(item.choice)
+    return Array.isArray(parsed) ? parsed.map((c) => String(c)).filter((c) => c.trim()) : []
+  } catch {
+    return item.choice.split('\n').filter((c) => c.trim())
+  }
+}
+
+/** 题型/作答方式中文名 */
+const questionTypeName = (code?: number) =>
+  questionTypeOptions.value.find((t) => t.typeCode === code)?.typeName || (code != null ? String(code) : '-')
+const answerModeName = (mode?: number) =>
+  answerModeOptions.find((m) => m.value === mode)?.label || (mode != null ? String(mode) : '-')
 
 // 保存状态
 const assembling = ref(false)
@@ -607,7 +704,11 @@ const validateField = (fieldName: 'question' | 'options' | 'answer'): string => 
       return '题干不能为空'
     }
   } else if (fieldName === 'options') {
-    if (isChoiceType(questionForm.value.labelQuestionType, questionForm.value.tishi)) {
+    // 判断题选项固定为 对/错，无需校验
+    if (questionKind.value === 'judge') {
+      return ''
+    }
+    if (questionKind.value === 'choice') {
       const validOptions = choiceOptions.value.filter(o => o.trim())
       if (validOptions.length === 0) {
         return '选择题必须要有选项'
@@ -620,6 +721,10 @@ const validateField = (fieldName: 'question' | 'options' | 'answer'): string => 
     if (!questionForm.value.noAnswer) {
       if (!questionForm.value.answer || questionForm.value.answer.trim() === '') {
         return '答案不能为空'
+      }
+      // 判断题答案只允许 对/错
+      if (questionKind.value === 'judge' && !JUDGE_OPTIONS.includes(questionForm.value.answer.trim())) {
+        return '判断题答案请选择 对 或 错'
       }
     }
   }
@@ -932,6 +1037,42 @@ const getDifficultyLabel = (value: number) => {
 const isChoiceType = (labelQuestionType?: number | null, tishi?: string | null) =>
   isChoiceQuestion({ labelQuestionType, tishi })
 
+/** 判断题固定选项 */
+const JUDGE_OPTIONS = ['对', '错']
+
+/** 旧数据兼容：判断题答案可能以 true/false 存储 */
+const normalizeJudgeAnswer = (answer: string) =>
+  answer === 'true' ? '对' : answer === 'false' ? '错' : answer
+
+/**
+ * 题目作答形态：
+ * - judge：作答方式=判断，或题型字典名称含"判断" → 选项固定 对/错，答案二选一
+ * - choice：作答方式=单选/多选，或标签题型为选择类 → 可编辑选项
+ * - none：其余题型无选项
+ */
+const questionKind = computed<'choice' | 'judge' | 'none'>(() => {
+  const mode = questionForm.value.questionAnswerMode
+  if (mode === 4) return 'judge'
+  const matched = questionTypeOptions.value.find((t) => t.typeCode === questionForm.value.labelQuestionType)
+  if ((matched?.typeName || '').includes('判断')) return 'judge'
+  if (mode === 1 || mode === 2) return 'choice'
+  if (isChoiceType(questionForm.value.labelQuestionType, questionForm.value.tishi)) return 'choice'
+  return 'none'
+})
+
+// 切到判断题时同步固定选项与答案写法；离开判断题时清掉遗留的对/错选项
+watch(questionKind, (kind) => {
+  if (kind === 'judge') {
+    choiceOptions.value = [...JUDGE_OPTIONS]
+    questionForm.value.answer = normalizeJudgeAnswer(questionForm.value.answer || '')
+    return
+  }
+  if (questionForm.value.choice === JSON.stringify(JUDGE_OPTIONS)) {
+    choiceOptions.value = ['', '', '', '']
+    questionForm.value.choice = ''
+  }
+})
+
 // 监听无答案选项变化
 watch(() => questionForm.value.noAnswer, () => {
   updateFieldError('answer')
@@ -987,6 +1128,10 @@ const handleModeChange = (value: string) => {
 // 设置模式（供外部调用）
 const setMode = (mode: 'edit' | 'preview') => {
   currentMode.value = mode
+  // 编辑期间子题可能已增删改，切到预览前重新取一次，保证预览内容与最新一致
+  if (mode === 'preview' && props.selectedQuestion?.id) {
+    loadSubQuestionDetails(props.selectedQuestion.id)
+  }
 }
 
 // 处理图片路径
@@ -1005,6 +1150,21 @@ const renderContent = (content: string, forPreview: boolean = false) => {
   return renderContentUtil(sanitizeHtml(content), forPreview ? processImageUrl : null)
 }
 
+/**
+ * 单独加载子题列表（详情接口按层级递归返回 subQuestionList）。
+ * 编辑模式下子题面板自行维护数据，这里只负责预览所需的只读快照。
+ */
+const loadSubQuestionDetails = async (questionId: string) => {
+  try {
+    const response = await getQuestionDetailsApi({ id: questionId })
+    if (response.data.code === 200) {
+      subQuestionDetails.value = response.data.data?.subQuestionList || []
+    }
+  } catch (error) {
+    console.error('加载子题详情失败:', error)
+  }
+}
+
 // 加载题目详情
 const loadQuestionDetails = async (questionId: string) => {
   try {
@@ -1012,6 +1172,9 @@ const loadQuestionDetails = async (questionId: string) => {
     if (response.data.code === 200 && response.data.data) {
       const tishiValue = response.data.data.tishi || ''
       const choiceValue = response.data.data.choice || ''
+
+      // 子题快照（预览模式只读展示用）
+      subQuestionDetails.value = response.data.data.subQuestionList || []
 
       questionForm.value = {
         tilei: response.data.data.tilei || '',
@@ -1052,6 +1215,15 @@ const loadQuestionDetails = async (questionId: string) => {
 
       // 使用 nextTick 确保 questionForm 更新后再初始化选项
       await nextTick()
+
+      // 判断题：选项固定 对/错，答案兼容 true/false 旧写法
+      if (questionKind.value === 'judge') {
+        choiceOptions.value = [...JUDGE_OPTIONS]
+        questionForm.value.choice = JSON.stringify(JUDGE_OPTIONS)
+        questionForm.value.answer = normalizeJudgeAnswer(questionForm.value.answer)
+        updateFieldError('answer')
+        return
+      }
 
       // 初始化选项数组（仅对选择题类型）
       if (isChoiceType(response.data.data.labelQuestionType, tishiValue) && choiceValue) {
@@ -1119,9 +1291,26 @@ watch(() => props.selectedQuestion, (newQuestion, oldQuestion) => {
 }, { immediate: true, deep: true })
 
 // 暴露方法（外部切换题目/关闭面板时调用，强制提交，避免未保存的元信息丢失）
+/**
+ * 快捷新增子题：挂到当前编辑的题目下。
+ * 预览模式下子题面板未渲染，先切回编辑模式再新增。
+ */
+const addSubQuestion = async () => {
+  if (!props.selectedQuestion) {
+    ElMessage.warning('请先选中一道题目')
+    return
+  }
+  if (currentMode.value !== 'edit') {
+    setMode('edit')
+    await nextTick()
+  }
+  subQuestionPanelRef.value?.handleAdd()
+}
+
 defineExpose({
   autoSaveQuestion: (force: boolean = true) => autoSaveQuestion(force),
-  setMode
+  setMode,
+  addSubQuestion
 })
 </script>
 
@@ -1343,5 +1532,40 @@ defineExpose({
   overflow-x: auto;
 }
 
+/* 判断题固定选项展示 */
+.judge-options {
+  color: var(--el-text-color-secondary, #909399);
+}
+
+/* 预览模式下的只读子题列表 */
+.sub-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sub-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sub-preview-no {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+
+.sub-preview-score {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 子题目块在预览里的留白比主内容略小 */
+.sub-preview-item .preview-box {
+  min-height: auto;
+}
 
 </style>

@@ -90,6 +90,8 @@ export interface QuestionUpdateCmd {
   level?: number
   /* 标签题型枚举（atd_dic_question_type.type_code） */
   labelQuestionType?: number
+  /* 题目类型：0-默认题，1-单选题，2-多选题，3-填空题，4-判断题，5-解答题，6-完形填空，7-综合题，8-连线题 */
+  questionType?: number
   /* 作答方式：0-综合母题，1-单选，2-多选，3-填空，4-判断，5-解答 */
   questionAnswerMode?: number
   /* 题目内容结构化（docx questionContent） */
@@ -172,6 +174,8 @@ export interface QuestionCreateCmd {
   level?: number
   /* 标签题型枚举（atd_dic_question_type.type_code） */
   labelQuestionType?: number
+  /* 题目类型：0-默认题，1-单选题，2-多选题，3-填空题，4-判断题，5-解答题，6-完形填空，7-综合题，8-连线题 */
+  questionType?: number
   /* 作答方式：0-综合母题，1-单选，2-多选，3-填空，4-判断，5-解答 */
   questionAnswerMode?: number
   /* 题目内容结构化（docx questionContent） */
@@ -229,9 +233,15 @@ export interface QuestionVO {
   tishi?: string
   /* 题目开始页码 */
   page?: number
-  /* 排序数，用户保证同目录下的题目顺序 */
+  /* 排序数：母题为同目录内的题号，子题继承母题题号（与母题一致），用户保证同目录下的题目顺序 */
   sortNum?: number
-  /* 标注个数 */
+  /* 母题ID，顶级题目为 0 */
+  parentId: string
+  /* 层级：0-母题，1-一级子题，2-二级子题 */
+  level: number
+  /* 题内序号（docx questionOrder）：同一母题下的子题顺序 */
+  questionOrder?: number
+  /* 标注个数：母题包含其所有子题的标注数（子树汇总） */
   annotationCount?: number
 }
 
@@ -275,6 +285,8 @@ export interface QuestionDetailsVO {
   level?: number
   /* 标签题型枚举 */
   labelQuestionType?: number
+  /* 题目类型枚举：0-默认题，1-单选题，2-多选题，3-填空题，4-判断题，5-解答题，6-完形填空，7-综合题，8-连线题 */
+  questionType?: number
   /* 标签题型中文 */
   labelQuestionTypeZh?: string
   /* 作答方式 */
@@ -341,6 +353,8 @@ export interface QuestionDetailsListVO {
   level?: number
   /* 标签题型枚举 */
   labelQuestionType?: number
+  /* 题目类型枚举：0-默认题，1-单选题，2-多选题，3-填空题，4-判断题，5-解答题，6-完形填空，7-综合题，8-连线题 */
+  questionType?: number
   /* 标签题型中文 */
   labelQuestionTypeZh?: string
   /* 作答方式 */

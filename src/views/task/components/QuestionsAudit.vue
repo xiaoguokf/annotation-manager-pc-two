@@ -203,6 +203,49 @@
                         <span>{{ question.questionComment }}</span>
                       </div>
                     </div>
+
+                    <!-- 子题预览：按层级缩进展示，题号 子题1 / 子题1.1 -->
+                    <div v-if="getSubPreviewRows(question).length" class="sub-preview-block">
+                      <div class="sub-preview-title">子题（{{ getSubPreviewRows(question).length }}）</div>
+                      <div v-for="row in getSubPreviewRows(question)" :key="row.id" class="sub-preview-item"
+                        :style="{ marginLeft: `${row.depth * 16}px` }">
+                        <div class="sub-preview-head">
+                          <span class="sub-preview-no">{{ row.no }}</span>
+                          <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
+                            {{ getSubAnswerModeName(row.item.questionAnswerMode) }}
+                          </el-tag>
+                          <span v-if="row.item.questionContent?.questionScore != null" class="sub-preview-score">
+                            {{ row.item.questionContent.questionScore }} 分
+                          </span>
+                        </div>
+                        <div class="item-body">
+                          <div v-if="getSubStem(row.item)"
+                            v-html="processInlineContent(getSubStem(row.item))"></div>
+                          <div v-else class="text-gray-400">暂无题干</div>
+                        </div>
+                        <div v-if="getSubOptions(row.item).length" class="item-choices">
+                          <div class="choices-list">
+                            <div v-for="(option, oi) in getSubOptions(row.item)" :key="oi" class="choice-item">
+                              <div v-html="processInlineContent(option)"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="analysis-box">
+                          <div class="analysis-row" v-if="row.item.answer">
+                            <span class="label-tag tag-ans">参考答案</span>
+                            <div>
+                              <span v-html="processInlineContent(row.item.answer)"></span>
+                            </div>
+                          </div>
+                          <div class="analysis-row" v-if="row.item.analysis">
+                            <span class="label-tag tag-ana">试题解析</span>
+                            <div>
+                              <span v-html="processInlineContent(row.item.analysis)"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </el-splitter-panel>
@@ -347,7 +390,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Icon } from '@iconify/vue'
-import { getQuestionDetailsListApi, putQuestionUpdateApi, type QuestionDetailsListVO, type QuestionUpdateCmd } from '@/api/gen/questionController'
+import { getQuestionDetailsListApi, putQuestionUpdateApi, type QuestionDetailsListVO, type QuestionDetailsVO, type QuestionUpdateCmd } from '@/api/gen/questionController'
 import { getPdfPageListApi, type PdfPageVO } from '@/api/gen/pdfAdminController'
 import { type BookVO } from '@/api/gen/bookController'
 import { type DocVO } from '@/api/gen/docController'
@@ -987,6 +1030,67 @@ const parseChoiceOptions = (choice: string | undefined): string[] => {
 }
 
 // 解析知识点标签
+/** 审核预览用的子题行（扁平化后按 depth 缩进） */
+interface AuditSubRow {
+  id: string
+  /** 题号：子题1 / 子题1.1 */
+  no: string
+  depth: number
+  item: QuestionDetailsVO
+}
+
+/** 作答方式中文名（与 docx questionAnswerMode 对齐） */
+const SUB_ANSWER_MODE_LABELS: Record<number, string> = {
+  0: '综合母题',
+  1: '单选',
+  2: '多选',
+  3: '填空',
+  4: '判断',
+  5: '解答'
+}
+const getSubAnswerModeName = (mode?: number) =>
+  mode == null ? '' : SUB_ANSWER_MODE_LABELS[mode] || String(mode)
+
+/** 子题题干：优先结构化内容，回退 question 字段 */
+const getSubStem = (item: QuestionDetailsVO) => item.questionContent?.questionStem || item.question || ''
+
+/** 子题选项：choice 为 JSON 数组字符串（判断题固定 对/错），解析失败按换行降级 */
+const getSubOptions = (item: QuestionDetailsVO): string[] => {
+  if (!item.choice) return []
+  try {
+    const parsed = JSON.parse(item.choice)
+    return Array.isArray(parsed) ? parsed.map((c) => String(c)).filter((c) => c.trim()) : []
+  } catch {
+    return item.choice.split('\n').filter((c) => c.trim())
+  }
+}
+
+/** 题目ID → 子题预览行；新增题目时自动重算 */
+const subPreviewRowsMap = computed<Record<string, AuditSubRow[]>>(() => {
+  const map: Record<string, AuditSubRow[]> = {}
+  const flatten = (list: QuestionDetailsVO[] | undefined): AuditSubRow[] => {
+    const rows: AuditSubRow[] = []
+    const walk = (items: QuestionDetailsVO[] | undefined, prefix: string, depth: number) => {
+      ;(items || []).forEach((item, index) => {
+        const no = prefix ? `${prefix}.${index + 1}` : String(index + 1)
+        rows.push({ id: item.id, no: `子题${no}`, depth, item })
+        walk(item.subQuestionList, no, depth + 1)
+      })
+    }
+    walk(list, '', 0)
+    return rows
+  }
+  questions.value.forEach((question) => {
+    const rows = flatten(question.subQuestionList)
+    if (rows.length) map[question.id] = rows
+  })
+  return map
+})
+
+/** 取某道题的子题预览行 */
+const getSubPreviewRows = (question: QuestionDetailsListVO): AuditSubRow[] =>
+  subPreviewRowsMap.value[question.id] || []
+
 const parseKnowledgeTags = (knowledge: string | undefined): string[] => {
   if (!knowledge) return []
 
@@ -1853,6 +1957,64 @@ const toggleProgressMinimize = () => {
   border-radius: 8px;
   border-left: 4px solid #e4e7ed;
   font-size: 15px;
+}
+
+/* 子题预览：与母题区分，浅底 + 左侧层级线 */
+.sub-preview-block {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #dcdfe6;
+}
+
+.sub-preview-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--el-text-color-primary, #303133);
+  margin-bottom: 10px;
+}
+
+.sub-preview-item {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #fafafa;
+  border-left: 2px solid #c6e2ff;
+  border-radius: 6px;
+}
+
+.sub-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sub-preview-no {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--el-text-color-regular, #606266);
+}
+
+.sub-preview-score {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #909399);
+}
+
+.sub-preview-item .analysis-box {
+  padding: 10px 0 0 0;
+  border-left: none;
+  background: transparent;
+  font-size: 14px;
+}
+
+/* 深色模式 */
+.dark .sub-preview-block {
+  border-top-color: #4c4d4f;
+}
+
+.dark .sub-preview-item {
+  background: #262727;
+  border-left-color: #409eff;
 }
 
 .analysis-row {
