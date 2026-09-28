@@ -208,7 +208,7 @@ import { Icon } from '@iconify/vue'
 import { type AnnotationSimpleVO, putAnnotationUpdateAnalysisResultApi } from '@/api/gen/annotationController'
 import { useConfigStore } from '@/stores/config'
 import { renderContent, renderLatex } from '@/utils/contentRenderer'
-import { normalizeFormulaDelimiters } from '@/utils/formula'
+import { isDisplayFormula, normalizeFormulaDelimiters } from '@/utils/formula'
 import 'katex/dist/katex.min.css'
 
 const emit = defineEmits(['retryParse', 'updateContent'])
@@ -1303,7 +1303,6 @@ const renderPreview = (formula: { name: string, code: string, previewCode?: stri
     return codeToRender
   }
 
-  // 去掉 $ 或 $$ 包裹
   // 去掉定界符（兼容 $ / $$ 与 \( \) / \[ \] 两套写法）
   const latex = codeToRender
     .replace(/^\$\$/, '').replace(/\$\$$/, '')
@@ -1311,15 +1310,8 @@ const renderPreview = (formula: { name: string, code: string, previewCode?: stri
     .replace(/^\$/, '').replace(/\$$/, '')
     .replace(/^\\\(/, '').replace(/\\\)$/, '')
 
-  // 判断是否需要显示模式（包含 cases、array、matrix 等）
-  const needsDisplayMode = codeToRender.includes('$$') ||
-    latex.includes('\\begin{cases}') ||
-    latex.includes('\\begin{array}') ||
-    latex.includes('\\begin{matrix}') ||
-    latex.includes('\\begin{pmatrix}') ||
-    latex.includes('\\begin{bmatrix}')
-
-  return renderLatex(latex, needsDisplayMode)
+  // 行内 / 行间按内容判断（块级环境用行间），判据与 contentRenderer 共用一处
+  return renderLatex(latex, isDisplayFormula(latex))
 }
 
 // 处理图片路径
