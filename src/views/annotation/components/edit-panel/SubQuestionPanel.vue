@@ -291,7 +291,7 @@ const handleKindChange = async (row: SubQuestionRow, mode?: number) => {
   if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
     try {
       await ElMessageBox.confirm(
-        '切换为「综合母题」后，本题答案需要清空：综合母题的答案应写在子题内。是否继续？',
+        '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案将被清空，是否继续？',
         '提示',
         { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
       )

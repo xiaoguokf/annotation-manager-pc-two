@@ -180,6 +180,32 @@
             </el-button>
           </div>
         </el-form-item>
+        <!-- 综合母题不应单独填答案：若历史数据残留答案，给出清空入口，
+             否则答案区被隐藏、用户没有地方清空，会一直卡在提交审核 -->
+        <el-form-item v-else-if="hasStaleAnswer" label="答案">
+          <div
+            class="w-full rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-600 dark:bg-amber-900/25"
+          >
+            <div class="flex items-start gap-2 text-[13px] text-amber-700 dark:text-amber-300">
+              <Icon icon="ep:warning" class="mt-0.5 shrink-0" />
+              <span>综合母题的答案应写在子题内。本题残留了以下答案，需清空后才能提交审核。</span>
+            </div>
+            <div
+              class="mt-2 rounded bg-white/70 px-2 py-1.5 text-[13px] text-gray-600 break-all dark:bg-black/20 dark:text-gray-300"
+            >
+              {{ staleAnswerPreview }}
+            </div>
+            <el-button
+              class="mt-2"
+              type="warning"
+              size="small"
+              :loading="clearingAnswer"
+              @click="handleClearStaleAnswer"
+            >
+              清空答案
+            </el-button>
+          </div>
+        </el-form-item>
         <el-form-item v-if="questionForm.questionAnswerMode !== 0" label="答案" :required="!questionForm.noAnswer" :error="formErrors.answer">
           <!-- 判断题：对/错 单选 -->
           <el-radio-group v-if="questionKind === 'judge'" v-model="questionForm.answer" @change="handleAnswerBlur">
@@ -576,6 +602,28 @@ const ANSWER_MODE_COMPREHENSIVE = 0
  */
 const answerModeSelectKey = ref(0)
 
+/** 清空残留答案的请求进行中 */
+const clearingAnswer = ref(false)
+
+/**
+ * 综合母题残留了答案。
+ * 后端提交审核会校验「综合母题答案必须置空」，而作答方式为综合母题时答案区是隐藏的，
+ * 若历史数据残留答案，用户没有地方清空就会一直卡住，因此单独给出提示与清空入口。
+ */
+const hasStaleAnswer = computed(
+  () => questionForm.value.questionAnswerMode === ANSWER_MODE_COMPREHENSIVE
+    && !!questionForm.value.answer && questionForm.value.answer.trim() !== '',
+)
+
+/** 答案摘要：压缩空白并按长度截断，供提示文案与残留答案预览使用 */
+const answerExcerpt = (limit: number) => {
+  const raw = (questionForm.value.answer || '').replace(/\s+/g, ' ').trim()
+  return raw.length > limit ? raw.slice(0, limit) + '…' : raw
+}
+
+/** 残留答案预览（截断，避免长内容撑破面板） */
+const staleAnswerPreview = computed(() => answerExcerpt(60))
+
 const answerModeOptions = [
   { label: '综合母题', value: 0 },
   { label: '单选', value: 1 },
@@ -720,7 +768,7 @@ const handleAnswerModeChange = async (mode: number | undefined) => {
   }
   try {
     await ElMessageBox.confirm(
-      '切换为「综合母题」后，本题答案需要清空：综合母题的答案应写在子题内。是否继续？',
+      '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案（当前：' + answerExcerpt(20) + '）将被清空，是否继续？',
       '提示',
       { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
     )
@@ -734,6 +782,29 @@ const handleAnswerModeChange = async (mode: number | undefined) => {
   formErrors.value.answer = ''
   ElMessage.success('已清空本题答案')
   triggerAutoSave(true)
+}
+
+/**
+ * 清空综合母题残留的答案并立即保存。
+ */
+const handleClearStaleAnswer = async () => {
+  clearingAnswer.value = true
+  try {
+    const response = await putQuestionUpdateApi({ answer: '' }, { id: props.selectedQuestion.id })
+    if (response.data.code === 200) {
+      questionForm.value.answer = ''
+      formErrors.value.answer = ''
+      ElMessage.success('已清空本题答案')
+      emit('refreshQuestion')
+    } else {
+      ElMessage.error(response.data.msg || '清空失败')
+    }
+  } catch (error) {
+    console.error('清空答案失败:', error)
+    ElMessage.error('清空失败')
+  } finally {
+    clearingAnswer.value = false
+  }
 }
 
 // 处理知识点变化
