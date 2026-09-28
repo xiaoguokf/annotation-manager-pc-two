@@ -159,6 +159,34 @@ app.on("activate", () => {
   }
 });
 
+/**
+ * 统一导航防护：应用只应停留在自身页面。
+ * preload 通过 contextBridge 暴露了 ipcRenderer（含 download-file 这类可写本地文件、
+ * 带 token 发网络请求的通道），因此任何把窗口导航到外部页面的路径都必须堵死，
+ * 否则外部页面可与应用同权限地调用这些通道。
+ */
+app.on("web-contents-created", (_event, contents) => {
+  // 站内跳转放行，其余一律拦截并交给系统浏览器
+  const isInternal = (target: string) => {
+    if (process.env.VITE_DEV_SERVER_URL && target.startsWith(process.env.VITE_DEV_SERVER_URL)) {
+      return true;
+    }
+    return target.startsWith("file://");
+  };
+
+  contents.on("will-navigate", (event, url) => {
+    if (!isInternal(url)) {
+      event.preventDefault();
+      if (url.startsWith("https:")) shell.openExternal(url);
+    }
+  });
+
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https:")) shell.openExternal(url);
+    return { action: "deny" };
+  });
+});
+
 // 菜单栏 https://www.electronjs.org/zh/docs/latest/api/menu-item#%E8%8F%9C%E5%8D%95%E9%A1%B9
 const appMenu = (fullscreenLabel: string) => {
   const menuItems = [
@@ -215,8 +243,12 @@ ipcMain.handle("open-win", (_, arg) => {
   const childWindow = new BrowserWindow({
     webPreferences: {
       preload,
-      nodeIntegration: true,
-      contextIsolation: false
+      // 子窗口加载的是本应用页面，与主窗口保持同一套安全设置。
+      // 原实现开启 nodeIntegration 并关闭 contextIsolation，等于给子窗口渲染进程
+      // 完整的 Node 权限：一旦页面内出现 XSS 或加载了外部内容，即可直接读写文件、
+      // 执行系统命令。主窗口本来就是 word 安全配置，这里没有理由放宽。
+      nodeIntegration: false,
+      contextIsolation: true
     }
   });
 

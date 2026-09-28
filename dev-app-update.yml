@@ -1,3 +1,9 @@
 provider: generic
+# 仅开发模式（autoUpdater.forceDevUpdateConfig = true）生效；正式包的更新地址来自
+# electron-builder.json5 的 publish.url（打包时会生成 app-update.yml）。
+# 注意：两处都还在用 http，更新包与校验文件走明文传输，存在被中间人替换的风险，
+# 建议在下载域名上启用 https 后同步替换（未改是因为不确定该域名是否已支持 https）。
 url: http://dl.sshine.ltd/
-updaterCacheDirName: annotation-admin-pc-updater
+# 与 electron-builder.json5 的 productName 对齐（原值 annotation-admin-pc-updater 与
+# productName annotation-admin-pc-two 不一致，缓存目录与安装路径会对不上）
+updaterCacheDirName: annotation-admin-pc-two-updater
