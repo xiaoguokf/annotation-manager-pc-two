@@ -3,6 +3,7 @@ import login from '@/router/login.ts'
 import { getToken, hasAnyRole } from '@/utils/auth'
 import { setPageTitle } from '@/utils/title'
 import { useUserStore } from '@/stores/user'
+import { isFileProtocol } from '@/utils/routerMode'
 import normal from './normal'
 
 const modules: Record<string, { default: ShortClipRoute }> = import.meta.glob(
@@ -41,16 +42,9 @@ routes.forEach((route) => {
     }
   }
 })
-/**
- * Electron 打包后页面以 file:// 加载，没有 Web 服务器做 try_files 回退，
- * history 模式下任意路径都无法落到 index.html（且 file 协议的 pathname 是文件真实路径，
- * 匹配不到任何业务路由，会直接掉进 404 兜底）。
- * 因此 Electron 环境改用 hash 路由；浏览器 / dev 环境仍是 history 路由。
- */
-const isElectronFileProtocol = window.location.protocol === 'file:'
-
 const router = createRouter({
-  history: isElectronFileProtocol
+  // Electron(file://) 用 hash 路由，避免启动后直接掉进 404 兜底；详见 utils/routerMode.ts
+  history: isFileProtocol
     ? createWebHashHistory()
     : createWebHistory(import.meta.env.BASE_URL),
   routes: [
