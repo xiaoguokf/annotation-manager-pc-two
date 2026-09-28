@@ -137,6 +137,17 @@
   text-emphasis-position: under;
 }
 
+/* 作答空白（作答线）：<span data-tiptype="question-blank_filling"></span>
+ * 编辑器插入的是空标签，必须靠全局样式撑出下划线，题目预览 / 审核页同样依赖它 */
+[data-tiptype="question-blank_filling"] {
+  display: inline-block;
+  min-width: 60px;
+  border-bottom: 1px solid currentColor;
+  height: 1em;
+  vertical-align: bottom;
+  margin: 0 2px;
+}
+
 /* 删除线 */
 .rich-line-through {
   text-decoration-line: line-through;

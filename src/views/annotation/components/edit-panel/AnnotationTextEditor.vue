@@ -1735,17 +1735,7 @@ defineExpose({
 }
 
 
-/* 作答空白标记（预览渲染） */
-.rich-editor :deep([data-tiptype="question-blank_filling"]),
-.preview-content :deep([data-tiptype="question-blank_filling"]) {
-  display: inline-block;
-  min-width: 60px;
-  border-bottom: 1px solid currentColor;
-  height: 1em;
-  vertical-align: bottom;
-  margin: 0 2px;
-}
-
+/* 作答空白标记样式见 src/assets/rich-content.css（全局，编辑器/题目预览/审核页共用） */
 .answer-blank-btn {
   font-weight: 500;
 }
