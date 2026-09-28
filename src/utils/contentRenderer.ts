@@ -5,7 +5,7 @@ import 'katex/contrib/mhchem'
 /**
  * 行内公式定界符：$...$ 与 \(...\)
  */
-const INLINE_FORMULA = /\$([^$\n]+)\$|\\\(([\s\S]*?)\\\)/g
+const INLINE_FORMULA = /\$([^$<]+)\$|\\\(([\s\S]*?)\\\)/g
 
 /**
  * 块级公式定界符：$$...$$ 与 \[...\]
@@ -172,23 +172,25 @@ export const renderContent = (
 
   // 第二步：对非表格内容进行 LaTeX 和 Markdown 处理
   // 定界符与后端 FormulaNormalizer 一致：$$..$$、\[..\]、$..$、\(..\)
-  const regex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\$\n]+\$|\\\([\s\S]*?\\\))/g
+  const regex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\$<]+\$|\\\([\s\S]*?\\\))/g
+  /**
+   * 单段是否为公式（必须整段就是公式）。
+   * 与上面的拆分正则保持一致：$ 行内公式允许跨行，但不允许包含 < >（避免吞掉 HTML 标签）。
+   */
+  const FORMULA_PART = /^(?:\$\$([\s\S]+)\$\$|\\\[([\s\S]+)\\\]|\\\(([\s\S]+)\\\)|\$([^$<]+)\$)$/
+
   const parts = result.split(regex)
 
   let processedResult = ''
   parts.forEach(part => {
-    if (part.startsWith('$$') && part.endsWith('$$')) {
-      const latex = part.slice(2, -2).trim()
-      processedResult += renderLatex(latex, true)
-    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
-      const latex = part.slice(2, -2).trim()
-      processedResult += renderLatex(latex, true)
-    } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
-      const latex = part.slice(2, -2).trim()
-      processedResult += renderLatex(latex, false)
-    } else if (part.startsWith('$') && part.endsWith('$')) {
-      const latex = part.slice(1, -1).trim()
-      processedResult += renderLatex(latex, false)
+    // 整段匹配才算公式：不能用 startsWith/endsWith 判断，
+    // 否则「整段普通文本恰好以 $ 开头结尾」（如 $x<p>y$）会被当成公式，
+    // 把 HTML 标签一起塞进 KaTeX。分组顺序：$$..$$、\[..\]、\(..\)、$..$
+    const formula = part.match(FORMULA_PART)
+    if (formula) {
+      const isDisplay = formula[1] !== undefined || formula[2] !== undefined
+      const latex = (formula[1] ?? formula[2] ?? formula[3] ?? formula[4] ?? '').trim()
+      processedResult += renderLatex(latex, isDisplay)
     } else if (part.match(/!\[([^\]]*)\]\(([^)]+)\)/)) {
       const imgMatch = part.match(/!\[([^\]]*)\]\(([^)]+)\)/)
       if (imgMatch && imgMatch[2]) {
