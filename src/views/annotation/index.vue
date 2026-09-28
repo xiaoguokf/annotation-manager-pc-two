@@ -541,6 +541,10 @@ const handleGoToQuestionFromSubmit = async (questionId: string, catalogueId: str
     const question = questionsListRef.value?.getQuestionById(questionId)
     if (question) {
       handleEditQuestion(question)
+    } else {
+      // 题目不在当前列表里（已被删除、或父题缺失导致挂不上题目树）时给出提示，
+      // 否则点了跳转没任何反应，不知道是没找到还是没生效
+      ElMessage.warning('未找到该题目，可能已被删除或数据异常，请刷新后重试')
     }
     // 跳转到指定页面
     if (page) {
@@ -574,6 +578,10 @@ const handleGoToQuestion = async (questionId: string, catalogueId: string, page?
     const question = questionsListRef.value?.getQuestionById(questionId)
     if (question) {
       handleEditQuestion(question)
+    } else {
+      // 题目不在当前列表里（已被删除、或父题缺失导致挂不上题目树）时给出提示，
+      // 否则点了跳转没任何反应，不知道是没找到还是没生效
+      ElMessage.warning('未找到该题目，可能已被删除或数据异常，请刷新后重试')
     }
     // 跳转到指定页面
     if (page) {

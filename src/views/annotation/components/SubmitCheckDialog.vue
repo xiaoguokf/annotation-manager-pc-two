@@ -106,7 +106,7 @@
             <div class="question-list">
               <div v-for="item in checkResult.question.questions" :key="item.id" class="question-item">
                 <span v-if="type === 'book'" class="catalogue-name">{{ item.catalogueName }}</span>
-                <span class="question-num">题号: {{ item.sortNum }}</span>
+                <span class="question-num">题号: {{ item.questionNo || item.sortNum }}</span>
                 <span v-if="item.reason" class="error-reason">原因: {{ item.reason }}</span>
                 <el-button type="primary" size="small" link @click="handleGoToQuestion(item)" class="jump-btn">
                   跳转
@@ -272,6 +272,10 @@ interface CheckResult {
   }
   question: {
     pass: boolean
+    /**
+     * questionNo 为后端按题树推导的展示题号（母题 1、子题 1.1）：
+     * 子题的 sortNum 继承母题题号，只有题号才能定位到具体子题。
+     */
     questions: (QuestionCheckVO & { catalogueName?: string; catalogueOrder?: number })[]
   }
   feedback: {
@@ -608,6 +612,24 @@ const checkContentPage = async () => {
   }
 }
 
+/**
+ * 按展示题号比较：逐段数值比较，保证 1 < 1.1 < 1.2 < 1.10（字符串比较会出错）。
+ * 缺题号时排到该组末尾，保持原相对顺序。
+ */
+const compareQuestionNo = (a?: string, b?: string): number => {
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const va = pa[i] ?? -1
+    const vb = pb[i] ?? -1
+    if (va !== vb) return va - vb
+  }
+  return 0
+}
+
 // 获取目录映射表和父目录关系
 const getCatalogueMap = async (): Promise<{ map: Map<string, string>, parentMap: Map<string, string> }> => {
   const map = new Map<string, string>()
@@ -683,12 +705,17 @@ const checkQuestion = async () => {
           catalogueOrder: q.catalogueId ? (catalogueOrderMap.get(q.catalogueId) || 9999) : 9999
         }))
 
-        // 按目录序号排序，同一目录的题目按 sortNum 排序
+        // 按目录序号 → 母题题号 → 子题序号排序
+        // 子题的 sortNum 与母题相同，只用 sortNum 排不出 1 → 1.1 → 1.2 的顺序，
+        // 因此再按展示题号（questionNo）逐段数值比较，避免 1.10 排在 1.9 前面
         questionsWithCatalogue.sort((a, b) => {
           if (a.catalogueOrder !== b.catalogueOrder) {
             return a.catalogueOrder - b.catalogueOrder
           }
-          return (a.sortNum || 0) - (b.sortNum || 0)
+          if ((a.sortNum || 0) !== (b.sortNum || 0)) {
+            return (a.sortNum || 0) - (b.sortNum || 0)
+          }
+          return compareQuestionNo(a.questionNo, b.questionNo)
         })
 
         checkResult.value.question = {
@@ -812,7 +839,7 @@ const handleClose = () => {
   dialogVisible.value = false
 }
 
-// 跳转到题目
+// 跳转到题目（母题、子题通用：子题会先展开其所在母题）
 const handleGoToQuestion = async (item: QuestionCheckVO & { catalogueName?: string }) => {
   try {
     const response = await getQuestionCatalogueIdApi({ questionId: item.id })

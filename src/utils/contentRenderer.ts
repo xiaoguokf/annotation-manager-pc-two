@@ -1,11 +1,12 @@
 import katex from 'katex'
+import { isDisplayFormula } from './formula'
 import DOMPurify from 'dompurify'
 import 'katex/contrib/mhchem'
 
 /**
  * 行内公式定界符：$...$ 与 \(...\)
  */
-const INLINE_FORMULA = /\$([^$\n]+)\$|\\\(([\s\S]*?)\\\)/g
+const INLINE_FORMULA = /\$([^$<]+)\$|\\\(([\s\S]*?)\\\)/g
 
 /**
  * 块级公式定界符：$$...$$ 与 \[...\]
@@ -18,14 +19,14 @@ const BLOCK_FORMULA = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
  * 与后端 FormulaNormalizer 保持同一套定界符（\( \)、\[ \]、$ $、$$ $$），
  * 先块级后行内，避免 $$ 被行内规则截断。
  */
-export const renderFormulas = (text: string): string =>
-  text
-    .replace(BLOCK_FORMULA, (_match, dollarLatex, bracketLatex) =>
-      renderLatex((dollarLatex ?? bracketLatex).trim(), true),
-    )
-    .replace(INLINE_FORMULA, (_match, dollarLatex, parenLatex) =>
-      renderLatex((dollarLatex ?? parenLatex).trim(), false),
-    )
+export const renderFormulas = (text: string): string => {
+  // 定界符只表示「这是公式」，行内 / 行间按内容判断（块级环境用行间）
+  const render = (_match: string, dollarLatex?: string, bracketLatex?: string) => {
+    const latex = (dollarLatex ?? bracketLatex ?? '').trim()
+    return renderLatex(latex, isDisplayFormula(latex))
+  }
+  return text.replace(BLOCK_FORMULA, render).replace(INLINE_FORMULA, render)
+}
 
 /**
  * 清洗富文本，仅保留排版与媒体标签。
@@ -171,24 +172,26 @@ export const renderContent = (
   })
 
   // 第二步：对非表格内容进行 LaTeX 和 Markdown 处理
-  // 定界符与后端 FormulaNormalizer 一致：$$..$$、\[..\]、$..$、\(..\)
-  const regex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\$\n]+\$|\\\([\s\S]*?\\\))/g
+  // 输入兼容四种定界符（$$..$$、\[..\]、$..$、\(..\)，见 normalizeFormulaDelimiters），
+  // 输出统一为 \(..\)；行内 / 行间按内容判断
+  const regex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\$<]+\$|\\\([\s\S]*?\\\))/g
+  /**
+   * 单段是否为公式（必须整段就是公式）。
+   * 与上面的拆分正则保持一致：$ 行内公式允许跨行，但不允许包含 < >（避免吞掉 HTML 标签）。
+   */
+  const FORMULA_PART = /^(?:\$\$([\s\S]+)\$\$|\\\[([\s\S]+)\\\]|\\\(([\s\S]+)\\\)|\$([^$<]+)\$)$/
+
   const parts = result.split(regex)
 
   let processedResult = ''
   parts.forEach(part => {
-    if (part.startsWith('$$') && part.endsWith('$$')) {
-      const latex = part.slice(2, -2).trim()
-      processedResult += renderLatex(latex, true)
-    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
-      const latex = part.slice(2, -2).trim()
-      processedResult += renderLatex(latex, true)
-    } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
-      const latex = part.slice(2, -2).trim()
-      processedResult += renderLatex(latex, false)
-    } else if (part.startsWith('$') && part.endsWith('$')) {
-      const latex = part.slice(1, -1).trim()
-      processedResult += renderLatex(latex, false)
+    // 整段匹配才算公式：不能用 startsWith/endsWith 判断，
+    // 否则「整段普通文本恰好以 $ 开头结尾」（如 $x<p>y$）会被当成公式，
+    // 把 HTML 标签一起塞进 KaTeX。分组顺序：$$..$$、\[..\]、\(..\)、$..$
+    const formula = part.match(FORMULA_PART)
+    if (formula) {
+      const latex = (formula[1] ?? formula[2] ?? formula[3] ?? formula[4] ?? '').trim()
+      processedResult += renderLatex(latex, isDisplayFormula(latex))
     } else if (part.match(/!\[([^\]]*)\]\(([^)]+)\)/)) {
       const imgMatch = part.match(/!\[([^\]]*)\]\(([^)]+)\)/)
       if (imgMatch && imgMatch[2]) {

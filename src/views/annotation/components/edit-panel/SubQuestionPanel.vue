@@ -28,7 +28,15 @@
             </el-select>
           </el-form-item>
           <el-form-item label="作答方式">
-            <el-select v-model="item.questionAnswerMode" placeholder="请选择" style="width: 100%" @change="handleKindChange(item)">
+            <!-- :model-value + @change 而非 v-model：切到「综合母题」需先确认清空答案，
+                 用户取消时值不能被改掉 -->
+            <el-select
+              :key="item.answerModeSelectKey"
+              :model-value="item.questionAnswerMode"
+              placeholder="请选择"
+              style="width: 100%"
+              @change="(mode: number | undefined) => handleKindChange(item, mode)"
+            >
               <el-option
                 v-for="mode in ANSWER_MODES"
                 :key="mode.value"
@@ -205,6 +213,12 @@ interface SubQuestionRow {
   /** 选项内容（选择型/判断题使用），保存时序列化为 choice JSON 数组 */
   choiceOptions: string[]
   saving?: boolean
+  /**
+   * 作答方式下拉的重挂载标记。
+   * 下拉用 :model-value 受控（取消时值不应变化），但 el-select 内部会把选中项文本
+   * 立即改成新值，仅靠 prop 不变不会刷新显示，因此取消时自增本标记强制重挂载。
+   */
+  answerModeSelectKey?: number
 }
 
 const children = ref<SubQuestionRow[]>([])
@@ -266,8 +280,32 @@ const initChoiceOptions = (row: SubQuestionRow) => {
   }
 }
 
-/** 题型/作答方式变化后重新初始化选项，并立即保存该字段 */
-const handleKindChange = (row: SubQuestionRow) => {
+/**
+ * 题型/作答方式变化后重新初始化选项，并立即保存该字段。
+ *
+ * 切到「综合母题」时答案应写在子题内（后端提交审核会校验「综合母题答案必须置空」），
+ * 因此本行已有答案时先让用户确认再清空；用户取消则保持原作答方式不动。
+ */
+const handleKindChange = async (row: SubQuestionRow, mode?: number) => {
+  const hasAnswer = !!row.answer && row.answer.trim() !== ''
+  if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
+    try {
+      await ElMessageBox.confirm(
+        '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案将被清空，是否继续？',
+        '提示',
+        { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
+      )
+    } catch {
+      // 用户取消：不改动作答方式；重挂载下拉以还原显示（el-select 内部已把文本改成新值）
+      row.answerModeSelectKey = (row.answerModeSelectKey ?? 0) + 1
+      return
+    }
+    row.answer = ''
+    ElMessage.success('已清空本题答案')
+  }
+  if (mode !== undefined) {
+    row.questionAnswerMode = mode
+  }
   initChoiceOptions(row)
   triggerAutoSave(row, true)
 }

@@ -108,9 +108,13 @@ export interface QuestionUpdateCmd {
   questionYear?: string
   /* 题目主题 */
   questionTopic?: string
-  /* 附件（图片：base64 与 fileUrl 二选一） */
+  /* 附件（图片：base64 与 fileUrl 二选一）。
+ 保持 null 语义：null-不修改既有附件；空数组-清空附件。
+ 若默认成空数组，任何一次局部更新（如只改答案）都会误清空附件。 */
   attachFileList?: QuestionAttachVO[]
-  /* 子题（最多 2 级递归，三级及以上拒绝） */
+  /* 子题（最多 2 级递归，三级及以上拒绝）。
+ 保持 null 语义：null-不修改既有子题；空数组-清空子题。
+ 若默认成空数组，任何一次局部更新（如只改答案）都会级联删除全部子题。 */
   subQuestionList?: QuestionUpdateCmd[]
 }
 
@@ -166,6 +170,10 @@ export interface QuestionCreateCmd {
   questionComment?: string
   /* 题目开始页码 */
   page?: number
+  /* 是否有答案：0-有答案，1-没答案 */
+  noAnswer?: boolean
+  /* 解析 */
+  analysis?: string
   /* 题内序号（docx questionOrder） */
   questionOrder?: number
   /* 母题ID，顶级题目为 0 */
@@ -229,8 +237,15 @@ export interface QuestionVO {
   projectId: string
   /* 目录ID */
   catalogueId?: string
-  /* 题型类型（xuanze，duoxuan，panduan，tiankong，zuhe，wenda） */
+  /* 题型类型（xuanze，duoxuan，panduan，tiankong，zuhe，wenda）
+ <p>
+ 旧版字符串题型，docx 题型改造后已不再写入（新数据为空），仅作历史兼容。 */
   tishi?: string
+  /* 标签题型（atd_dic_question_type.type_code）
+ <p>
+ 列表页据此回显题型名称（前端用学科题型字典按 type_code 翻译）。
+ 缺此字段时列表只能退化成 tishi，而 tishi 现已为空，题型就显示不出来。 */
+  labelQuestionType?: number
   /* 题目开始页码 */
   page?: number
   /* 排序数：母题为同目录内的题号，子题继承母题题号（与母题一致），用户保证同目录下的题目顺序 */
@@ -407,8 +422,14 @@ export interface QuestionCheckVO {
   id: string
   /* 目录ID */
   catalogueId?: string
-  /* 排序数 */
+  /* 排序数
+ <p>
+ 注意：子题继承母题的 sortNum，单靠它无法区分母题与其子题，展示请用 {@link ltd.sshine.at.admin.model.vo.QuestionCheckVO#questionNo #questionNo}。 */
   sortNum?: number
+  /* 展示题号：母题 1、一级子题 1.1、二级子题 1.1.2
+ <p>
+ 由题树层级推导，便于列表直接展示并据此定位到具体子题。 */
+  questionNo?: string
   /* 错误原因 */
   reason: string
 }

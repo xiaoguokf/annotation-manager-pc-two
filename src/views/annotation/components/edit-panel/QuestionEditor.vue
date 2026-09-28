@@ -68,11 +68,14 @@
             />
           </el-form-item>
           <el-form-item label="作答方式">
+            <!-- 用 :model-value + @change 而非 v-model：切到「综合母题」需先确认清空答案，
+                 用户取消时值不能被改掉（v-model 会先行写入） -->
             <el-select
-              v-model="questionForm.questionAnswerMode"
+              :key="answerModeSelectKey"
+              :model-value="questionForm.questionAnswerMode"
               placeholder="请选择作答方式"
               style="width: 100%"
-              @change="() => triggerAutoSave(true)"
+              @change="handleAnswerModeChange"
             >
               <el-option
                 v-for="item in answerModeOptions"
@@ -174,6 +177,32 @@
             >
               <Icon icon="ep:plus" class="mr-1" />
               添加选项
+            </el-button>
+          </div>
+        </el-form-item>
+        <!-- 综合母题不应单独填答案：若历史数据残留答案，给出清空入口，
+             否则答案区被隐藏、用户没有地方清空，会一直卡在提交审核 -->
+        <el-form-item v-else-if="hasStaleAnswer" label="答案">
+          <div
+            class="w-full rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-600 dark:bg-amber-900/25"
+          >
+            <div class="flex items-start gap-2 text-[13px] text-amber-700 dark:text-amber-300">
+              <Icon icon="ep:warning" class="mt-0.5 shrink-0" />
+              <span>综合母题的答案应写在子题内。本题残留了以下答案，需清空后才能提交审核。</span>
+            </div>
+            <div
+              class="mt-2 rounded bg-white/70 px-2 py-1.5 text-[13px] text-gray-600 break-all dark:bg-black/20 dark:text-gray-300"
+            >
+              {{ staleAnswerPreview }}
+            </div>
+            <el-button
+              class="mt-2"
+              type="warning"
+              size="small"
+              :loading="clearingAnswer"
+              @click="handleClearStaleAnswer"
+            >
+              清空答案
             </el-button>
           </div>
         </el-form-item>
@@ -348,7 +377,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { type QuestionVO, type QuestionDetailsVO, getQuestionDetailsApi, putQuestionUpdateApi } from '@/api/gen/questionController'
 import { getBookInfoDetailsApi } from '@/api/gen/bookController'
@@ -563,6 +592,38 @@ const questionTypeCascaderOptions = computed<Array<{ value: string; label: strin
 const questionTypeCascaderProps = { emitPath: false, expandTrigger: 'hover' as const }
 
 // 作答方式选项（docx questionAnswerMode：0=综合母题/1=单选/2=多选/3=填空/4=判断/5=解答）
+/** 作答方式：综合母题（答案写在子题内） */
+const ANSWER_MODE_COMPREHENSIVE = 0
+
+/**
+ * 作答方式下拉的重挂载标记。
+ * 下拉用 :model-value 受控（取消时值不应变化），但 el-select 内部会把选中项文本
+ * 立即改成新值，仅靠 prop 不变不会刷新显示，因此取消时自增本标记强制重挂载。
+ */
+const answerModeSelectKey = ref(0)
+
+/** 清空残留答案的请求进行中 */
+const clearingAnswer = ref(false)
+
+/**
+ * 综合母题残留了答案。
+ * 后端提交审核会校验「综合母题答案必须置空」，而作答方式为综合母题时答案区是隐藏的，
+ * 若历史数据残留答案，用户没有地方清空就会一直卡住，因此单独给出提示与清空入口。
+ */
+const hasStaleAnswer = computed(
+  () => questionForm.value.questionAnswerMode === ANSWER_MODE_COMPREHENSIVE
+    && !!questionForm.value.answer && questionForm.value.answer.trim() !== '',
+)
+
+/** 答案摘要：压缩空白并按长度截断，供提示文案与残留答案预览使用 */
+const answerExcerpt = (limit: number) => {
+  const raw = (questionForm.value.answer || '').replace(/\s+/g, ' ').trim()
+  return raw.length > limit ? raw.slice(0, limit) + '…' : raw
+}
+
+/** 残留答案预览（截断，避免长内容撑破面板） */
+const staleAnswerPreview = computed(() => answerExcerpt(60))
+
 const answerModeOptions = [
   { label: '综合母题', value: 0 },
   { label: '单选', value: 1 },
@@ -689,6 +750,61 @@ const triggerAutoSave = (force: boolean = false) => {
   saveTimer.value = setTimeout(() => {
     autoSaveQuestion(force)
   }, 1000) // 1秒后自动保存
+}
+
+/**
+ * 作答方式切换。
+ *
+ * 选「综合母题」时答案应由子题承载（后端提交审核也会校验「综合母题答案必须置空」），
+ * 因此本题已有答案时先让用户确认再清空；用户取消则保持原作答方式不动。
+ * 用 :model-value + 本方法（而非 v-model）才能做到「取消即回滚」。
+ */
+const handleAnswerModeChange = async (mode: number | undefined) => {
+  const hasAnswer = !!questionForm.value.answer && questionForm.value.answer.trim() !== ''
+  if (mode !== ANSWER_MODE_COMPREHENSIVE || !hasAnswer) {
+    questionForm.value.questionAnswerMode = mode
+    triggerAutoSave(true)
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案（当前：' + answerExcerpt(20) + '）将被清空，是否继续？',
+      '提示',
+      { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
+    )
+  } catch {
+    // 用户取消：不改动作答方式；重挂载下拉以还原显示（el-select 内部已把文本改成新值）
+    answerModeSelectKey.value++
+    return
+  }
+  questionForm.value.questionAnswerMode = mode
+  questionForm.value.answer = ''
+  formErrors.value.answer = ''
+  ElMessage.success('已清空本题答案')
+  triggerAutoSave(true)
+}
+
+/**
+ * 清空综合母题残留的答案并立即保存。
+ */
+const handleClearStaleAnswer = async () => {
+  clearingAnswer.value = true
+  try {
+    const response = await putQuestionUpdateApi({ answer: '' }, { id: props.selectedQuestion.id })
+    if (response.data.code === 200) {
+      questionForm.value.answer = ''
+      formErrors.value.answer = ''
+      ElMessage.success('已清空本题答案')
+      emit('refreshQuestion')
+    } else {
+      ElMessage.error(response.data.msg || '清空失败')
+    }
+  } catch (error) {
+    console.error('清空答案失败:', error)
+    ElMessage.error('清空失败')
+  } finally {
+    clearingAnswer.value = false
+  }
 }
 
 // 处理知识点变化

@@ -209,11 +209,10 @@ import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import type { DicQuestionTypeVO } from '@/api/gen/dicController'
 
 // 扩展 QuestionVO 类型以包含本地维护的字段
-// 说明：parentId/level/questionOrder 已由 generate-api 生成进 QuestionVO，
-// annotationStatus/labelQuestionType* 为接口未返回、由前端本地补全的字段
+// 说明：parentId/level/questionOrder/labelQuestionType 已由 generate-api 生成进 QuestionVO，
+// annotationStatus/labelQuestionTypeZh 为接口未返回、由前端本地补全的字段
 interface ExtendedQuestionVO extends QuestionVO {
   annotationStatus?: number
-  labelQuestionType?: number | null
   labelQuestionTypeZh?: string | null
 }
 

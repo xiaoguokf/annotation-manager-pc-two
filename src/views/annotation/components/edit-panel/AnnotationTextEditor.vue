@@ -208,6 +208,7 @@ import { Icon } from '@iconify/vue'
 import { type AnnotationSimpleVO, putAnnotationUpdateAnalysisResultApi } from '@/api/gen/annotationController'
 import { useConfigStore } from '@/stores/config'
 import { renderContent, renderLatex } from '@/utils/contentRenderer'
+import { isDisplayFormula, normalizeFormulaDelimiters } from '@/utils/formula'
 import 'katex/dist/katex.min.css'
 
 const emit = defineEmits(['retryParse', 'updateContent'])
@@ -1160,10 +1161,12 @@ const insertFormula = (formula: { name: string, code: string, isFormat?: boolean
   const textarea = document.querySelector('.content-box textarea') as HTMLTextAreaElement
   if (!textarea) return
 
-  // 1. 使用 insertCode（如果存在）或 code
-  let finalCode = (formula as any).insertCode || formula.code
-  if (!finalCode.includes('$')) {
-    finalCode = '$' + finalCode + '$'
+  // 1. 使用 insertCode（如果存在）或 code，并统一为 \( ... \) / \[ ... \] 写法
+  //    公式库内置的是 $ 写法，这里在插入时收敛，避免正文里混着两套定界符
+  let finalCode = normalizeFormulaDelimiters((formula as any).insertCode || formula.code)
+  // 裸公式（不含任何定界符）补上行内定界符
+  if (!finalCode.includes('\\(') && !finalCode.includes('\\[')) {
+    finalCode = '\\(' + finalCode + '\\)'
   }
 
   // 2. 在光标位置插入
@@ -1196,13 +1199,14 @@ const insertFormula = (formula: { name: string, code: string, isFormat?: boolean
     } else if (finalCode.includes('_{') || finalCode.includes('^{')) {
       const subPos = finalCode.indexOf('{') + 1
       textarea.setSelectionRange(start + subPos, start + subPos)
-    } else if (finalCode.includes('$$')) {
-      // 对于 $$ 公式，定位到 $$ 之后
-      const doubleDollarPos = finalCode.indexOf('$$') + 2
-      textarea.setSelectionRange(start + doubleDollarPos, start + doubleDollarPos)
-    } else if (finalCode.includes('$')) {
-      const dollarPos = finalCode.indexOf('$') + 1
-      textarea.setSelectionRange(start + dollarPos, start + dollarPos)
+    } else if (finalCode.includes('\\[')) {
+      // 行间公式：定位到 \[ 之后
+      const displayPos = finalCode.indexOf('\\[') + 2
+      textarea.setSelectionRange(start + displayPos, start + displayPos)
+    } else if (finalCode.includes('\\(')) {
+      // 行内公式：定位到 \( 之后
+      const inlinePos = finalCode.indexOf('\\(') + 2
+      textarea.setSelectionRange(start + inlinePos, start + inlinePos)
     } else {
       textarea.setSelectionRange(start + finalCode.length, start + finalCode.length)
     }
@@ -1294,22 +1298,20 @@ const renderPreview = (formula: { name: string, code: string, previewCode?: stri
   const codeToRender = formula.previewCode || formula.code
 
   // 纯文本预览
-  if (!codeToRender.includes('$')) {
+  const hasDelimiter = codeToRender.includes('$') || codeToRender.includes('\\(') || codeToRender.includes('\\[')
+  if (!hasDelimiter) {
     return codeToRender
   }
 
-  // 去掉 $ 或 $$ 包裹
-  const latex = codeToRender.replace(/^\$\$/, '').replace(/\$\$$$/, '').replace(/^\$/, '').replace(/\$$$/, '')
+  // 去掉定界符（兼容 $ / $$ 与 \( \) / \[ \] 两套写法）
+  const latex = codeToRender
+    .replace(/^\$\$/, '').replace(/\$\$$/, '')
+    .replace(/^\\\[/, '').replace(/\\\]$/, '')
+    .replace(/^\$/, '').replace(/\$$/, '')
+    .replace(/^\\\(/, '').replace(/\\\)$/, '')
 
-  // 判断是否需要显示模式（包含 cases、array、matrix 等）
-  const needsDisplayMode = codeToRender.includes('$$') ||
-    latex.includes('\\begin{cases}') ||
-    latex.includes('\\begin{array}') ||
-    latex.includes('\\begin{matrix}') ||
-    latex.includes('\\begin{pmatrix}') ||
-    latex.includes('\\begin{bmatrix}')
-
-  return renderLatex(latex, needsDisplayMode)
+  // 行内 / 行间按内容判断（块级环境用行间），判据与 contentRenderer 共用一处
+  return renderLatex(latex, isDisplayFormula(latex))
 }
 
 // 处理图片路径

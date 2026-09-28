@@ -1,6 +1,7 @@
 import axios from "axios"
 
 import { type ModelVO, type ModelArgVO } from "./gen/modelController"
+import { normalizeFormulaDelimiters } from '@/utils/formula'
 import { ElMessage } from "element-plus"
 
 const MAX_PIXELS = 36000000 // 豆包API最大允许的像素数
@@ -336,7 +337,10 @@ type DoubBaoError =
     }
 
 /**
- * 规范化公式格式：将 \( ... \) 形式的公式替换为 $ ... $
+ * 规范化公式定界符：统一为 \\( ... \\)（行内）与 \\[ ... \\]（行间）。
+ *
+ * 模型返回的定界符不固定（\\(..\\)、$..$、$$..$$ 都会出现），
+ * 这里收敛到全站唯一写法，避免入库后混着两套定界符。
  *
  * @param text 原始文本
  * @return 规范化后的文本
@@ -345,23 +349,19 @@ function normalizeFormulaFormat(text: string | null): string | null {
     if (!text) {
         return text
     }
-    // Java 代码: text.replaceAll("\\\\\\((.*?)\\\\\\)", "\\$$1\\$")
-    // 在 Java 字符串中，\\\\\\( 表示 \\\(（即反斜杠+括号）
-    // 在 Java 中，\\$ 表示字面量的 $，所以 \\$$1\\$ 表示 $$1$
-    // 在 JavaScript 中，$$ 表示字面量的 $，$1 是第一个捕获组
-    return text.replace(/\\\((.*?)\\\)/g, '$$$1$')
+    return normalizeFormulaDelimiters(text)
 }
 
 /**
- * 自动填充空括号：将空的或仅含空白的中英文括号替换为 $\hspace{2em}$
+ * 自动填充空括号：将空的或仅含空白的中英文括号替换为作答空白公式 \hspace{2em}
  */
 function fillEmptyBrackets(text: string | null): string | null {
     if (!text) return text
     return text.replace(/\((?:[ \t]*)\)|（(?:[ \t]*）)/g, (match) => {
         if (match.includes('(')) {
-            return '($\\hspace{2em}$)'
+            return '(\\(\\hspace{2em}\\))'
         } else {
-            return '（$\\hspace{2em}$）'
+            return '（\\(\\hspace{2em}\\)）'
         }
     })
 }
