@@ -61,6 +61,24 @@
               </el-icon>
               主题设置
             </el-dropdown-item>
+            <el-dropdown-item command="nodeManagement">
+              <el-icon>
+                <Icon icon="ep:connection" />
+              </el-icon>
+              节点管理
+            </el-dropdown-item>
+            <el-dropdown-item command="checkUpdate">
+              <el-icon>
+                <Icon icon="ep:download" />
+              </el-icon>
+              检查更新
+            </el-dropdown-item>
+            <el-dropdown-item command="viewChangeLog">
+              <el-icon>
+                <Icon icon="ep:document" />
+              </el-icon>
+              变更日志
+            </el-dropdown-item>
             <!-- <el-dropdown-item command="settings">
               <el-icon>
                 <Icon icon="ep:setting" />
@@ -76,6 +94,15 @@
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+
+      <!-- 节点管理弹窗 -->
+      <NodeManagementDialog v-model="showNodeManagement" />
+
+      <!-- 更新日志弹窗 -->
+      <ChangeLogDialog v-model="showChangeLog" />
+
+      <!-- 更新组件 -->
+      <Updater ref="updaterRef" />
     </div>
   </div>
 </template>
@@ -84,9 +111,13 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
-import { ElMessageBox } from "element-plus";
+import { useNodeStore } from "@/stores/node";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { Icon } from "@iconify/vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
+import NodeManagementDialog from "./NodeManagementDialog.vue";
+import ChangeLogDialog from "@/components/ChangeLog/ChangeLogDialog.vue";
+import Updater from "@/components/Updater/Updater.vue";
 import avatar from "@/assets/user.png";
 import { getToken } from "@/utils/auth";
 
@@ -96,6 +127,16 @@ defineOptions({
 
 const router = useRouter();
 const userStore = useUserStore();
+const nodeStore = useNodeStore();
+
+// 节点管理弹窗显示状态
+const showNodeManagement = ref(false);
+
+// 更新日志弹窗显示状态
+const showChangeLog = ref(false);
+
+// 更新组件引用
+const updaterRef = ref<InstanceType<typeof Updater>>();
 
 // 用户信息
 const userInfo = computed(() => userStore.getUserInfo());
@@ -110,7 +151,7 @@ const toggleFullscreen = () => {
 };
 
 // 处理下拉菜单命令
-const handleCommand = (command: string) => {
+const handleCommand = async (command: string) => {
   switch (command) {
     case "profile":
       router.push("/profile");
@@ -118,10 +159,38 @@ const handleCommand = (command: string) => {
     case "theme":
       router.push("/system/theme");
       break;
+    case "nodeManagement":
+      await handleNodeManagement();
+      break;
+    case "checkUpdate":
+      await handleCheckUpdate();
+      break;
+    case "viewChangeLog":
+      handleViewChangeLog();
+      break;
     case "logout":
       handleLogout();
       break;
   }
+};
+
+// 检查更新
+const handleCheckUpdate = async () => {
+  const result = await window.ipcRenderer?.invoke("check-update-by-user");
+  if (!result?.isUpdateAvailable) {
+    ElMessage.success("当前已是最新版本");
+  }
+};
+
+// 查看更新日志
+const handleViewChangeLog = () => {
+  showChangeLog.value = true;
+};
+
+// 节点管理
+const handleNodeManagement = async () => {
+  await nodeStore.initNodes();
+  showNodeManagement.value = true;
 };
 
 // 退出登录
