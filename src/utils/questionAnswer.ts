@@ -92,9 +92,17 @@ export const createAnswerDraft = (): AnswerDraft => ({
   text: '',
 })
 
+/**
+ * 构造答案项。
+ *
+ * docx 约定 extendOptionList 用于「多答案兼容」，且需包含主答案本身
+ * （见 example-output.json：{"optionKey":"C","optionVal":"","extendOptionList":[{"optionKey":"C","optionVal":""}]}），
+ * 备选答案可在其基础上追加。
+ */
 const answerItem = (optionKey: string, optionVal: string): QuestionAnswerOptionVO => ({
   optionKey,
   optionVal,
+  extendOptionList: [{ optionKey, optionVal }],
 })
 
 /** 选择型 / 解答型统一形态：矩阵外层恒 1 层 */
