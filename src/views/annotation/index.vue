@@ -206,6 +206,13 @@ import { getBookInfoDetailsApi } from '@/api/gen/bookController'
 import { getDocInfoDetailsApi } from '@/api/gen/docController'
 import { getDicSubjectListApi, type DicSubjectVO } from '@/api/gen/dicController'
 import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
+import {
+  ANSWER_MODE_ANSWER,
+  ANSWER_MODE_BLANK,
+  ANSWER_MODE_JUDGE,
+  ANSWER_MODE_MULTI,
+  ANSWER_MODE_SINGLE,
+} from '@/constants/answerMode'
 
 defineOptions({
   name: 'AnnotationSystem'
@@ -233,18 +240,15 @@ const projectTitle = ref('标注工作台')
 
 // 学科名称（用于OCR识别时注入学科相关提示词）
 const subjectName = ref<string | undefined>(undefined)
-// 学科枚举（docx code，用于按学科动态加载题目类型字典）
-const subjectCode = ref<number | undefined>(undefined)
-const { ensureLoaded, getOptionsBySubject } = useQuestionTypeDict()
-// 数字键 1-6 → 当前学科前 6 个题型 typeCode（按学科动态）
-const typeCodeShortcuts = computed<Record<string, number>>(() => {
-  const opts = getOptionsBySubject(subjectCode.value)
-  const map: Record<string, number> = {}
-  opts.slice(0, 6).forEach((t, i) => {
-    if (t.typeCode != null) map[String(i + 1)] = t.typeCode as number
-  })
-  return map
-})
+const { ensureLoaded } = useQuestionTypeDict()
+// 数字键 1-5 → 作答方式（1 单选 / 2 多选 / 3 填空 / 4 判断 / 5 解答）
+const answerModeShortcuts: Record<string, number> = {
+  '1': ANSWER_MODE_SINGLE,
+  '2': ANSWER_MODE_MULTI,
+  '3': ANSWER_MODE_BLANK,
+  '4': ANSWER_MODE_JUDGE,
+  '5': ANSWER_MODE_ANSWER,
+}
 
 // 题目总数
 const totalQuestionCount = ref(0)
@@ -274,12 +278,10 @@ const fetchSubjectName = async () => {
 
     // 根据类型获取书籍/试卷信息中的subjectId
     let subjectId: string | undefined
-    let code: number | undefined
     if (type.value === 'book') {
       const res = await getBookInfoDetailsApi({ id: String(projectId.value) })
       if (res.data.code === 200 && res.data.data) {
         subjectId = res.data.data.subjectId
-        code = res.data.data.subjectCode && res.data.data.subjectCode > 0 ? res.data.data.subjectCode : undefined
       }
     } else {
       const res = await getDocInfoDetailsApi({ id: String(projectId.value) })
@@ -292,9 +294,7 @@ const fetchSubjectName = async () => {
     if (subjectId) {
       const subject = subjectList.find(s => s.id === subjectId)
       subjectName.value = subject?.subjectName || undefined
-      if (code == null && subject?.docxCode != null) code = subject.docxCode
     }
-    subjectCode.value = code
   } catch (error) {
     console.error('[AnnotationSystem] 获取学科信息失败:', error)
   }
@@ -748,11 +748,11 @@ const handleKeyDown = async (event: KeyboardEvent) => {
     questionsListRef.value?.handleAddQuestion()
   }
 
-  // 数字键 1-6 - 切换当前选中题目的类型（按学科题型顺序动态映射）
-  const shortcutTypeCode = hasModifier ? undefined : typeCodeShortcuts.value[event.key]
-  if (shortcutTypeCode != null) {
+  // 数字键 1-5 - 切换当前选中题目的作答方式
+  const shortcutAnswerMode = hasModifier ? undefined : answerModeShortcuts[event.key]
+  if (shortcutAnswerMode != null) {
     event.preventDefault()
-    questionsListRef.value?.handleChangeQuestionType(shortcutTypeCode)
+    questionsListRef.value?.handleChangeAnswerMode(shortcutAnswerMode)
   }
 
   // B 键 - 切换到编辑模式（仅在编辑面板打开时生效）

@@ -60,19 +60,24 @@
             <span class="question-prefix">题</span>
             <span class="sort-num">{{ item.no }}</span>
             <span class="annotation-count">({{ item.question.annotationCount || 0 }})</span>
-            <el-cascader
-              class="question-type-cascader"
+            <!-- 列表显示「作答方式」（可编辑）：后端列表接口已回传 questionAnswerMode -->
+            <el-select
+              class="question-answer-mode-select"
               size="small"
-              :model-value="item.question.labelQuestionType ?? undefined"
-              :options="questionTypeCascaderOptions"
-              :props="questionTypeCascaderProps"
-              filterable
+              :model-value="item.question.questionAnswerMode ?? undefined"
+              :title="getQuestionTypeLabel(item.question)"
+              placeholder="作答方式"
               clearable
-              :show-all-levels="false"
-              :placeholder="getQuestionTypeLabel(item.question)"
-              @change="(val) => handleQuestionTypeChange(val as number | null, item.question)"
+              @change="(val) => handleAnswerModeChange(val as number | null, item.question)"
               @click.stop
-            />
+            >
+              <el-option
+                v-for="mode in answerModeOptions"
+                :key="mode.value"
+                :label="mode.label"
+                :value="mode.value"
+              />
+            </el-select>
             <div v-if="item.question.page" class="page-badge">
               <Icon icon="ep:circle-check-filled" />
             </div>
@@ -207,6 +212,7 @@ import { getDocInfoDetailsApi } from '@/api/gen/docController'
 import { getDicSubjectListApi, type DicSubjectVO } from '@/api/gen/dicController'
 import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import type { DicQuestionTypeVO } from '@/api/gen/dicController'
+import { answerModeName, answerModeOptions } from '@/constants/answerMode'
 
 // 扩展 QuestionVO 类型以包含本地维护的字段
 // 说明：parentId/level/questionOrder/labelQuestionType 已由 generate-api 生成进 QuestionVO，
@@ -214,6 +220,8 @@ import type { DicQuestionTypeVO } from '@/api/gen/dicController'
 interface ExtendedQuestionVO extends QuestionVO {
   annotationStatus?: number
   labelQuestionTypeZh?: string | null
+  /** 作答方式（docx questionAnswerMode）：后端 QuestionVO 已补该字段，生成类型暂未同步 */
+  questionAnswerMode?: number
 }
 
 /** 题目树渲染项：扁平化后的单行，供模板按顺序渲染并保留缩进/题号 */
@@ -344,20 +352,6 @@ const {
 
 const subjectCode = ref<number | undefined>(undefined)
 const questionTypeOptions = ref<DicQuestionTypeVO[]>([])
-
-// 题型大类 -> 叶子题型，构建 el-cascader 选项（仅叶子可选）
-const questionTypeCascaderOptions = computed<Array<{ value: string; label: string; children: Array<{ value: number; label: string }> }>>(() => {
-  const map = new Map<string, Array<{ value: number; label: string }>>()
-  for (const item of questionTypeOptions.value) {
-    const key = item.categoryName || '其他'
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push({ value: item.typeCode as number, label: item.typeName || '' })
-  }
-  return Array.from(map.entries()).map(([categoryName, children]) => ({ value: categoryName, label: categoryName, children }))
-})
-
-// 级联选择：emitPath=false 只返回叶子节点值；父节点不可选，只能选叶子
-const questionTypeCascaderProps = { emitPath: false, expandTrigger: 'hover' as const }
 
 
 // 获取当前书籍/试卷的学科枚举（subjectCode）
@@ -816,6 +810,42 @@ const handleQuestionTypeChange = async (type: number | null | undefined, questio
     ElMessage.error('题目类型修改失败')
     console.error(error)
   }
+}
+
+// 切换作答方式（列表内联编辑）
+const handleAnswerModeChange = async (mode: number | null | undefined, question: ExtendedQuestionVO) => {
+  // 清空选择时不做处理，保留原作答方式
+  if (mode == null) return
+  if (question.questionAnswerMode === mode) return
+  try {
+    const response = await putQuestionUpdateApi(
+      { questionAnswerMode: mode },
+      { id: question.id }
+    )
+    if (response.data.code === 200) {
+      question.questionAnswerMode = mode
+      ElMessage.success(`已切换为${answerModeName(mode)}`)
+    } else {
+      ElMessage.error(response.data.msg || '作答方式修改失败')
+    }
+  } catch (error) {
+    ElMessage.error('作答方式修改失败')
+    console.error(error)
+  }
+}
+
+// 快捷键：切换当前选中题目的作答方式
+const handleChangeAnswerMode = async (mode: number) => {
+  if (!selectedQuestionId.value) {
+    ElMessage.warning('请先选择一个题目')
+    return
+  }
+  const question = findQuestionById(selectedQuestionId.value)
+  if (!question) {
+    ElMessage.warning('未找到选中的题目')
+    return
+  }
+  await handleAnswerModeChange(mode, question)
 }
 
 // 加载题目列表
@@ -1740,6 +1770,7 @@ defineExpose({
   quickDeleteAnnotation,
   handleAddQuestion,
   handleChangeQuestionType,
+  handleChangeAnswerMode,
   handleAutoSort,
   updateQuestionAnnotationStatus,
   startPolling,
@@ -1936,28 +1967,24 @@ html.dark .question-item.is-child {
 }
 
 /* 题型级联选择器：做成紧凑小控件，避免撑破题目行 */
-.question-type-cascader {
-  width: 160px;
+.question-answer-mode-select {
+  width: 110px;
 }
 
-.question-type-cascader :deep(.el-cascader__tags) {
-  max-width: 100%;
-}
-
-.question-type-cascader :deep(.el-input__wrapper) {
+.question-answer-mode-select :deep(.el-input__wrapper) {
   background-color: #f3f4f6;
   box-shadow: none;
 }
 
-.question-type-cascader :deep(input::placeholder) {
+.question-answer-mode-select :deep(input::placeholder) {
   color: #6b7280;
 }
 
-.dark .question-type-cascader :deep(.el-input__wrapper) {
+.dark .question-answer-mode-select :deep(.el-input__wrapper) {
   background-color: #1f2937;
 }
 
-.dark .question-type-cascader :deep(input::placeholder) {
+.dark .question-answer-mode-select :deep(input::placeholder) {
   color: #9ca3af;
 }
 
