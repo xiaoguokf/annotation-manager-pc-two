@@ -116,16 +116,17 @@ export const createAnswerDraft = (): AnswerDraft => ({
 /**
  * 答案行 → 结构化答案项。
  *
- * docx 约定 extendOptionList 用于「多答案兼容」，且**第一项即主答案本身**
- * （见 example-output.json：{"optionKey":"C","optionVal":"","extendOptionList":[{"optionKey":"C","optionVal":""}]}），
- * 其后挂备选答案。
+ * extendOptionList 用于「多答案兼容」，**仅存放备选答案**（主答案只在 optionKey/optionVal），
+ * 无备选即为空数组 —— 口径以两份真实交付核验文件为准（英语 729/729、生物 444/444 条均为 []）。
+ * 权威样例 example-output.json 把主答案也放进 [0]，解析侧已做兼容（见 itemToRow）。
  */
 const answerRowToItem = (row: AnswerRow): QuestionAnswerOptionVO => {
   const { optionKey, optionVal } = row.primary
-  const extendOptionList = [
-    { optionKey, optionVal },
-    ...row.extends.map((cell) => ({ optionKey: cell.optionKey, optionVal: cell.optionVal })),
-  ]
+  // 按真实交付文件口径：extendOptionList 仅存备选答案，无备选即空数组（主答案只在 optionKey/optionVal）
+  const extendOptionList = row.extends.map((cell) => ({
+    optionKey: cell.optionKey,
+    optionVal: cell.optionVal,
+  }))
   return { optionKey, optionVal, extendOptionList }
 }
 
@@ -133,7 +134,7 @@ const answerRowToItem = (row: AnswerRow): QuestionAnswerOptionVO => {
 const judgeItem = (key: string): QuestionAnswerOptionVO => ({
   optionKey: key,
   optionVal: '',
-  extendOptionList: [{ optionKey: key, optionVal: '' }],
+  extendOptionList: [],
 })
 
 /** 选择型 / 解答型统一形态：矩阵外层恒 1 层 */
@@ -262,12 +263,18 @@ const rowOfVal = (optionVal: string): AnswerRow => ({
 })
 
 /** 结构化答案项 → 答案行（extendOptionList 首项为主答案，其余为备选） */
-const itemToRow = (item: QuestionAnswerOptionVO): AnswerRow => ({
-  primary: { optionKey: (item.optionKey ?? '').trim(), optionVal: item.optionVal ?? '' },
-  extends: (item.extendOptionList ?? [])
-    .slice(1)
-    .map((cell) => ({ optionKey: (cell.optionKey ?? '').trim(), optionVal: cell.optionVal ?? '' })),
-})
+const itemToRow = (item: QuestionAnswerOptionVO): AnswerRow => {
+  const primary = { optionKey: (item.optionKey ?? '').trim(), optionVal: item.optionVal ?? '' }
+  const cells = (item.extendOptionList ?? []).map((cell) => ({
+    optionKey: (cell.optionKey ?? '').trim(),
+    optionVal: cell.optionVal ?? '',
+  }))
+  // 兼容样例口径（extendOptionList[0] 为副本式的主答案）：首项与主答案完全相同则跳过
+  const first = cells[0]
+  const isPrimaryCopy =
+    first != null && first.optionKey === primary.optionKey && first.optionVal === primary.optionVal
+  return { primary, extends: isPrimaryCopy ? cells.slice(1) : cells }
+}
 
 /** 判断题答案项的键：优先取 optionKey，缺失时从 optionVal 反推 */
 const judgeKeyOfItem = (item: QuestionAnswerOptionVO): string => {
