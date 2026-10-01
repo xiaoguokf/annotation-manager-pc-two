@@ -26,8 +26,9 @@
               <el-checkbox v-model="questionForm.noAnswer" @change="() => triggerAutoSave(true)" />
             </el-form-item>
           </div>
-          <el-form-item label="难度">
-            <el-select v-model="questionForm.difficulty" placeholder="请选择难度" style="width: 100%" @change="() => triggerAutoSave(true)">
+          <div class="form-row">
+          <el-form-item label="难度" required :error="formErrors.difficulty">
+            <el-select v-model="questionForm.difficulty" placeholder="请选择难度" style="width: 100%" @change="() => { updateFieldError('difficulty'); triggerAutoSave(true) }">
               <el-option label="0（容易）" :value="0" />
               <el-option label="0.1（容易）" :value="0.1" />
               <el-option label="0.2（容易）" :value="0.2" />
@@ -41,6 +42,19 @@
               <el-option label="1（难）" :value="1" />
             </el-select>
           </el-form-item>
+          <!-- 分值（docx questionScore）：母题同样需要，示例输出中母题亦有分值 -->
+          <el-form-item label="分值">
+            <el-input-number
+              v-model="questionForm.questionScore"
+              :min="0"
+              :precision="1"
+              :controls="false"
+              placeholder="请输入分值"
+              style="width: 100%"
+              @change="() => triggerAutoSave(true)"
+            />
+          </el-form-item>
+          </div>
           <el-form-item label="知识点">
             <el-select
               v-model="knowledgeTags"
@@ -54,7 +68,7 @@
               @change="handleKnowledgeChange"
             />
           </el-form-item>
-          <el-form-item label="标签题型">
+          <el-form-item label="标签题型" required :error="formErrors.labelQuestionType">
             <el-cascader
               v-model="questionForm.labelQuestionType"
               :options="questionTypeCascaderOptions"
@@ -64,10 +78,10 @@
               filterable
               clearable
               :show-all-levels="false"
-              @change="() => triggerAutoSave(true)"
+              @change="() => { updateFieldError('labelQuestionType'); triggerAutoSave(true) }"
             />
           </el-form-item>
-          <el-form-item label="作答方式">
+          <el-form-item label="作答方式" required :error="formErrors.answerMode">
             <!-- 用 :model-value + @change 而非 v-model：切到「综合母题」需先确认清空答案，
                  用户取消时值不能被改掉（v-model 会先行写入） -->
             <el-select
@@ -173,7 +187,7 @@
               type="primary"
               size="small"
               @click="addOption"
-              :disabled="choiceOptions.length >= 8"
+              :disabled="choiceOptions.length >= MAX_OPTIONS"
             >
               <Icon icon="ep:plus" class="mr-1" />
               添加选项
@@ -207,17 +221,40 @@
           </div>
         </el-form-item>
         <el-form-item v-if="questionForm.questionAnswerMode !== 0" label="答案" :required="!questionForm.noAnswer" :error="formErrors.answer">
-          <!-- 判断题：对/错 单选 -->
-          <el-radio-group v-if="questionKind === 'judge'" v-model="questionForm.answer" @change="handleAnswerBlur">
-            <el-radio value="对">对</el-radio>
-            <el-radio value="错">错</el-radio>
+          <!-- 判断题：对/错 单选；内部值为字符串 "true"/"false"，与 docx 约定一致 -->
+          <el-radio-group
+            v-if="questionForm.questionAnswerMode === ANSWER_MODE_JUDGE"
+            v-model="answerDraft.judge"
+            @change="handleAnswerBlur"
+          >
+            <el-radio value="true">对</el-radio>
+            <el-radio value="false">错</el-radio>
           </el-radio-group>
-          <el-input
+          <!-- 单选 / 多选：一行一个正确选项（answerOptionList），每行可再加备选答案（extendOptionList） -->
+          <AnswerRowsEditor
+            v-else-if="questionForm.questionAnswerMode === ANSWER_MODE_SINGLE || questionForm.questionAnswerMode === ANSWER_MODE_MULTI"
+            v-model="answerDraft.rows"
+            variant="choice"
+            add-row-label="添加选项"
+            @blur="handleAnswerBlur"
+          />
+          <!-- 填空：一行一空，每空可再加备选答案 -->
+          <AnswerRowsEditor
+            v-else-if="questionForm.questionAnswerMode === ANSWER_MODE_BLANK"
+            v-model="answerDraft.rows"
+            variant="text"
+            add-row-label="添加空"
+            text-placeholder="请输入本空答案"
+            :stem="questionForm.question"
+            @blur="handleAnswerBlur"
+            @input="() => triggerAutoSave()"
+          />
+          <!-- 解答：单行答案 + 备选答案 -->
+          <AnswerRowsEditor
             v-else
-            v-model="questionForm.answer"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入答案，支持 Markdown 和 LaTeX 公式"
+            v-model="answerDraft.rows"
+            variant="text"
+            text-placeholder="请输入答案，支持 Markdown 和 LaTeX 公式"
             @blur="handleAnswerBlur"
             @input="() => triggerAutoSave()"
           />
@@ -293,6 +330,10 @@
             <span class="label">作答方式:</span>
             <span class="value">{{ (answerModeOptions.find(t => t.value === questionForm.questionAnswerMode)?.label) || questionForm.questionAnswerMode }}</span>
           </div>
+          <div class="info-item">
+            <span class="label">分值:</span>
+            <span class="value">{{ questionForm.questionScore != null ? `${questionForm.questionScore} 分` : '-' }}</span>
+          </div>
         </div>
         <div v-if="questionForm.questionComment" class="info-item-full">
           <span class="label">点评:</span>
@@ -317,9 +358,9 @@
             </div>
           </div>
           <!-- 答案 -->
-          <div v-if="questionForm.questionAnswerMode !== 0 && questionForm.answer" class="content-box preview-box mb-4">
+          <div v-if="questionForm.questionAnswerMode !== 0 && answerDisplayText" class="content-box preview-box mb-4">
             <el-tag type="success" size="small" class="mb-2">答案</el-tag>
-            <div class="preview-content" v-html="renderContent(questionForm.answer, true)"></div>
+            <div class="preview-content" v-html="renderContent(answerDisplayText, true)"></div>
           </div>
           <!-- 解析 -->
           <div v-if="questionForm.analysis" class="content-box preview-box mb-4">
@@ -388,7 +429,33 @@ import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotat
 import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
 import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
+import {
+  ANSWER_MODE_ANSWER,
+  ANSWER_MODE_BLANK,
+  ANSWER_MODE_COMPREHENSIVE,
+  ANSWER_MODE_JUDGE,
+  ANSWER_MODE_MULTI,
+  ANSWER_MODE_SINGLE,
+  answerModeOptions,
+  minChoiceOptions,
+} from '@/constants/answerMode'
+import {
+  type AnswerDraft,
+  JUDGE_OPTIONS,
+  MAX_OPTIONS,
+  buildQuestionAnswer,
+  createAnswerDraft,
+  createAnswerRow,
+  draftToDisplay,
+  draftToLegacyAnswer,
+  isAnswerDraftFilled,
+  isJudgeLeftover,
+  optionLetter,
+  parseAnswerDraft,
+  parseLegacyAnswer,
+} from '@/utils/questionAnswer'
 import SubQuestionPanel from './SubQuestionPanel.vue'
+import AnswerRowsEditor from './AnswerRowsEditor.vue'
 
 const configStore = useConfigStore()
 const parseSettingsStore = useParseSettingsStore()
@@ -465,7 +532,10 @@ const saveTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const formErrors = ref({
   question: '',
   options: '',
-  answer: ''
+  answer: '',
+  labelQuestionType: '',
+  answerMode: '',
+  difficulty: ''
 })
 
 // 标注列表
@@ -500,8 +570,68 @@ const questionForm = ref({
   labelQuestionType: undefined as number | undefined,
   questionAnswerMode: undefined as number | undefined,
   questionType: undefined as number | undefined,
+  /** 分值（docx questionScore）；母题同样需要，缺失会导致导出为 0 */
+  questionScore: undefined as number | undefined,
+  /** 题内序号（docx questionOrder）；仅回传保留，避免保存时被清空 */
+  questionOrder: undefined as number | undefined,
   questionExtra: ''
 })
+
+/** 结构化答案草稿：按作答方式采集，提交时转为 questionAnswer */
+const answerDraft = ref<AnswerDraft>(createAnswerDraft())
+
+/** 答案至少渲染一行，避免切到单选/多选/填空/解答时列表为空 */
+const ensureAnswerRows = () => {
+  const mode = questionForm.value.questionAnswerMode
+  const needRow =
+    mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI || mode === ANSWER_MODE_BLANK || mode === ANSWER_MODE_ANSWER
+  if (needRow && answerDraft.value.rows.length === 0) {
+    answerDraft.value.rows = [createAnswerRow()]
+  }
+}
+
+/** 草稿 → 旧扁平 answer，保证 answer 列与 questionAnswer 口径一致（判断题写 "true"/"false"） */
+const syncLegacyAnswer = () => {
+  questionForm.value.answer = draftToLegacyAnswer(questionForm.value.questionAnswerMode, answerDraft.value)
+}
+
+watch(answerDraft, syncLegacyAnswer, { deep: true })
+
+/**
+ * 重置答案草稿。
+ * 作答方式切换后各形态的答案不可复用（字母 / 对错 / 多空 / 原文结构不同），
+ * 统一清空可避免把上一种形态的残留带进新结构。
+ */
+const resetAnswerDraftsForMode = () => {
+  answerDraft.value = createAnswerDraft()
+}
+
+/**
+ * 母题结构化内容：题干 + 选项（判断题固定 true/false，选择型取填写内容，其余为空）。
+ * 供后端结构化优先解析使用，缺失时后端仍回退旧字段。
+ */
+const buildQuestionContent = () => {
+  const mode = questionForm.value.questionAnswerMode
+  let optionList: Array<{ optionKey: string; optionVal: string }> = []
+  if (mode === ANSWER_MODE_JUDGE) {
+    optionList = [
+      { optionKey: 'true', optionVal: '' },
+      { optionKey: 'false', optionVal: '' },
+    ]
+  } else if (mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI) {
+    optionList = choiceOptions.value
+      .filter((option) => option.trim())
+      .map((option, index) => ({ optionKey: optionLetter(index), optionVal: option }))
+  }
+  return {
+    questionStem: questionForm.value.question,
+    // 分值 / 题内序号必须回传：后端 applyDocxFields 会无条件覆盖这两列，漏传即被清空
+    questionScore: questionForm.value.questionScore,
+    questionOrder: questionForm.value.questionOrder,
+    questionOptionList: optionList,
+    questionOptionMatrix: optionList.length > 0 ? [optionList] : [],
+  }
+}
 
 // 标签题型字典（按当前书籍学科过滤）与作答方式选项
 const { isChoiceQuestion, ensureLoaded, getOptionsBySubject } = useQuestionTypeDict()
@@ -591,9 +721,7 @@ const questionTypeCascaderOptions = computed<Array<{ value: string; label: strin
 // 级联选择：emitPath=false 只返回叶子节点值；父节点不可选，只能选叶子
 const questionTypeCascaderProps = { emitPath: false, expandTrigger: 'hover' as const }
 
-// 作答方式选项（docx questionAnswerMode：0=综合母题/1=单选/2=多选/3=填空/4=判断/5=解答）
-/** 作答方式：综合母题（答案写在子题内） */
-const ANSWER_MODE_COMPREHENSIVE = 0
+// 作答方式常量与选项见 @/constants/answerMode，列表页与编辑页共用同一份
 
 /**
  * 作答方式下拉的重挂载标记。
@@ -624,14 +752,10 @@ const answerExcerpt = (limit: number) => {
 /** 残留答案预览（截断，避免长内容撑破面板） */
 const staleAnswerPreview = computed(() => answerExcerpt(60))
 
-const answerModeOptions = [
-  { label: '综合母题', value: 0 },
-  { label: '单选', value: 1 },
-  { label: '多选', value: 2 },
-  { label: '填空', value: 3 },
-  { label: '判断', value: 4 },
-  { label: '解答', value: 5 }
-]
+/** 预览用答案文案：判断题还原为 对/错，填空各空以 ／ 连接 */
+const answerDisplayText = computed(() =>
+  draftToDisplay(questionForm.value.questionAnswerMode, answerDraft.value),
+)
 
 // 知识点标签（用于多选下拉框）
 const knowledgeTags = ref<string[]>([])
@@ -662,10 +786,13 @@ const autoSaveQuestion = async (force: boolean = false) => {
     return
   }
 
-  // 校验必填字段并更新错误显示
+  // 校验必填字段并更新错误显示（含文档要求的标签题型/作答方式/难度，仅提示不强拦）
   updateFieldError('question')
   updateFieldError('options')
   updateFieldError('answer')
+  updateFieldError('labelQuestionType')
+  updateFieldError('answerMode')
+  updateFieldError('difficulty')
 
   const questionError = formErrors.value.question
   const optionsError = formErrors.value.options
@@ -707,11 +834,15 @@ const autoSaveQuestion = async (force: boolean = false) => {
       noAnswer: questionForm.value.noAnswer,
       question: questionForm.value.question,
       choice: choiceJson,
-      answer: questionForm.value.answer,
+      // 扁平 answer 与结构化 questionAnswer 同源，保证两条口径一致
+      answer: draftToLegacyAnswer(questionForm.value.questionAnswerMode, answerDraft.value),
       analysis: questionForm.value.analysis,
       labelQuestionType: questionForm.value.labelQuestionType,
       questionAnswerMode: questionForm.value.questionAnswerMode,
       questionType: questionForm.value.questionType,
+      // 题目内容/答案结构化（docx questionContent / questionAnswer）
+      questionContent: buildQuestionContent(),
+      questionAnswer: buildQuestionAnswer(questionForm.value.questionAnswerMode, answerDraft.value),
       // 后端 QuestionUpdateCmd 暂无 questionType 字段，临时持久化到 questionExtra（题目扩展）
       questionExtra: mergeQuestionTypeToExtra(questionForm.value.questionExtra, questionForm.value.questionType)
     }
@@ -760,27 +891,29 @@ const triggerAutoSave = (force: boolean = false) => {
  * 用 :model-value + 本方法（而非 v-model）才能做到「取消即回滚」。
  */
 const handleAnswerModeChange = async (mode: number | undefined) => {
-  const hasAnswer = !!questionForm.value.answer && questionForm.value.answer.trim() !== ''
-  if (mode !== ANSWER_MODE_COMPREHENSIVE || !hasAnswer) {
-    questionForm.value.questionAnswerMode = mode
-    triggerAutoSave(true)
-    return
-  }
-  try {
-    await ElMessageBox.confirm(
-      '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案（当前：' + answerExcerpt(20) + '）将被清空，是否继续？',
-      '提示',
-      { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
-    )
-  } catch {
-    // 用户取消：不改动作答方式；重挂载下拉以还原显示（el-select 内部已把文本改成新值）
-    answerModeSelectKey.value++
-    return
+  const hasAnswer = isAnswerDraftFilled(questionForm.value.questionAnswerMode, answerDraft.value)
+  if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
+    try {
+      await ElMessageBox.confirm(
+        '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案（当前：' + answerExcerpt(20) + '）将被清空，是否继续？',
+        '提示',
+        { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
+      )
+    } catch {
+      // 用户取消：不改动作答方式；重挂载下拉以还原显示（el-select 内部已把文本改成新值）
+      answerModeSelectKey.value++
+      return
+    }
   }
   questionForm.value.questionAnswerMode = mode
-  questionForm.value.answer = ''
+  // 各形态答案结构不同，切换后清空草稿，避免残留被带入新结构
+  resetAnswerDraftsForMode()
+  ensureAnswerRows()
   formErrors.value.answer = ''
-  ElMessage.success('已清空本题答案')
+  updateFieldError('answerMode')
+  if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
+    ElMessage.success('已清空本题答案')
+  }
   triggerAutoSave(true)
 }
 
@@ -790,8 +923,12 @@ const handleAnswerModeChange = async (mode: number | undefined) => {
 const handleClearStaleAnswer = async () => {
   clearingAnswer.value = true
   try {
-    const response = await putQuestionUpdateApi({ answer: '' }, { id: props.selectedQuestion.id })
+    const response = await putQuestionUpdateApi(
+      { answer: '', questionAnswer: { answerOptionList: [], answerOptionMatrix: [] } },
+      { id: props.selectedQuestion.id },
+    )
     if (response.data.code === 200) {
+      resetAnswerDraftsForMode()
       questionForm.value.answer = ''
       formErrors.value.answer = ''
       ElMessage.success('已清空本题答案')
@@ -814,7 +951,9 @@ const handleKnowledgeChange = (value: string[]) => {
 }
 
 // 校验单个字段
-const validateField = (fieldName: 'question' | 'options' | 'answer'): string => {
+type FormField = 'question' | 'options' | 'answer' | 'labelQuestionType' | 'answerMode' | 'difficulty'
+
+const validateField = (fieldName: FormField): string => {
   if (fieldName === 'question') {
     if (!questionForm.value.question || questionForm.value.question.trim() === '') {
       return '题干不能为空'
@@ -826,29 +965,48 @@ const validateField = (fieldName: 'question' | 'options' | 'answer'): string => 
     }
     if (questionKind.value === 'choice') {
       const validOptions = choiceOptions.value.filter(o => o.trim())
-      if (validOptions.length === 0) {
+      if (validOptions.length < minChoiceOptions(questionForm.value.questionAnswerMode)) {
         return '选择题必须要有选项'
       }
     }
   } else if (fieldName === 'answer') {
-    if (questionForm.value.questionAnswerMode === 0) {
+    const mode = questionForm.value.questionAnswerMode
+    if (mode === ANSWER_MODE_COMPREHENSIVE) {
       return ''
     }
-    if (!questionForm.value.noAnswer) {
-      if (!questionForm.value.answer || questionForm.value.answer.trim() === '') {
-        return '答案不能为空'
+    if (!questionForm.value.noAnswer && !isAnswerDraftFilled(mode, answerDraft.value)) {
+      return '答案不能为空'
+    }
+    // 单选/多选答案必须落在已列出的选项范围内（字母数 = 选项行数）
+    if (mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI) {
+      const limit = choiceOptions.value.length
+      const keys = (mode === ANSWER_MODE_SINGLE ? answerDraft.value.rows.slice(0, 1) : answerDraft.value.rows).map(
+        (row) => row.primary.optionKey,
+      )
+      const overflow = keys.filter(Boolean).some((key) => key.trim() && key.trim().toUpperCase().charCodeAt(0) - 65 >= limit)
+      if (overflow) {
+        return `答案选项超出范围（本题共 ${limit} 个选项）`
       }
-      // 判断题答案只允许 对/错
-      if (questionKind.value === 'judge' && !JUDGE_OPTIONS.includes(questionForm.value.answer.trim())) {
-        return '判断题答案请选择 对 或 错'
-      }
+    }
+  } else if (fieldName === 'labelQuestionType') {
+    if (questionForm.value.labelQuestionType == null) {
+      return '标签题型不能为空'
+    }
+  } else if (fieldName === 'answerMode') {
+    // 文档要求非综合母题的作答方式必填；综合母题以 0 显式表示，不算缺失
+    if (questionForm.value.questionAnswerMode == null) {
+      return '作答方式不能为空'
+    }
+  } else if (fieldName === 'difficulty') {
+    if (questionForm.value.difficulty === undefined || questionForm.value.difficulty === null) {
+      return '题目难度不能为空'
     }
   }
   return ''
 }
 
 // 更新字段错误
-const updateFieldError = (fieldName: 'question' | 'options' | 'answer') => {
+const updateFieldError = (fieldName: FormField) => {
   formErrors.value[fieldName] = validateField(fieldName)
 }
 
@@ -970,13 +1128,13 @@ const handleSmartAssemble = async () => {
       // 只有一个选项标注，按换行解析
       const parsedChoices = choiceContent.split('\n').filter(c => c.trim())
       if (parsedChoices.length > 0) {
-        choiceOptions.value = parsedChoices.slice(0, 8)
+        choiceOptions.value = parsedChoices.slice(0, MAX_OPTIONS)
       }
     } else if (choiceContent) {
       // 多个选项标注，按原始解析内容作为选项
       const parsedChoices = choiceContent.split('\n').filter(c => c.trim())
       if (parsedChoices.length > 0) {
-        choiceOptions.value = parsedChoices.slice(0, 8)
+        choiceOptions.value = parsedChoices.slice(0, MAX_OPTIONS)
       }
     }
 
@@ -1120,7 +1278,7 @@ const removeQuestionNumber = (text: string): string => {
 
 // 添加选项
 const addOption = () => {
-  if (choiceOptions.value.length < 8) {
+  if (choiceOptions.value.length < MAX_OPTIONS) {
     choiceOptions.value.push('')
     triggerAutoSave()
   }
@@ -1153,13 +1311,6 @@ const getDifficultyLabel = (value: number) => {
 const isChoiceType = (labelQuestionType?: number | null, tishi?: string | null) =>
   isChoiceQuestion({ labelQuestionType, tishi })
 
-/** 判断题固定选项 */
-const JUDGE_OPTIONS = ['对', '错']
-
-/** 旧数据兼容：判断题答案可能以 true/false 存储 */
-const normalizeJudgeAnswer = (answer: string) =>
-  answer === 'true' ? '对' : answer === 'false' ? '错' : answer
-
 /**
  * 题目作答形态：
  * - judge：作答方式=判断，或题型字典名称含"判断" → 选项固定 对/错，答案二选一
@@ -1180,7 +1331,10 @@ const questionKind = computed<'choice' | 'judge' | 'none'>(() => {
 watch(questionKind, (kind) => {
   if (kind === 'judge') {
     choiceOptions.value = [...JUDGE_OPTIONS]
-    questionForm.value.answer = normalizeJudgeAnswer(questionForm.value.answer || '')
+    // 仅按标签题型判定为判断（mode 未显式给出）时，从旧答案补一次草稿
+    if (!answerDraft.value.judge && questionForm.value.answer) {
+      answerDraft.value = parseLegacyAnswer(ANSWER_MODE_JUDGE, questionForm.value.answer)
+    }
     return
   }
   if (questionForm.value.choice === JSON.stringify(JUDGE_OPTIONS)) {
@@ -1205,18 +1359,23 @@ watch(() => questionForm.value.tishi, (newTishi, oldTishi) => {
     }
     // 如果从服务器加载的 choice 数据不为空，需要重新解析
     if (questionForm.value.choice) {
+      let loaded: string[] = []
       try {
         // 尝试解析为 JSON 数组
         const parsed = JSON.parse(questionForm.value.choice)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          choiceOptions.value = parsed
+          loaded = parsed.map((c) => String(c))
         }
       } catch {
         // JSON 解析失败，按换行符分割
-        const choices = questionForm.value.choice.split('\n').filter(c => c.trim())
-        if (choices.length > 0) {
-          choiceOptions.value = choices
-        }
+        loaded = questionForm.value.choice.split('\n').filter(c => c.trim())
+      }
+      // 存量判断题固定选项（对/错）不是真实选项，切到单选/多选时剔除
+      if (isJudgeLeftover(loaded)) {
+        loaded = []
+      }
+      if (loaded.length > 0) {
+        choiceOptions.value = loaded
       }
     }
       } else {
@@ -1305,6 +1464,8 @@ const loadQuestionDetails = async (questionId: string) => {
         tishi: tishiValue,
         labelQuestionType: response.data.data.labelQuestionType != null ? response.data.data.labelQuestionType : undefined,
         questionAnswerMode: response.data.data.questionAnswerMode != null ? response.data.data.questionAnswerMode : undefined,
+        questionScore: response.data.data.questionContent?.questionScore ?? undefined,
+        questionOrder: response.data.data.questionContent?.questionOrder ?? undefined,
         questionExtra: response.data.data.questionExtra || '',
         // 后端当前未回传 questionType 字段，从 questionExtra（题目扩展）中读取本地持久化的题目类型
         questionType: readQuestionTypeFromExtra(response.data.data.questionExtra)
@@ -1329,14 +1490,22 @@ const loadQuestionDetails = async (questionId: string) => {
         }
       }
 
+      // 答案草稿：优先结构化 questionAnswer，为空时按作答方式从旧 answer 兜底解析
+      answerDraft.value = parseAnswerDraft(
+        questionForm.value.questionAnswerMode,
+        response.data.data.questionAnswer,
+        response.data.data.answer,
+      )
+      ensureAnswerRows()
+      syncLegacyAnswer()
+
       // 使用 nextTick 确保 questionForm 更新后再初始化选项
       await nextTick()
 
-      // 判断题：选项固定 对/错，答案兼容 true/false 旧写法
+      // 判断题：选项固定 对/错
       if (questionKind.value === 'judge') {
         choiceOptions.value = [...JUDGE_OPTIONS]
         questionForm.value.choice = JSON.stringify(JUDGE_OPTIONS)
-        questionForm.value.answer = normalizeJudgeAnswer(questionForm.value.answer)
         updateFieldError('answer')
         return
       }
@@ -1348,7 +1517,7 @@ const loadQuestionDetails = async (questionId: string) => {
           // 尝试解析为 JSON 数组
           const parsed = JSON.parse(choiceValue)
           if (Array.isArray(parsed)) {
-            choices = parsed
+            choices = parsed.map((c) => String(c))
           } else {
             // 如果不是数组，按换行符分割
             choices = choiceValue.split('\n').filter(c => c.trim())
@@ -1356,6 +1525,10 @@ const loadQuestionDetails = async (questionId: string) => {
         } catch {
           // JSON 解析失败，按换行符分割
           choices = choiceValue.split('\n').filter(c => c.trim())
+        }
+        // 存量判断题固定选项（对/错）不是真实选项，切到单选/多选时剔除，避免凭空多出两项
+        if (isJudgeLeftover(choices)) {
+          choices = []
         }
         choiceOptions.value = choices.length > 0 ? choices : ['', '', '', '']
       } else {
@@ -1484,6 +1657,13 @@ defineExpose({
   margin-bottom: 12px;
 }
 
+/* 校验错误默认绝对定位，会压住下方控件（选项「添加选项」按钮、答案输入框）。
+   改为文档流内显示，出现错误时把后续内容向下推，避免遮挡与重叠。 */
+.question-editor .el-form-item__error {
+  position: static;
+  margin-top: 4px;
+}
+
 .question-editor .el-form-item:last-child {
   margin-bottom: 0;
 }
@@ -1500,13 +1680,6 @@ defineExpose({
   display: flex;
   align-items: flex-start;
   gap: 8px;
-}
-
-.option-label {
-  color: #6b7280;
-  font-weight: 500;
-  min-width: 24px;
-  font-size: 13px;
 }
 
 .option-input-wrapper {

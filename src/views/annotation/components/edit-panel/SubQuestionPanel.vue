@@ -38,7 +38,7 @@
               @change="(mode: number | undefined) => handleKindChange(item, mode)"
             >
               <el-option
-                v-for="mode in ANSWER_MODES"
+                v-for="mode in answerModeOptions"
                 :key="mode.value"
                 :label="mode.label"
                 :value="mode.value"
@@ -48,6 +48,10 @@
           <el-form-item label="分值">
             <el-input-number v-model="item.questionScore" :min="0" :precision="1" controls-position="right"
               @change="triggerAutoSave(item, true)" />
+          </el-form-item>
+          <el-form-item label="难度">
+            <el-input-number v-model="item.difficulty" :min="0" :max="1" :step="0.1" :precision="1"
+              controls-position="right" placeholder="难度" @change="triggerAutoSave(item, true)" />
           </el-form-item>
         </div>
 
@@ -64,7 +68,6 @@
         <el-form-item v-if="getRowKind(item) === 'choice'" label="选项">
           <div class="options-container">
             <div v-for="(_, idx) in item.choiceOptions" :key="idx" class="option-item">
-              <span class="option-label">{{ optionLetter(idx) }}</span>
               <el-input
                 v-model="item.choiceOptions[idx]"
                 type="textarea"
@@ -76,7 +79,7 @@
                 type="danger"
                 size="small"
                 circle
-                :disabled="item.choiceOptions.length <= 2"
+                :disabled="item.choiceOptions.length <= minChoiceOptions(item.questionAnswerMode)"
                 @click="item.choiceOptions.splice(idx, 1); triggerAutoSave(item, true)"
               >
                 <Icon icon="ep:delete" />
@@ -85,7 +88,7 @@
             <el-button
               size="small"
               type="primary"
-              :disabled="item.choiceOptions.length >= 8"
+              :disabled="item.choiceOptions.length >= MAX_OPTIONS"
               @click="item.choiceOptions.push(''); triggerAutoSave(item, true)"
             >
               <Icon icon="ep:plus" class="mr-1" />
@@ -99,30 +102,43 @@
         </el-form-item>
 
         <el-form-item label="答案">
-          <!-- 判断题：对/错 单选 -->
-          <el-radio-group v-if="getRowKind(item) === 'judge'" v-model="item.answer"
-            @change="triggerAutoSave(item, true)">
-            <el-radio value="对">对</el-radio>
-            <el-radio value="错">错</el-radio>
-          </el-radio-group>
-          <!-- 单选：从选项中选一个字母 -->
-          <el-select
-            v-else-if="getRowKind(item) === 'choice' && item.questionAnswerMode !== 2"
-            v-model="item.answer"
-            placeholder="请选择答案"
-            clearable
-            style="width: 100%"
+          <!-- 判断题：对/错 单选；内部值为字符串 "true"/"false" -->
+          <el-radio-group
+            v-if="item.questionAnswerMode === ANSWER_MODE_JUDGE"
+            v-model="item.answerDraft.judge"
             @change="triggerAutoSave(item, true)"
           >
-            <el-option
-              v-for="(_, idx) in item.choiceOptions"
-              :key="idx"
-              :label="optionLetter(idx)"
-              :value="optionLetter(idx)"
-            />
-          </el-select>
-          <el-input v-else v-model="item.answer" type="textarea" :rows="2" placeholder="请输入答案"
-            @input="triggerAutoSave(item)" />
+            <el-radio value="true">对</el-radio>
+            <el-radio value="false">错</el-radio>
+          </el-radio-group>
+          <!-- 单选 / 多选：一行一个正确选项，每行可再加备选答案 -->
+          <AnswerRowsEditor
+            v-else-if="item.questionAnswerMode === ANSWER_MODE_SINGLE || item.questionAnswerMode === ANSWER_MODE_MULTI"
+            v-model="item.answerDraft.rows"
+            variant="choice"
+            add-row-label="添加选项"
+            @blur="triggerAutoSave(item, true)"
+          />
+          <!-- 填空：一行一空，每空可再加备选答案 -->
+          <AnswerRowsEditor
+            v-else-if="item.questionAnswerMode === ANSWER_MODE_BLANK"
+            v-model="item.answerDraft.rows"
+            variant="text"
+            add-row-label="添加空"
+            text-placeholder="请输入本空答案"
+            :stem="item.questionStem"
+            @blur="triggerAutoSave(item, true)"
+            @input="triggerAutoSave(item)"
+          />
+          <!-- 解答：单行答案 + 备选答案 -->
+          <AnswerRowsEditor
+            v-else
+            v-model="item.answerDraft.rows"
+            variant="text"
+            text-placeholder="请输入答案"
+            @blur="triggerAutoSave(item, true)"
+            @input="triggerAutoSave(item)"
+          />
         </el-form-item>
         <el-form-item label="解析">
           <el-input
@@ -163,6 +179,28 @@ import {
   type QuestionDetailsVO,
 } from '@/api/gen/questionController'
 import { getQuestionTypeListApi } from '@/api/gen/questionType'
+import {
+  ANSWER_MODE_ANSWER,
+  ANSWER_MODE_BLANK,
+  ANSWER_MODE_COMPREHENSIVE,
+  ANSWER_MODE_JUDGE,
+  ANSWER_MODE_MULTI,
+  ANSWER_MODE_SINGLE,
+  answerModeOptions,
+  minChoiceOptions,
+} from '@/constants/answerMode'
+import {
+  type AnswerDraft,
+  MAX_OPTIONS,
+  buildQuestionAnswer,
+  createAnswerDraft,
+  createAnswerRow,
+  draftToLegacyAnswer,
+  isJudgeLeftover,
+  optionLetter,
+  parseAnswerDraft,
+} from '@/utils/questionAnswer'
+import AnswerRowsEditor from './AnswerRowsEditor.vue'
 
 const props = defineProps<{
   /** 母题ID */
@@ -184,21 +222,8 @@ const emit = defineEmits<{
   changed: [parentId: string]
 }>()
 
-/** 作答方式：与后端 questionAnswerMode 一致 */
-const ANSWER_MODES = [
-  { label: '综合母题', value: 0 },
-  { label: '单选', value: 1 },
-  { label: '多选', value: 2 },
-  { label: '填空', value: 3 },
-  { label: '判断', value: 4 },
-  { label: '解答', value: 5 },
-]
-
 /** 最大层级（0 母题 / 1 一级子题 / 2 二级子题） */
 const LEVEL_MAX = 2
-
-/** 新增子题时的默认作答方式：综合母题，不带选项，避免默认单选却无选项 */
-const ANSWER_MODE_COMPREHENSIVE = 0
 
 /** 子题编辑行 */
 interface SubQuestionRow {
@@ -207,11 +232,17 @@ interface SubQuestionRow {
   labelQuestionType?: number
   questionAnswerMode?: number
   questionScore?: number
+  /** 题内序号（docx questionOrder）；仅回传保留，避免保存时被清空 */
+  questionOrder?: number
+  /** 题目难度（与母题一致，独立填写，不继承母题） */
+  difficulty?: number
   questionStem: string
   answer: string
   analysis: string
   /** 选项内容（选择型/判断题使用），保存时序列化为 choice JSON 数组 */
   choiceOptions: string[]
+  /** 结构化答案草稿：按作答方式采集 */
+  answerDraft: AnswerDraft
   saving?: boolean
   /**
    * 作答方式下拉的重挂载标记。
@@ -233,25 +264,24 @@ const pendingSaveKeys = new Set<string>()
 /** 去抖间隔，与母题编辑面板保持一致 */
 const AUTO_SAVE_DELAY = 1000
 
-/** 选项字母：0->A, 1->B ... */
-const optionLetter = (idx: number): string => String.fromCharCode(65 + idx)
-
 /**
  * 子题题型类别：
- * - choice：选择型（字典 baseType=1，即单选/多选），显示可编辑选项
+ * - choice：选择型，显示可编辑选项
  * - judge：判断题，固定 对/错 选项，答案为单选
  * - none：其余题型无选项
- * 题型未选择时，回退用作答方式判断（1/2-单选多选，4-判断）
+ *
+ * 作答方式优先于字典：显式选了单选/多选/判断就必须按对应形态渲染，
+ * 否则「听力选择」这类字典 baseType 未标选择的题型会被判成 none —— 选项区不显示、
+ * 答案字母也无处生成。字典判定仅作答方式缺失时兜底。
  */
 const getRowKind = (row: SubQuestionRow): 'choice' | 'judge' | 'none' => {
+  if (row.questionAnswerMode === 4) return 'judge'
+  if (row.questionAnswerMode === 1 || row.questionAnswerMode === 2) return 'choice'
   const t = questionTypes.value.find((x) => x.typeCode === row.labelQuestionType)
   if (t) {
     if ((t.typeName || '').includes('判断')) return 'judge'
     if (t.baseType === 1) return 'choice'
-    return 'none'
   }
-  if (row.questionAnswerMode === 4) return 'judge'
-  if (row.questionAnswerMode === 1 || row.questionAnswerMode === 2) return 'choice'
   return 'none'
 }
 
@@ -271,8 +301,8 @@ const initChoiceOptions = (row: SubQuestionRow) => {
   const kind = getRowKind(row)
   if (kind === 'judge') {
     row.choiceOptions = ['对', '错']
-  } else if (kind === 'choice') {
-    if (row.choiceOptions.filter((o) => o.trim()).length < 2) {
+  } else   if (kind === 'choice') {
+    if (row.choiceOptions.filter((o) => o.trim()).length < minChoiceOptions(row.questionAnswerMode)) {
       row.choiceOptions = ['', '', '', '']
     }
   } else {
@@ -287,28 +317,47 @@ const initChoiceOptions = (row: SubQuestionRow) => {
  * 因此本行已有答案时先让用户确认再清空；用户取消则保持原作答方式不动。
  */
 const handleKindChange = async (row: SubQuestionRow, mode?: number) => {
-  const hasAnswer = !!row.answer && row.answer.trim() !== ''
-  if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
-    try {
-      await ElMessageBox.confirm(
-        '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案将被清空，是否继续？',
-        '提示',
-        { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
-      )
-    } catch {
-      // 用户取消：不改动作答方式；重挂载下拉以还原显示（el-select 内部已把文本改成新值）
-      row.answerModeSelectKey = (row.answerModeSelectKey ?? 0) + 1
-      return
-    }
-    row.answer = ''
-    ElMessage.success('已清空本题答案')
-  }
   if (mode !== undefined) {
+    const hasAnswer = isAnswerFilled(row)
+    if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
+      try {
+        await ElMessageBox.confirm(
+          '「综合母题」的答案应写在子题内，不能单独填写。切换后本题答案将被清空，是否继续？',
+          '提示',
+          { type: 'warning', confirmButtonText: '清空并切换', cancelButtonText: '取消' },
+        )
+      } catch {
+        // 用户取消：不改动作答方式；重挂载下拉以还原显示（el-select 内部已把文本改成新值）
+        row.answerModeSelectKey = (row.answerModeSelectKey ?? 0) + 1
+        return
+      }
+      ElMessage.success('已清空本题答案')
+    }
     row.questionAnswerMode = mode
+    // 各形态答案结构不同，切换后清空草稿，避免残留被带入新结构
+    row.answerDraft = createAnswerDraft()
+    ensureAnswerRows(row)
   }
+  row.answer = draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft)
   initChoiceOptions(row)
   triggerAutoSave(row, true)
 }
+
+/** 答案至少渲染一行，避免切到单选/多选/填空/解答时列表为空 */
+const ensureAnswerRows = (row: SubQuestionRow) => {
+  const mode = row.questionAnswerMode
+  const needRow =
+    mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI || mode === ANSWER_MODE_BLANK || mode === ANSWER_MODE_ANSWER
+  if (needRow && row.answerDraft.rows.length === 0) {
+    row.answerDraft.rows = [createAnswerRow()]
+  }
+}
+
+/** 子题答案是否已填写（按作答方式判定），供切换确认使用 */
+const isAnswerFilled = (row: SubQuestionRow): boolean =>
+  Object.values(row.answerDraft).some((val) =>
+    Array.isArray(val) ? val.some((item) => String(item).trim() !== '') : String(val ?? '').trim() !== '',
+  )
 
 /** 本面板渲染的子题层级 */
 const childLevel = computed(() => props.level + 1)
@@ -338,16 +387,25 @@ const toRow = (detail: QuestionDetailsVO): SubQuestionRow => {
     labelQuestionType: detail.labelQuestionType,
     questionAnswerMode: detail.questionAnswerMode,
     questionScore: detail.questionContent?.questionScore,
+    questionOrder: detail.questionContent?.questionOrder,
+    difficulty: detail.difficulty,
     questionStem: detail.questionContent?.questionStem || detail.question || '',
     answer: detail.answer || '',
     analysis: detail.analysis || '',
     choiceOptions: [],
+    answerDraft: createAnswerDraft(),
   }
-  // 兼容旧数据：判断题答案可能以 true/false 存储
-  if (row.answer === 'true') row.answer = '对'
-  if (row.answer === 'false') row.answer = '错'
+  // 答案草稿：优先结构化 questionAnswer，为空时按作答方式从旧 answer 兜底解析
+  row.answerDraft = parseAnswerDraft(row.questionAnswerMode, detail.questionAnswer, detail.answer)
+  ensureAnswerRows(row)
+  row.answer = draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft)
   row.choiceOptions = parseChoice(detail.choice)
-  if (getRowKind(row) === 'judge') row.choiceOptions = ['对', '错']
+  // 存量判断题固定选项（对/错）不是真实选项，切到选择型时剔除，避免凭空多出两项
+  if (getRowKind(row) !== 'judge' && isJudgeLeftover(row.choiceOptions)) {
+    row.choiceOptions = []
+  }
+  // 选择型子题即使尚无选项，也要给出默认选项行，否则答案字母无从生成
+  initChoiceOptions(row)
   return row
 }
 
@@ -411,18 +469,35 @@ const handleAdd = async () => {
 const buildSavePayload = (row: SubQuestionRow) => {
   const kind = getRowKind(row)
   const validOptions = row.choiceOptions.map((o) => o.trim()).filter((o) => o)
+  // 结构化选项：判断题固定 true/false，选择型取填写内容，其余为空
+  const optionList =
+    kind === 'judge'
+      ? [
+          { optionKey: 'true', optionVal: '' },
+          { optionKey: 'false', optionVal: '' },
+        ]
+      : kind === 'choice'
+        ? validOptions.map((val, index) => ({ optionKey: optionLetter(index), optionVal: val }))
+        : []
   return {
     labelQuestionType: row.labelQuestionType,
     questionAnswerMode: row.questionAnswerMode,
+    difficulty: row.difficulty,
     question: row.questionStem,
-    answer: row.answer,
+    // 扁平 answer 与结构化 questionAnswer 同源，保证两条口径一致
+    answer: draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft),
     analysis: row.analysis,
     parentId: props.questionId,
     level: childLevel.value,
     questionContent: {
       questionStem: row.questionStem,
+      // 分值 / 题内序号必须回传：后端 applyDocxFields 会无条件覆盖这两列，漏传即被清空
       questionScore: row.questionScore,
+      questionOrder: row.questionOrder,
+      questionOptionList: optionList,
+      questionOptionMatrix: optionList.length > 0 ? [optionList] : [],
     },
+    questionAnswer: buildQuestionAnswer(row.questionAnswerMode, row.answerDraft),
     // 选项：判断题固定 对/错，选择型取填写内容，其余题型清空
     choice:
       kind === 'judge'
@@ -610,14 +685,6 @@ defineExpose({
   display: flex;
   align-items: flex-start;
   gap: 8px;
-}
-
-.option-label {
-  flex-shrink: 0;
-  width: 20px;
-  line-height: 32px;
-  font-weight: 600;
-  text-align: center;
 }
 
 .option-item .el-button {

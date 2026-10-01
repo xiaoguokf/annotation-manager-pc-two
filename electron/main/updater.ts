@@ -4,6 +4,31 @@ import pkg from "electron-updater";
 const { autoUpdater } = pkg;
 let mainWindow: any = null;
 
+/** 运行期定时检查间隔：1 小时 */
+const CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
+/** 定时器句柄（退出时清理） */
+let checkTimer: NodeJS.Timeout | null = null;
+
+/** 是否已有一次检查在途，避免定时器与手动检查重叠 */
+let checking = false;
+
+/** 是否正在下载更新；下载期间不再触发检查 */
+let downloading = false;
+
+/**
+ * 已提示过「发现新版本」的版本号。
+ * 运行期定时检查会反复查到同一个新版本，这里做去重：同一版本每次运行只弹一次，
+ * 用户选了「稍后更新」也不会被每小时反复打扰；若期间又发布更高版本，仍会重新提示。
+ */
+let notifiedVersion = '';
+
+/**
+ * 已提示过「下载完成，是否安装」的版本号。
+ * 用户点了「下次安装」后，更新包仍在本地，若不去重，后续检查会反复弹安装框。
+ */
+let downloadReadyVersion = '';
+
 export function upgradeHandle(window: any, feedUrl: any) {
   const msg = {
     error: "检查更新出错 ...",
@@ -26,6 +51,8 @@ export function upgradeHandle(window: any, feedUrl: any) {
 
   //监听升级失败事件
   autoUpdater.on("error", function (message: any) {
+    // 下载中途失败不会触发 update-downloaded，需在此复位，否则定时检查会被永久跳过
+    downloading = false;
     sendUpdateMessage({
       cmd: "error",
       title: msg.error,
@@ -42,6 +69,12 @@ export function upgradeHandle(window: any, feedUrl: any) {
   });
   //监听发现可用更新事件
   autoUpdater.on("update-available", function (message: any) {
+    // 同一版本每次运行只提示一次：定时检查每小时都会查到，重复弹窗会打扰用户
+    const version = message?.version ?? '';
+    if (version && version === notifiedVersion) {
+      return;
+    }
+    notifiedVersion = version;
     sendUpdateMessage({
       cmd: "update-available",
       title: msg.updateAva,
@@ -62,6 +95,7 @@ export function upgradeHandle(window: any, feedUrl: any) {
 
   // 更新下载进度事件
   autoUpdater.on("download-progress", function (message: any) {
+    downloading = true;
     sendUpdateMessage({
       cmd: "download-progress",
       title: msg.downloadProgress,
@@ -69,7 +103,14 @@ export function upgradeHandle(window: any, feedUrl: any) {
     });
   });
   //监听下载完成事件
-  autoUpdater.on("update-downloaded", function () {
+  autoUpdater.on("update-downloaded", function (message: any) {
+    downloading = false;
+    // 同一版本只提示一次安装：用户选「下次安装」后，不要再反复弹安装框
+    const version = message?.version ?? notifiedVersion;
+    if (version && version === downloadReadyVersion) {
+      return;
+    }
+    downloadReadyVersion = version;
     sendUpdateMessage({
       cmd: "update-downloaded",
       title: msg.downloaded,
@@ -91,7 +132,39 @@ export function upgradeHandle(window: any, feedUrl: any) {
     autoUpdater.quitAndInstall();
   });
   ipcMain.handle("check-update-by-user", () => {
+    // 用户手动点「检查更新」：清掉去重标记，保证这次一定有反馈（弹窗或「已是最新」）
+    notifiedVersion = ''
+    downloadReadyVersion = ''
     return autoUpdater.checkForUpdates()
+  })
+
+  /**
+   * 运行期定时检查：应用启动后每 1 小时查一次。
+   *
+   * 原有实现只在启动时查一次，用户长时间不关软件就永远发现不了新版本；
+   * 这里补齐运行期检查。重复弹窗由 notifiedVersion 去重（见 update-available 处理）。
+   */
+  const runScheduledCheck = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (checking || downloading) return
+    checking = true
+    Promise.resolve(autoUpdater.checkForUpdates())
+      .catch(() => {
+        /* 离线等异常由 error 事件统一上报，这里静默即可 */
+      })
+      .finally(() => {
+        checking = false
+      })
+  }
+
+  if (checkTimer) {
+    clearInterval(checkTimer)
+  }
+  checkTimer = setInterval(runScheduledCheck, CHECK_INTERVAL_MS)
+  // 主进程退出前清理定时器
+  process.once('beforeExit', () => {
+    if (checkTimer) clearInterval(checkTimer)
+    checkTimer = null
   })
 
   // 获取远程 changelog.json
