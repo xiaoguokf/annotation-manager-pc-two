@@ -17,11 +17,17 @@ let checking = false;
 let downloading = false;
 
 /**
- * 已提示过的版本号。
+ * 已提示过「发现新版本」的版本号。
  * 运行期定时检查会反复查到同一个新版本，这里做去重：同一版本每次运行只弹一次，
  * 用户选了「稍后更新」也不会被每小时反复打扰；若期间又发布更高版本，仍会重新提示。
  */
 let notifiedVersion = '';
+
+/**
+ * 已提示过「下载完成，是否安装」的版本号。
+ * 用户点了「下次安装」后，更新包仍在本地，若不去重，后续检查会反复弹安装框。
+ */
+let downloadReadyVersion = '';
 
 export function upgradeHandle(window: any, feedUrl: any) {
   const msg = {
@@ -99,6 +105,12 @@ export function upgradeHandle(window: any, feedUrl: any) {
   //监听下载完成事件
   autoUpdater.on("update-downloaded", function (message: any) {
     downloading = false;
+    // 同一版本只提示一次安装：用户选「下次安装」后，不要再反复弹安装框
+    const version = message?.version ?? notifiedVersion;
+    if (version && version === downloadReadyVersion) {
+      return;
+    }
+    downloadReadyVersion = version;
     sendUpdateMessage({
       cmd: "update-downloaded",
       title: msg.downloaded,
@@ -120,6 +132,9 @@ export function upgradeHandle(window: any, feedUrl: any) {
     autoUpdater.quitAndInstall();
   });
   ipcMain.handle("check-update-by-user", () => {
+    // 用户手动点「检查更新」：清掉去重标记，保证这次一定有反馈（弹窗或「已是最新」）
+    notifiedVersion = ''
+    downloadReadyVersion = ''
     return autoUpdater.checkForUpdates()
   })
 

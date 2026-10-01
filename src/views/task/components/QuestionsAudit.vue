@@ -13,12 +13,13 @@
           可视化数据
           <div class="filter-section">
             <span class="filter-label">筛选:</span>
-            <el-select v-model="selectedTishiType" placeholder="全部题型" clearable size="small" style="width: 150px;"
-              @change="handleTishiFilterChange">
-              <el-option v-for="(label, key) in tishiMap" :key="key" :label="label" :value="key">
+            <!-- 作答方式筛选：选中某项后，按「作答方式 或 标签题型」匹配（标签题型名与其作答方式一致时也能筛到） -->
+            <el-select v-model="selectedAnswerMode" placeholder="全部作答方式" clearable size="small" style="width: 170px;"
+              @change="handleAnswerModeFilterChange">
+              <el-option v-for="mode in answerModeOptions" :key="mode.value" :label="mode.label" :value="mode.value">
                 <span class="tishi-option">
-                  <span>{{ label }}</span>
-                  <span class="tishi-count">({{ getTishiCount(key) }})</span>
+                  <span>{{ mode.label }}</span>
+                  <span class="tishi-count">({{ getAnswerModeCount(mode.value) }})</span>
                 </span>
               </el-option>
             </el-select>
@@ -41,7 +42,13 @@
             <div class="item-meta">
               <div class="meta-left">
                 <span class="question-index">第{{ index + 1 }}题</span>
-                <el-tag v-if="question.tishi" size="small" type="info">题型: {{ getTishiName(question.tishi) }}</el-tag>
+                <!-- 标签题型：docx 改造后题型存于 labelQuestionType（tishi 已废弃恒空） -->
+                <el-tag v-if="getLabelQuestionTypeName(question)" size="small" type="info">题型: {{
+                  getLabelQuestionTypeName(question) }}</el-tag>
+                <el-tag v-else-if="question.tishi" size="small" type="info">题型: {{ getTishiName(question.tishi) }}</el-tag>
+                <!-- 作答方式：决定答案结构，审核时必看 -->
+                <el-tag v-if="question.questionAnswerMode != null" size="small" type="primary">作答方式: {{
+                  getAnswerModeName(question.questionAnswerMode) }}</el-tag>
                 <el-tag v-if="question.tilei" size="small" type="warning">题类: {{ getTileiName(question.tilei)
                 }}</el-tag>
                 <el-tag v-if="question.difficulty !== undefined" size="small" type="success">难度: {{
@@ -402,6 +409,8 @@ import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotat
 import { getAnnotationListByQuestionApi, type AnnotationVO as AnnotationFullVO } from '@/api/gen/annotationController'
 import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
 import AnnotationViewer from './AnnotationViewer.vue'
+import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
+import { answerModeName, answerModeOptions } from '@/constants/answerMode'
 import 'katex/dist/katex.min.css'
 
 // 目录树节点接口
@@ -412,6 +421,19 @@ interface CatalogueTreeNode {
   children?: CatalogueTreeNode[]
   [key: string]: any
 }
+
+// 学科题型字典：新数据题型存于 labelQuestionType，需按字典翻译成名称
+const { ensureLoaded: ensureTypeDictLoaded, getTypeNameByCode } = useQuestionTypeDict()
+
+/** 标签题型名称：优先 labelQuestionType（docx 改造后），回退旧 tishi */
+const getLabelQuestionTypeName = (question: any): string => {
+  const code = question?.labelQuestionType
+  if (code != null) return getTypeNameByCode(code) || ''
+  return ''
+}
+
+/** 作答方式中文名（与 docx questionAnswerMode 对齐） */
+const getAnswerModeName = (mode?: number | null) => answerModeName(mode)
 
 // 题型映射
 const tishiMap: Record<string, string> = {
@@ -591,8 +613,8 @@ const catalogueWithQuestionsTree = computed(() => {
 // 选中的目录ID
 const selectedCatalogueId = ref<string | undefined>()
 
-// 选中的题型
-const selectedTishiType = ref<string | undefined>()
+// 选中的作答方式（docx questionAnswerMode）
+const selectedAnswerMode = ref<number | undefined>()
 
 // 数据流: allQuestions -> filteredQuestions -> sortedQuestions -> questions
 
@@ -611,9 +633,14 @@ const filteredQuestions = computed(() => {
     )
   }
 
-  // 再按题型筛选
-  if (selectedTishiType.value) {
-    result = result.filter(question => question.tishi === selectedTishiType.value)
+  // 再按作答方式筛选：命中「作答方式」本身，或「标签题型名」与该作答方式同名（如「多选题」↔多选）
+  if (selectedAnswerMode.value != null) {
+    const label = answerModeName(selectedAnswerMode.value)
+    result = result.filter((question) => {
+      if (question.questionAnswerMode === selectedAnswerMode.value) return true
+      const typeName = getLabelQuestionTypeName(question)
+      return !!typeName && !!label && typeName.includes(label)
+    })
   }
 
   return result
@@ -651,13 +678,14 @@ watch(() => props.catalogues, () => {
   }
 }, { deep: true })
 
-// 获取各题型的题目数量（基于筛选后的所有题目）
-const getTishiCount = (tishiType: string) => {
-  // 使用 filteredQuestions 获取筛选后的题目
-  const result = filteredQuestions.value
-
-  // 返回指定题型的数量
-  return result.filter(q => q.tishi === tishiType).length
+// 获取各作答方式的题目数量（基于当前目录筛选后的题目；与筛选口径一致）
+const getAnswerModeCount = (mode: number) => {
+  const label = answerModeName(mode)
+  return filteredQuestions.value.filter((q) => {
+    if (q.questionAnswerMode === mode) return true
+    const typeName = getLabelQuestionTypeName(q)
+    return !!typeName && !!label && typeName.includes(label)
+  }).length
 }
 
 // 数据
@@ -867,9 +895,8 @@ const handleCatalogueFilterChange = (value: string | string[] | undefined) => {
 }
 
 // 处理题型筛选变化
-const handleTishiFilterChange = (value: string | undefined) => {
-  selectedTishiType.value = value
-  console.log('题型筛选变化, selectedTishiType:', selectedTishiType.value)
+const handleAnswerModeFilterChange = (value: number | undefined) => {
+  selectedAnswerMode.value = value ?? undefined
   // 筛选变化后重新加载
   handleFilterChange()
   // 筛选变化后滚动到顶部
@@ -1469,6 +1496,8 @@ onMounted(() => {
   })
   // 加载保存的最小化状态
   loadProgressMinimizeState()
+  // 学科题型字典：用于把 labelQuestionType 翻译成名称
+  ensureTypeDictLoaded()
   fetchQuestions()
   fetchPageList()
   initLazyImageLoading()
