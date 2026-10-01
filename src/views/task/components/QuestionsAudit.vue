@@ -43,9 +43,9 @@
               <div class="meta-left">
                 <span class="question-index">第{{ index + 1 }}题</span>
                 <!-- 标签题型：docx 改造后题型存于 labelQuestionType（tishi 已废弃恒空） -->
-                <el-tag v-if="getLabelQuestionTypeName(question)" size="small" type="info">题型: {{
+                <el-tag v-if="getLabelQuestionTypeName(question)" size="small" type="info">标签题型: {{
                   getLabelQuestionTypeName(question) }}</el-tag>
-                <el-tag v-else-if="question.tishi" size="small" type="info">题型: {{ getTishiName(question.tishi) }}</el-tag>
+                <el-tag v-else-if="question.tishi" size="small" type="info">标签题型: {{ getTishiName(question.tishi) }}</el-tag>
                 <!-- 作答方式：决定答案结构，审核时必看 -->
                 <el-tag v-if="question.questionAnswerMode != null" size="small" type="primary">作答方式: {{
                   getAnswerModeName(question.questionAnswerMode) }}</el-tag>
