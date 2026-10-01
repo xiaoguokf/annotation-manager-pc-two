@@ -1220,6 +1220,10 @@ const handleSmartAssemble = async () => {
     }
     if (answerContent) {
       questionForm.value.answer = answerContent
+      // 答案以结构化草稿（answerDraft）为准：提交与回显都读它，这里必须同步写回，
+      // 否则智能封装的答案不会生效（且会被 syncLegacyAnswer 覆盖掉）
+      answerDraft.value = parseLegacyAnswer(questionForm.value.questionAnswerMode, answerContent)
+      ensureAnswerRows()
     }
 
     // 检查解析失败的字段并提示

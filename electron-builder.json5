@@ -4,9 +4,11 @@
   appId: "ltd.sshine.at2",
   productName: "annotation-admin-pc-two",
   copyright: "Copyright © 2026-present, annotation-admin",
+  // 更新源：与 .env 的 VITE_APP_DOWNLOAD 保持一致（运行时 setFeedURL 也用该地址，
+  // 这里同步是为了避免取消 setFeedURL 时回退到过期域名）
   publish: {
     provider: "generic",
-    url: "http://8.134.38.154:4567/"
+    url: "https://bd.sshine.ltd/"
   },
   directories: {
     buildResources: "dist",
