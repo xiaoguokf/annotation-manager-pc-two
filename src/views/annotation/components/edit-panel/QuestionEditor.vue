@@ -1506,16 +1506,16 @@ const loadQuestionDetails = async (questionId: string) => {
       // 使用 nextTick 确保 questionForm 更新后再初始化选项
       await nextTick()
 
+      // 加载标注列表：必须对所有题型执行（判断题原先前置 return 会跳过，
+      // 导致智能封装读到的是空/上一题的标注 → 题干、答案解析都封不上）
+      await loadAnnotations(questionId)
+
       // 判断题：选项固定 对/错
       if (questionKind.value === 'judge') {
         choiceOptions.value = [...JUDGE_OPTIONS]
         questionForm.value.choice = JSON.stringify(JUDGE_OPTIONS)
         updateFieldError('answer')
-        return
-      }
-
-      // 初始化选项数组（仅对选择题类型）
-      if (isChoiceType(response.data.data.labelQuestionType, tishiValue) && choiceValue) {
+      } else if (isChoiceType(response.data.data.labelQuestionType, tishiValue) && choiceValue) {
         let choices: string[] = []
         try {
           // 尝试解析为 JSON 数组
@@ -1538,9 +1538,6 @@ const loadQuestionDetails = async (questionId: string) => {
       } else {
         choiceOptions.value = ['', '', '', '']
       }
-
-      // 加载标注列表
-      await loadAnnotations(questionId)
 
       // 检查是否需要自动智能封装
       if (parseSettingsStore.getAutoParse() && !response.data.data.page) {
