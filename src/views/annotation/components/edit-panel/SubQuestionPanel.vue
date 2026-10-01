@@ -68,7 +68,6 @@
         <el-form-item v-if="getRowKind(item) === 'choice'" label="选项">
           <div class="options-container">
             <div v-for="(_, idx) in item.choiceOptions" :key="idx" class="option-item">
-              <span class="option-label">{{ optionLetter(idx) }}</span>
               <el-input
                 v-model="item.choiceOptions[idx]"
                 type="textarea"
@@ -112,32 +111,34 @@
             <el-radio value="true">对</el-radio>
             <el-radio value="false">错</el-radio>
           </el-radio-group>
-          <!-- 单选：手打一个选项字母 -->
-          <el-input
-            v-else-if="item.questionAnswerMode === ANSWER_MODE_SINGLE"
-            :model-value="item.answerDraft.single"
-            placeholder="请输入正确选项字母，如 A"
-            style="width: 180px"
-            @update:model-value="(val: string) => setSingleAnswer(item, val)"
+          <!-- 单选 / 多选：一行一个正确选项，每行可再加备选答案 -->
+          <AnswerRowsEditor
+            v-else-if="item.questionAnswerMode === ANSWER_MODE_SINGLE || item.questionAnswerMode === ANSWER_MODE_MULTI"
+            v-model="item.answerDraft.rows"
+            variant="choice"
+            add-row-label="添加选项"
             @blur="triggerAutoSave(item, true)"
           />
-          <!-- 多选 / 不定项：手打多个字母 -->
-          <el-input
-            v-else-if="item.questionAnswerMode === ANSWER_MODE_MULTI"
-            :model-value="item.answerDraft.multi.join('')"
-            placeholder="请输入正确选项字母，如 AB"
-            style="width: 180px"
-            @update:model-value="(val: string) => setMultiAnswer(item, val)"
-            @blur="triggerAutoSave(item, true)"
-          />
-          <!-- 填空：多空编辑器 -->
-          <AnswerBlankEditor
+          <!-- 填空：一行一空，每空可再加备选答案 -->
+          <AnswerRowsEditor
             v-else-if="item.questionAnswerMode === ANSWER_MODE_BLANK"
-            v-model="item.answerDraft.blanks"
+            v-model="item.answerDraft.rows"
+            variant="text"
+            add-row-label="添加空"
+            text-placeholder="请输入本空答案"
             :stem="item.questionStem"
+            @blur="triggerAutoSave(item, true)"
+            @input="triggerAutoSave(item)"
           />
-          <el-input v-else v-model="item.answerDraft.text" type="textarea" :rows="2" placeholder="请输入答案"
-            @input="triggerAutoSave(item)" />
+          <!-- 解答：单行答案 + 备选答案 -->
+          <AnswerRowsEditor
+            v-else
+            v-model="item.answerDraft.rows"
+            variant="text"
+            text-placeholder="请输入答案"
+            @blur="triggerAutoSave(item, true)"
+            @input="triggerAutoSave(item)"
+          />
         </el-form-item>
         <el-form-item label="解析">
           <el-input
@@ -179,6 +180,7 @@ import {
 } from '@/api/gen/questionController'
 import { getQuestionTypeListApi } from '@/api/gen/questionType'
 import {
+  ANSWER_MODE_ANSWER,
   ANSWER_MODE_BLANK,
   ANSWER_MODE_COMPREHENSIVE,
   ANSWER_MODE_JUDGE,
@@ -192,13 +194,13 @@ import {
   MAX_OPTIONS,
   buildQuestionAnswer,
   createAnswerDraft,
+  createAnswerRow,
   draftToLegacyAnswer,
   isJudgeLeftover,
-  normalizeChoiceKeys,
   optionLetter,
   parseAnswerDraft,
 } from '@/utils/questionAnswer'
-import AnswerBlankEditor from './AnswerBlankEditor.vue'
+import AnswerRowsEditor from './AnswerRowsEditor.vue'
 
 const props = defineProps<{
   /** 母题ID */
@@ -334,20 +336,21 @@ const handleKindChange = async (row: SubQuestionRow, mode?: number) => {
     row.questionAnswerMode = mode
     // 各形态答案结构不同，切换后清空草稿，避免残留被带入新结构
     row.answerDraft = createAnswerDraft()
+    ensureAnswerRows(row)
   }
   row.answer = draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft)
   initChoiceOptions(row)
   triggerAutoSave(row, true)
 }
 
-/** 单选答案写入：只保留一个选项字母 */
-const setSingleAnswer = (row: SubQuestionRow, value: string) => {
-  row.answerDraft.single = normalizeChoiceKeys(value)[0] ?? ''
-}
-
-/** 多选答案写入：字母序列 → 数组 */
-const setMultiAnswer = (row: SubQuestionRow, value: string) => {
-  row.answerDraft.multi = normalizeChoiceKeys(value)
+/** 答案至少渲染一行，避免切到单选/多选/填空/解答时列表为空 */
+const ensureAnswerRows = (row: SubQuestionRow) => {
+  const mode = row.questionAnswerMode
+  const needRow =
+    mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI || mode === ANSWER_MODE_BLANK || mode === ANSWER_MODE_ANSWER
+  if (needRow && row.answerDraft.rows.length === 0) {
+    row.answerDraft.rows = [createAnswerRow()]
+  }
 }
 
 /** 子题答案是否已填写（按作答方式判定），供切换确认使用 */
@@ -394,6 +397,7 @@ const toRow = (detail: QuestionDetailsVO): SubQuestionRow => {
   }
   // 答案草稿：优先结构化 questionAnswer，为空时按作答方式从旧 answer 兜底解析
   row.answerDraft = parseAnswerDraft(row.questionAnswerMode, detail.questionAnswer, detail.answer)
+  ensureAnswerRows(row)
   row.answer = draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft)
   row.choiceOptions = parseChoice(detail.choice)
   // 存量判断题固定选项（对/错）不是真实选项，切到选择型时剔除，避免凭空多出两项
@@ -681,14 +685,6 @@ defineExpose({
   display: flex;
   align-items: flex-start;
   gap: 8px;
-}
-
-.option-label {
-  flex-shrink: 0;
-  width: 20px;
-  line-height: 32px;
-  font-weight: 600;
-  text-align: center;
 }
 
 .option-item .el-button {

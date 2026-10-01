@@ -69,40 +69,71 @@ export const isJudgeLeftover = (options: string[]): boolean =>
   options[0]?.trim() === JUDGE_OPTIONS[0] &&
   options[1]?.trim() === JUDGE_OPTIONS[1]
 
-/** 作答方式对应的答案草稿（表单内部状态） */
+/** 一条答案：选择题填 optionKey（字母），填空/解答填 optionVal（内容） */
+export interface AnswerCell {
+  optionKey: string
+  optionVal: string
+}
+
+/**
+ * 一行答案 = 主答案 + 备选答案。
+ *
+ * 对应 docx：主答案与备选答案同处一条 {@code answerOptionList} 元素，
+ * 主答案在 optionKey/optionVal，备选答案（多答案兼容）在 extendOptionList。
+ */
+export interface AnswerRow {
+  primary: AnswerCell
+  /** 备选答案（extendOptionList 中除主答案外的部分） */
+  extends: AnswerCell[]
+}
+
+/**
+ * 作答方式对应的答案草稿（表单内部状态）。
+ *
+ * 答案区与题目选项区同构：都是「可增删的列表」——
+ * 选择题每行一个正确选项字母（单选 1 行 / 多选 N 行），填空每行一空，解答一行；
+ * 每行还可再挂若干备选答案（多答案兼容）。
+ */
 export interface AnswerDraft {
-  /** 单选：正确选项字母 */
-  single: string
-  /** 多选 / 不定项：正确选项字母集合 */
-  multi: string[]
+  /** 单选/多选/填空/解答：多行答案；单选仅取第一行 */
+  rows: AnswerRow[]
   /** 判断：'true' | 'false' */
   judge: string
-  /** 填空：各空答案 */
-  blanks: string[]
-  /** 解答 / 未指定：原文 */
-  text: string
 }
+
+/** 空答案行 */
+export const createAnswerRow = (): AnswerRow => ({
+  primary: { optionKey: '', optionVal: '' },
+  extends: [],
+})
 
 /** 空草稿 */
 export const createAnswerDraft = (): AnswerDraft => ({
-  single: '',
-  multi: [],
+  rows: [],
   judge: '',
-  blanks: [],
-  text: '',
 })
 
 /**
- * 构造答案项。
+ * 答案行 → 结构化答案项。
  *
- * docx 约定 extendOptionList 用于「多答案兼容」，且需包含主答案本身
+ * docx 约定 extendOptionList 用于「多答案兼容」，且**第一项即主答案本身**
  * （见 example-output.json：{"optionKey":"C","optionVal":"","extendOptionList":[{"optionKey":"C","optionVal":""}]}），
- * 备选答案可在其基础上追加。
+ * 其后挂备选答案。
  */
-const answerItem = (optionKey: string, optionVal: string): QuestionAnswerOptionVO => ({
-  optionKey,
-  optionVal,
-  extendOptionList: [{ optionKey, optionVal }],
+const answerRowToItem = (row: AnswerRow): QuestionAnswerOptionVO => {
+  const { optionKey, optionVal } = row.primary
+  const extendOptionList = [
+    { optionKey, optionVal },
+    ...row.extends.map((cell) => ({ optionKey: cell.optionKey, optionVal: cell.optionVal })),
+  ]
+  return { optionKey, optionVal, extendOptionList }
+}
+
+/** 判断题答案项（无备选） */
+const judgeItem = (key: string): QuestionAnswerOptionVO => ({
+  optionKey: key,
+  optionVal: '',
+  extendOptionList: [{ optionKey: key, optionVal: '' }],
 })
 
 /** 选择型 / 解答型统一形态：矩阵外层恒 1 层 */
@@ -114,21 +145,38 @@ const wrapSingleRow = (list: QuestionAnswerOptionVO[]): QuestionAnswerVO =>
  * @param mode 作答方式
  */
 export const buildQuestionAnswer = (mode: number | undefined, draft: AnswerDraft): QuestionAnswerVO => {
+  // 选择题各行：字母统一大写、去空、行内去重
+  const choiceRows = draft.rows.filter((row) => row.primary.optionKey.trim())
+  const seen = new Set<string>()
+  const dedupedChoiceRows = choiceRows.filter((row) => {
+    const key = row.primary.optionKey.trim().toUpperCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    row.primary.optionKey = key
+    return true
+  })
   switch (mode) {
     case ANSWER_MODE_SINGLE:
-      return draft.single ? wrapSingleRow([answerItem(draft.single, '')]) : { answerOptionList: [], answerOptionMatrix: [] }
-    case ANSWER_MODE_MULTI: {
-      const list = draft.multi.filter((key) => key).map((key) => answerItem(key, ''))
-      return wrapSingleRow(list)
-    }
+      // 单选：只取第一行
+      return dedupedChoiceRows.length
+        ? wrapSingleRow([answerRowToItem(dedupedChoiceRows[0]!)])
+        : { answerOptionList: [], answerOptionMatrix: [] }
+    case ANSWER_MODE_MULTI:
+      return dedupedChoiceRows.length
+        ? wrapSingleRow(dedupedChoiceRows.map(answerRowToItem))
+        : { answerOptionList: [], answerOptionMatrix: [] }
     case ANSWER_MODE_JUDGE:
-      return draft.judge ? wrapSingleRow([answerItem(draft.judge, '')]) : { answerOptionList: [], answerOptionMatrix: [] }
+      return draft.judge ? wrapSingleRow([judgeItem(draft.judge)]) : { answerOptionList: [], answerOptionMatrix: [] }
     case ANSWER_MODE_BLANK: {
-      const list = draft.blanks.map((val) => answerItem('', val))
+      const list = draft.rows.map(answerRowToItem)
       return { answerOptionList: list, answerOptionMatrix: list.map((item) => [item]) }
     }
-    case ANSWER_MODE_ANSWER:
-      return draft.text ? wrapSingleRow([answerItem('', draft.text)]) : { answerOptionList: [], answerOptionMatrix: [] }
+    case ANSWER_MODE_ANSWER: {
+      const first = draft.rows[0]
+      return first && (first.primary.optionVal.trim() || first.extends.length)
+        ? wrapSingleRow([answerRowToItem(first)])
+        : { answerOptionList: [], answerOptionMatrix: [] }
+    }
     default:
       return { answerOptionList: [], answerOptionMatrix: [] }
   }
@@ -181,25 +229,45 @@ export const parseLegacyAnswer = (mode: number | undefined, legacyAnswer?: strin
   if (!value) return draft
   switch (mode) {
     case ANSWER_MODE_SINGLE:
-      draft.single = splitChoiceKeys(value)[0] ?? ''
+      draft.rows = splitChoiceKeys(value).slice(0, 1).map((key) => rowOfKey(key))
       break
     case ANSWER_MODE_MULTI:
-      draft.multi = splitChoiceKeys(value)
+      draft.rows = splitChoiceKeys(value).map((key) => rowOfKey(key))
       break
     case ANSWER_MODE_JUDGE:
       draft.judge = toJudgeKey(value)
       break
     case ANSWER_MODE_BLANK:
-      draft.blanks = splitBlankAnswers(value)
+      draft.rows = splitBlankAnswers(value).map((val) => rowOfVal(val))
       break
     case ANSWER_MODE_ANSWER:
-      draft.text = value
+      draft.rows = [rowOfVal(value)]
       break
     default:
-      draft.text = value
+      draft.rows = [rowOfVal(value)]
   }
   return draft
 }
+
+/** 选择题答案行 */
+const rowOfKey = (optionKey: string): AnswerRow => ({
+  primary: { optionKey, optionVal: '' },
+  extends: [],
+})
+
+/** 填空/解答答案行 */
+const rowOfVal = (optionVal: string): AnswerRow => ({
+  primary: { optionKey: '', optionVal },
+  extends: [],
+})
+
+/** 结构化答案项 → 答案行（extendOptionList 首项为主答案，其余为备选） */
+const itemToRow = (item: QuestionAnswerOptionVO): AnswerRow => ({
+  primary: { optionKey: (item.optionKey ?? '').trim(), optionVal: item.optionVal ?? '' },
+  extends: (item.extendOptionList ?? [])
+    .slice(1)
+    .map((cell) => ({ optionKey: (cell.optionKey ?? '').trim(), optionVal: cell.optionVal ?? '' })),
+})
 
 /** 判断题答案项的键：优先取 optionKey，缺失时从 optionVal 反推 */
 const judgeKeyOfItem = (item: QuestionAnswerOptionVO): string => {
@@ -225,19 +293,19 @@ export const parseAnswerDraft = (
   const first = list[0]
   switch (mode) {
     case ANSWER_MODE_SINGLE:
-      draft.single = (first?.optionKey ?? '').trim()
+      draft.rows = first ? [itemToRow(first)] : []
       break
     case ANSWER_MODE_MULTI:
-      draft.multi = list.map((item) => (item.optionKey ?? '').trim()).filter((key) => key)
+      draft.rows = list.map(itemToRow)
       break
     case ANSWER_MODE_JUDGE:
       draft.judge = first ? judgeKeyOfItem(first) : ''
       break
     case ANSWER_MODE_BLANK:
-      draft.blanks = list.map((item) => item.optionVal ?? '')
+      draft.rows = list.map(itemToRow)
       break
     default:
-      draft.text = list.map((item) => item.optionVal ?? '').join('\n')
+      draft.rows = [itemToRow({ optionKey: '', optionVal: list.map((item) => item.optionVal ?? '').join('\n') })]
   }
   return draft
 }
@@ -246,17 +314,17 @@ export const parseAnswerDraft = (
 export const draftToLegacyAnswer = (mode: number | undefined, draft: AnswerDraft): string => {
   switch (mode) {
     case ANSWER_MODE_SINGLE:
-      return draft.single
+      return draft.rows[0]?.primary.optionKey ?? ''
     case ANSWER_MODE_MULTI:
-      return draft.multi.join('')
+      return draft.rows.map((row) => row.primary.optionKey).join('')
     case ANSWER_MODE_JUDGE:
       return draft.judge
     case ANSWER_MODE_BLANK:
-      return draft.blanks.join('\n')
+      return draft.rows.map((row) => row.primary.optionVal).join('\n')
     case ANSWER_MODE_ANSWER:
-      return draft.text
+      return draft.rows[0]?.primary.optionVal ?? ''
     default:
-      return draft.text
+      return draft.rows[0]?.primary.optionVal ?? ''
   }
 }
 
@@ -268,7 +336,7 @@ export const draftToDisplay = (mode: number | undefined, draft: AnswerDraft): st
     return ''
   }
   if (mode === ANSWER_MODE_BLANK) {
-    return draft.blanks.filter((val) => val).join(' ／ ')
+    return draft.rows.map((row) => row.primary.optionVal).filter(Boolean).join(' ／ ')
   }
   return draftToLegacyAnswer(mode, draft)
 }
@@ -277,15 +345,14 @@ export const draftToDisplay = (mode: number | undefined, draft: AnswerDraft): st
 export const isAnswerDraftFilled = (mode: number | undefined, draft: AnswerDraft): boolean => {
   switch (mode) {
     case ANSWER_MODE_SINGLE:
-      return draft.single.trim() !== ''
     case ANSWER_MODE_MULTI:
-      return draft.multi.some((key) => key)
+      return draft.rows.some((row) => row.primary.optionKey.trim() !== '')
     case ANSWER_MODE_JUDGE:
       return draft.judge === JUDGE_KEY_TRUE || draft.judge === JUDGE_KEY_FALSE
     case ANSWER_MODE_BLANK:
-      return draft.blanks.some((val) => val.trim() !== '')
+      return draft.rows.some((row) => row.primary.optionVal.trim() !== '')
     case ANSWER_MODE_ANSWER:
-      return draft.text.trim() !== ''
+      return (draft.rows[0]?.primary.optionVal ?? '').trim() !== ''
     default:
       return draftToLegacyAnswer(mode, draft).trim() !== ''
   }

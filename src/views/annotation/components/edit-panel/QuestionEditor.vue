@@ -230,37 +230,31 @@
             <el-radio value="true">对</el-radio>
             <el-radio value="false">错</el-radio>
           </el-radio-group>
-          <!-- 单选：手打一个选项字母 -->
-          <el-input
-            v-else-if="questionForm.questionAnswerMode === ANSWER_MODE_SINGLE"
-            v-model="singleAnswerInput"
-            placeholder="请输入正确选项字母，如 A"
-            style="width: 180px"
+          <!-- 单选 / 多选：一行一个正确选项（answerOptionList），每行可再加备选答案（extendOptionList） -->
+          <AnswerRowsEditor
+            v-else-if="questionForm.questionAnswerMode === ANSWER_MODE_SINGLE || questionForm.questionAnswerMode === ANSWER_MODE_MULTI"
+            v-model="answerDraft.rows"
+            variant="choice"
+            add-row-label="添加选项"
             @blur="handleAnswerBlur"
-            @input="() => triggerAutoSave()"
           />
-          <!-- 多选 / 不定项：手打多个字母，提交时拆成 N 条独立对象 -->
-          <el-input
-            v-else-if="questionForm.questionAnswerMode === ANSWER_MODE_MULTI"
-            v-model="multiAnswerInput"
-            placeholder="请输入正确选项字母，如 AB"
-            style="width: 180px"
-            @blur="handleAnswerBlur"
-            @input="() => triggerAutoSave()"
-          />
-          <!-- 填空：多空编辑器，一空一条 -->
-          <AnswerBlankEditor
+          <!-- 填空：一行一空，每空可再加备选答案 -->
+          <AnswerRowsEditor
             v-else-if="questionForm.questionAnswerMode === ANSWER_MODE_BLANK"
-            v-model="answerDraft.blanks"
+            v-model="answerDraft.rows"
+            variant="text"
+            add-row-label="添加空"
+            text-placeholder="请输入本空答案"
             :stem="questionForm.question"
+            @blur="handleAnswerBlur"
+            @input="() => triggerAutoSave()"
           />
-          <!-- 解答 / 未指定：原文 -->
-          <el-input
+          <!-- 解答：单行答案 + 备选答案 -->
+          <AnswerRowsEditor
             v-else
-            v-model="answerDraft.text"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入答案，支持 Markdown 和 LaTeX 公式"
+            v-model="answerDraft.rows"
+            variant="text"
+            text-placeholder="请输入答案，支持 Markdown 和 LaTeX 公式"
             @blur="handleAnswerBlur"
             @input="() => triggerAutoSave()"
           />
@@ -436,6 +430,7 @@ import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
 import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
 import {
+  ANSWER_MODE_ANSWER,
   ANSWER_MODE_BLANK,
   ANSWER_MODE_COMPREHENSIVE,
   ANSWER_MODE_JUDGE,
@@ -450,17 +445,17 @@ import {
   MAX_OPTIONS,
   buildQuestionAnswer,
   createAnswerDraft,
+  createAnswerRow,
   draftToDisplay,
   draftToLegacyAnswer,
   isAnswerDraftFilled,
   isJudgeLeftover,
-  normalizeChoiceKeys,
   optionLetter,
   parseAnswerDraft,
   parseLegacyAnswer,
 } from '@/utils/questionAnswer'
 import SubQuestionPanel from './SubQuestionPanel.vue'
-import AnswerBlankEditor from './AnswerBlankEditor.vue'
+import AnswerRowsEditor from './AnswerRowsEditor.vue'
 
 const configStore = useConfigStore()
 const parseSettingsStore = useParseSettingsStore()
@@ -585,21 +580,15 @@ const questionForm = ref({
 /** 结构化答案草稿：按作答方式采集，提交时转为 questionAnswer */
 const answerDraft = ref<AnswerDraft>(createAnswerDraft())
 
-/** 单选答案输入框：只保留一个选项字母 */
-const singleAnswerInput = computed({
-  get: () => answerDraft.value.single,
-  set: (value: string) => {
-    answerDraft.value.single = normalizeChoiceKeys(value)[0] ?? ''
-  },
-})
-
-/** 多选答案输入框：字母序列（如 "ABD"）与数组互转 */
-const multiAnswerInput = computed({
-  get: () => answerDraft.value.multi.join(''),
-  set: (value: string) => {
-    answerDraft.value.multi = normalizeChoiceKeys(value)
-  },
-})
+/** 答案至少渲染一行，避免切到单选/多选/填空/解答时列表为空 */
+const ensureAnswerRows = () => {
+  const mode = questionForm.value.questionAnswerMode
+  const needRow =
+    mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI || mode === ANSWER_MODE_BLANK || mode === ANSWER_MODE_ANSWER
+  if (needRow && answerDraft.value.rows.length === 0) {
+    answerDraft.value.rows = [createAnswerRow()]
+  }
+}
 
 /** 草稿 → 旧扁平 answer，保证 answer 列与 questionAnswer 口径一致（判断题写 "true"/"false"） */
 const syncLegacyAnswer = () => {
@@ -919,6 +908,7 @@ const handleAnswerModeChange = async (mode: number | undefined) => {
   questionForm.value.questionAnswerMode = mode
   // 各形态答案结构不同，切换后清空草稿，避免残留被带入新结构
   resetAnswerDraftsForMode()
+  ensureAnswerRows()
   formErrors.value.answer = ''
   updateFieldError('answerMode')
   if (mode === ANSWER_MODE_COMPREHENSIVE && hasAnswer) {
@@ -990,8 +980,10 @@ const validateField = (fieldName: FormField): string => {
     // 单选/多选答案必须落在已列出的选项范围内（字母数 = 选项行数）
     if (mode === ANSWER_MODE_SINGLE || mode === ANSWER_MODE_MULTI) {
       const limit = choiceOptions.value.length
-      const keys = mode === ANSWER_MODE_SINGLE ? [answerDraft.value.single] : answerDraft.value.multi
-      const overflow = keys.filter(Boolean).some((key) => key.charCodeAt(0) - 65 >= limit)
+      const keys = (mode === ANSWER_MODE_SINGLE ? answerDraft.value.rows.slice(0, 1) : answerDraft.value.rows).map(
+        (row) => row.primary.optionKey,
+      )
+      const overflow = keys.filter(Boolean).some((key) => key.trim() && key.trim().toUpperCase().charCodeAt(0) - 65 >= limit)
       if (overflow) {
         return `答案选项超出范围（本题共 ${limit} 个选项）`
       }
@@ -1504,6 +1496,7 @@ const loadQuestionDetails = async (questionId: string) => {
         response.data.data.questionAnswer,
         response.data.data.answer,
       )
+      ensureAnswerRows()
       syncLegacyAnswer()
 
       // 使用 nextTick 确保 questionForm 更新后再初始化选项
@@ -1664,6 +1657,13 @@ defineExpose({
   margin-bottom: 12px;
 }
 
+/* 校验错误默认绝对定位，会压住下方控件（选项「添加选项」按钮、答案输入框）。
+   改为文档流内显示，出现错误时把后续内容向下推，避免遮挡与重叠。 */
+.question-editor .el-form-item__error {
+  position: static;
+  margin-top: 4px;
+}
+
 .question-editor .el-form-item:last-child {
   margin-bottom: 0;
 }
@@ -1680,13 +1680,6 @@ defineExpose({
   display: flex;
   align-items: flex-start;
   gap: 8px;
-}
-
-.option-label {
-  color: #6b7280;
-  font-weight: 500;
-  min-width: 24px;
-  font-size: 13px;
 }
 
 .option-input-wrapper {
