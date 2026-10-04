@@ -32,8 +32,8 @@ export interface QuestionAnswerOptionVO {
   optionKey?: string
   /* 答案内容 */
   optionVal?: string
-  /* 备选答案（多答案兼容） */
-  extendOptionList?: QuestionOptionVO[]
+  /* 备选答案（多答案兼容）：无备选时为 null */
+  extendOptionList?: QuestionOptionVO[] | null
 }
 
 export interface QuestionAnswerVO {

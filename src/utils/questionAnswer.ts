@@ -116,17 +116,19 @@ export const createAnswerDraft = (): AnswerDraft => ({
 /**
  * 答案行 → 结构化答案项。
  *
- * extendOptionList 用于「多答案兼容」，**仅存放备选答案**（主答案只在 optionKey/optionVal），
- * 无备选即为空数组 —— 口径以两份真实交付核验文件为准（英语 729/729、生物 444/444 条均为 []）。
- * 权威样例 example-output.json 把主答案也放进 [0]，解析侧已做兼容（见 itemToRow）。
+ * extendOptionList 用于「多答案兼容」：**有备选答案时，首项为主答案**（与 optionKey/optionVal 相同），
+ * 其余为备选答案；**无备选时为 null**（此时主答案只在 optionKey/optionVal）。
+ * 例：{"optionKey":"","optionVal":"app","extendOptionList":[{"optionKey":"","optionVal":"app"},{"optionKey":"","optionVal":"bpp"}]}
  */
 const answerRowToItem = (row: AnswerRow): QuestionAnswerOptionVO => {
   const { optionKey, optionVal } = row.primary
-  // 按真实交付文件口径：extendOptionList 仅存备选答案，无备选即空数组（主答案只在 optionKey/optionVal）
-  const extendOptionList = row.extends.map((cell) => ({
-    optionKey: cell.optionKey,
-    optionVal: cell.optionVal,
-  }))
+  // 有备选答案时，extendOptionList 首项为主答案，其余为备选；无备选即 null
+  const extendOptionList = row.extends.length
+    ? [
+        { optionKey, optionVal },
+        ...row.extends.map((cell) => ({ optionKey: cell.optionKey, optionVal: cell.optionVal })),
+      ]
+    : null
   return { optionKey, optionVal, extendOptionList }
 }
 
@@ -134,7 +136,7 @@ const answerRowToItem = (row: AnswerRow): QuestionAnswerOptionVO => {
 const judgeItem = (key: string): QuestionAnswerOptionVO => ({
   optionKey: key,
   optionVal: '',
-  extendOptionList: [],
+  extendOptionList: null,
 })
 
 /** 选择型 / 解答型统一形态：矩阵外层恒 1 层 */
