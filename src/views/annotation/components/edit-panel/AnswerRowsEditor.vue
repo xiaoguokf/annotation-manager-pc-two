@@ -24,6 +24,17 @@
           @input="emit('input')"
         />
         <el-button
+          v-if="showInsert"
+          type="primary"
+          plain
+          size="small"
+          circle
+          :title="'在第 ' + (idx + 1) + ' 空下方插入新空'"
+          @click="insertRowAt(idx)"
+        >
+          <Icon icon="ep:plus" />
+        </el-button>
+        <el-button
           type="danger"
           size="small"
           circle
@@ -73,6 +84,10 @@
         <Icon icon="ep:plus" class="mr-1" />
         {{ addRowLabel }}
       </el-button>
+      <el-button v-if="showSplit" size="small" :title="'把答案文本按空格拆到每个空'" @click="splitBySpace">
+        <Icon icon="ep:magic-stick" class="mr-1" />
+        按空格拆分
+      </el-button>
       <el-button v-if="variant === 'text' && stemBlankCount > modelValue.length" size="small" @click="syncFromStem">
         按题干补全 {{ stemBlankCount }} 空
       </el-button>
@@ -86,6 +101,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { ElMessage } from 'element-plus'
 import {
   type AnswerRow,
   countBlanks,
@@ -114,6 +130,10 @@ const emit = defineEmits<{
 
 const textPlaceholder = computed(() => props.textPlaceholder || '请输入答案')
 const stemBlankCount = computed(() => countBlanks(props.stem))
+
+/** 填空（一行一空）才显示「在下方插入」「按空格拆分」 */
+const showInsert = computed(() => props.variant === 'text' && !!props.addRowLabel)
+const showSplit = computed(() => props.variant === 'text' && !!props.addRowLabel)
 
 const updateKey = (index: number, value: string) => {
   const rows = props.modelValue.map((row, i) =>
@@ -151,25 +171,59 @@ const updateExtVal = (rowIndex: number, extIndex: number, value: string) => {
   emit('update:modelValue', rows)
 }
 
-const addRow = () => emit('update:modelValue', [...props.modelValue, createAnswerRow()])
+/** 提交结构变更：更新 v-model 并触发 input，让父组件自动保存 */
+const commitRows = (rows: AnswerRow[]) => {
+  emit('update:modelValue', rows)
+  emit('input')
+}
+
+const addRow = () => commitRows([...props.modelValue, createAnswerRow()])
+
+/** 在指定空下方插入一个新的作答空 */
+const insertRowAt = (index: number) => {
+  const rows = [...props.modelValue]
+  rows.splice(index + 1, 0, createAnswerRow())
+  commitRows(rows)
+}
+
+/**
+ * 按空格把答案文本拆分到每个空：
+ * 取当前各行答案文本合并后，按空白（含全角空格）切分，一个片段填入一个空。
+ * 便于把「减れ 晴れ 泳が …」这类空格分隔的多空答案一次性摊到各空。
+ */
+const splitBySpace = () => {
+  const merged = props.modelValue
+    .map((row) => row.primary.optionVal)
+    .filter((val) => val && val.trim())
+    .join(' ')
+  const parts = merged
+    .split(/[\s\u3000]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  if (parts.length <= 1) {
+    ElMessage.info('未识别到用空格分隔的多个答案')
+    return
+  }
+  commitRows(parts.map((val) => ({ primary: { optionKey: '', optionVal: val }, extends: [] })))
+}
 
 const removeRow = (index: number) => {
   if (props.modelValue.length <= 1) return
-  emit('update:modelValue', props.modelValue.filter((_, i) => i !== index))
+  commitRows(props.modelValue.filter((_, i) => i !== index))
 }
 
 const addExt = (rowIndex: number) => {
   const rows = props.modelValue.map((row, i) =>
     i === rowIndex ? { ...row, extends: [...row.extends, { optionKey: '', optionVal: '' }] } : row,
   )
-  emit('update:modelValue', rows)
+  commitRows(rows)
 }
 
 const removeExt = (rowIndex: number, extIndex: number) => {
   const rows = props.modelValue.map((row, i) =>
     i === rowIndex ? { ...row, extends: row.extends.filter((_, j) => j !== extIndex) } : row,
   )
-  emit('update:modelValue', rows)
+  commitRows(rows)
 }
 
 /** 按题干空位数补齐主答案行（只增不减，已填内容不丢） */
