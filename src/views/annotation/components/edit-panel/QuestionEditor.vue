@@ -1267,16 +1267,32 @@ const handleSmartAssemble = async () => {
 // 去除题号
 const removeQuestionNumber = (text: string): string => {
   if (!text) return text
+  // 题号 / 编号规则：
+  //  - 数字（半角或全角）或中文数字 + 顿号/句点/点号
+  //  - 可能被文本样式 span 包裹（如 <span class="rich-text-bold">1.</span>），此时连同 span 一起移除
+  // 反复剥离，直到不再变化，覆盖「大题号 + 小题号」这类连续编号
+  const patterns: RegExp[] = [
+    // 样式 span 包裹的题号：数字/中文数字在 span 内，标点在 span 内
+    /^<span[^>]*>\s*(?:[0-9０-９]{1,3}|[一二三四五六七八九十百千]+)\s*[、．.]\s*<\/span>\s*/,
+    // 样式 span 包裹的编号，标点在 span 外：<span>1</span>.
+    /^<span[^>]*>\s*(?:[0-9０-９]{1,3}|[一二三四五六七八九十百千]+)\s*<\/span>\s*[、．.]\s*/,
+    // 中文大题号：一、 二、
+    /^[一二三四五六七八九十百千]+[、．.]\s*/,
+    // 半角 / 全角数字题号：4.  12.  ４．
+    /^[0-9０-９]+[、．.]\s*/,
+  ]
   let result = text
-  // 1. 处理大题号连着小题号的情况（如"一、1."、"二、2."、"三、3."）
-  // 先移除大题号部分
-  result = result.replace(/^[一二三四五六七八九十百千]+[、．.]\s*/, '')
-  // 2. 处理单独的中文大题号（如"一、"、"二、"）
-  result = result.replace(/^[一二三四五六七八九十百千]+[、．.]\s*/, '')
-  // 3. 处理半角数字题号（如"4."、"12."、"123."）
-  result = result.replace(/^\d+[、．.]\s*/, '')
-  // 4. 处理全角数字题号（如"４．"）
-  result = result.replace(/^[\d\uFF10-\uFF19]+[、．.]\s*/, '')
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const pattern of patterns) {
+      const next = result.replace(pattern, '')
+      if (next !== result) {
+        result = next
+        changed = true
+      }
+    }
+  }
   return result
 }
 
@@ -1446,6 +1462,8 @@ const loadSubQuestionDetails = async (questionId: string) => {
 
 // 加载题目详情
 const loadQuestionDetails = async (questionId: string) => {
+  // 切换题目时清空上一题遗留的校验错误，避免在已填写的题目上显示陈旧红框
+  formErrors.value = { question: '', options: '', answer: '', labelQuestionType: '', answerMode: '', difficulty: '' }
   try {
     const response = await getQuestionDetailsApi({ id: questionId })
     if (response.data.code === 200 && response.data.data) {
