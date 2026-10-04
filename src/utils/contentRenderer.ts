@@ -1,5 +1,5 @@
 import katex from 'katex'
-import { isDisplayFormula, decodeHtmlEntities } from './formula'
+import { isDisplayFormula } from './formula'
 import DOMPurify from 'dompurify'
 import 'katex/contrib/mhchem'
 
@@ -22,7 +22,7 @@ const BLOCK_FORMULA = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
 export const renderFormulas = (text: string): string => {
   // 定界符只表示「这是公式」，行内 / 行间按内容判断（块级环境用行间）
   const render = (_match: string, dollarLatex?: string, bracketLatex?: string) => {
-    const latex = decodeHtmlEntities((dollarLatex ?? bracketLatex ?? '').trim())
+    const latex = (dollarLatex ?? bracketLatex ?? '').trim()
     return renderLatex(latex, isDisplayFormula(latex))
   }
   return text.replace(BLOCK_FORMULA, render).replace(INLINE_FORMULA, render)
@@ -190,7 +190,7 @@ export const renderContent = (
     // 把 HTML 标签一起塞进 KaTeX。分组顺序：$$..$$、\[..\]、\(..\)、$..$
     const formula = part.match(FORMULA_PART)
     if (formula) {
-      const latex = decodeHtmlEntities((formula[1] ?? formula[2] ?? formula[3] ?? formula[4] ?? '').trim())
+      const latex = (formula[1] ?? formula[2] ?? formula[3] ?? formula[4] ?? '').trim()
       processedResult += renderLatex(latex, isDisplayFormula(latex))
     } else if (part.match(/!\[([^\]]*)\]\(([^)]+)\)/)) {
       const imgMatch = part.match(/!\[([^\]]*)\]\(([^)]+)\)/)
@@ -230,8 +230,8 @@ export const renderContent = (
         textPart = textPart.replace(match, imgPlaceholders[idx]!)
       })
 
-      // 处理文本部分：先还原 OCR 误写的 HTML 实体，再转义 HTML 并转换换行
-      textPart = decodeHtmlEntities(textPart)
+      // 处理文本部分，转义HTML并转换换行
+      textPart = textPart
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -254,10 +254,11 @@ export const renderContent = (
 
       processedResult += textPart
     } else {
-      // 普通文本：先还原 OCR 误写的 HTML 实体，再转义 HTML 并转换换行
+      // 普通文本，转义 HTML 并转换换行
       let textPart = part
 
-      textPart = decodeHtmlEntities(textPart)
+      // 转义 HTML（除了占位符）
+      textPart = textPart
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
