@@ -1,7 +1,7 @@
 import axios from "axios"
 
 import { type ModelVO, type ModelArgVO } from "./gen/modelController"
-import { normalizeFormulaDelimiters } from '@/utils/formula'
+import { normalizeFormulaDelimiters, decodeHtmlEntities } from '@/utils/formula'
 import { ElMessage } from "element-plus"
 
 const MAX_PIXELS = 36000000 // 豆包API最大允许的像素数
@@ -454,7 +454,8 @@ export async function callDouBaoText(
         if (content) {
             console.log('[Doubao] 原始内容:', content)
             const normalized = normalizeFormulaFormat(content)
-            const filled = fillEmptyBrackets(normalized)
+            const decoded = decodeHtmlEntities(normalized)
+            const filled = fillEmptyBrackets(decoded)
             console.log('[Doubao] 格式化后:', filled)
             response.data.choices[0].message.content = filled
         }
@@ -527,7 +528,8 @@ export async function callDouBaoTable(
         if (content) {
             console.log('[Doubao] 原始内容:', content)
             const normalized = normalizeFormulaFormat(content)
-            const filled = fillEmptyBrackets(normalized)
+            const decoded = decodeHtmlEntities(normalized)
+            const filled = fillEmptyBrackets(decoded)
             console.log('[Doubao] 格式化后:', filled)
             response.data.choices[0].message.content = filled
         }

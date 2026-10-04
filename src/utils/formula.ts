@@ -70,3 +70,23 @@ export function normalizeFormulaDelimiters(richText: string): string {
     })
     .join('')
 }
+
+/**
+ * 解码常见 HTML 实体。
+ *
+ * OCR 模型常把文本里的 \< / \> / & 转义成实体（如 a&gt;b、\ce{F + A-&gt; 8}），
+ * 而公式（KaTeX / mhchem）只认原始字符，实体原样进入公式就会「乱码」（-> 变 -&gt;）。
+ * 提示词已明确「禁止输出 HTML 实体」，这里作为兜底统一还原。
+ */
+export function decodeHtmlEntities(text: string | null): string {
+  if (!text) {
+    return ''
+  }
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+}
