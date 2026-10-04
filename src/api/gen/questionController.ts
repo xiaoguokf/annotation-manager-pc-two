@@ -18,7 +18,7 @@ export interface QuestionContentVO {
   /* 题干（富文本 HTML，含 LaTeX 公式与 img 标签） */
   questionStem?: string
   /* 一维选项，填空/解答题为 null */
-  questionOptionList?: QuestionOptionVO[]
+  questionOptionList?: QuestionOptionVO[] | null
   /* 二维选项矩阵 */
   questionOptionMatrix?: QuestionOptionVO[][]
   /* 是否连线题：0-否，1-是 */
@@ -32,8 +32,8 @@ export interface QuestionAnswerOptionVO {
   optionKey?: string
   /* 答案内容 */
   optionVal?: string
-  /* 备选答案（多答案兼容） */
-  extendOptionList?: QuestionOptionVO[]
+  /* 备选答案（多答案兼容）：无备选时为 null */
+  extendOptionList?: QuestionOptionVO[] | null
 }
 
 export interface QuestionAnswerVO {
