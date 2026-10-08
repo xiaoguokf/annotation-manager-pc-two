@@ -110,7 +110,7 @@
                         <el-input v-model="questionEditData[question.id]!.question" type="textarea" :rows="4"
                           :autosize="{ minRows: 3, maxRows: 8 }" class="audit-input edit-input" placeholder="请输入题目内容" />
                       </div>
-                      <div v-if="question.choice && isChoiceType(question.tishi)" class="audit-section">
+                      <div v-if="question.choice && isChoiceType(question)" class="audit-section">
                         <div class="audit-label">
                           选项：
                           <el-button type="primary" size="small" @click="addChoiceOption(question.id)"
@@ -150,7 +150,7 @@
                         <el-input :model-value="processImageUrls(question.question)" type="textarea" :rows="4"
                           :autosize="{ minRows: 3, maxRows: 8 }" readonly class="audit-input" />
                       </div>
-                      <div v-if="question.choice && isChoiceType(question.tishi)" class="audit-section">
+                      <div v-if="question.choice && isChoiceType(question)" class="audit-section">
                         <div class="audit-label">选项：</div>
                         <el-input v-for="(choice, index) in parseChoiceOptions(question.choice)" :key="index"
                           :model-value="processImageUrls(choice)" type="textarea" :rows="2"
@@ -182,7 +182,7 @@
                     <div class="item-body">
                       <div v-html="processInlineContent(getQuestionDisplayData(question).question)"></div>
                     </div>
-                    <div v-if="getQuestionDisplayData(question).choice && isChoiceType(question.tishi)"
+                    <div v-if="getQuestionDisplayData(question).choice && isChoiceType(question)"
                       class="item-choices">
                       <div class="choices-list">
                         <div
@@ -423,7 +423,7 @@ interface CatalogueTreeNode {
 }
 
 // 学科题型字典：新数据题型存于 labelQuestionType，需按字典翻译成名称
-const { ensureLoaded: ensureTypeDictLoaded, getTypeNameByCode } = useQuestionTypeDict()
+const { ensureLoaded: ensureTypeDictLoaded, getTypeNameByCode, isChoiceQuestion } = useQuestionTypeDict()
 
 /** 标签题型名称：优先 labelQuestionType（docx 改造后），回退旧 tishi */
 const getLabelQuestionTypeName = (question: any): string => {
@@ -446,10 +446,10 @@ const tishiMap: Record<string, string> = {
   gaicuo: '改错题'
 }
 
-// 判断是否为选择题类型
-const isChoiceType = (tishi?: string) => {
-  return tishi === 'xuanze' || tishi === 'duoxuan'
-}
+// 判断是否为选择题类型：优先学科题型字典（labelQuestionType），回退旧 tishi 字符串。
+// docx 改造后 tishi 恒空，只看 tishi 会导致审核端选择题不显示选项（与 QuestionEditor 口径一致）
+const isChoiceType = (question?: { labelQuestionType?: number | null; tishi?: string | null } | null) =>
+  isChoiceQuestion({ labelQuestionType: question?.labelQuestionType, tishi: question?.tishi })
 
 // 题类映射
 const tileiMap: Record<string, string> = {
@@ -1345,7 +1345,7 @@ const saveQuestionEdit = async (questionId: string) => {
 
     // 处理选项（如果是选择题）
     const question = questions.value.find(q => q.id === questionId)
-    if (question && question.choice && isChoiceType(question.tishi)) {
+    if (question && question.choice && isChoiceType(question)) {
       // 将选项数组转换为JSON字符串格式
       const choiceArray = editData.choice?.filter(c => c?.trim()) || []
       updateData.choice = JSON.stringify(choiceArray)

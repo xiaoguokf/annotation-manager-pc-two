@@ -34,21 +34,60 @@ export const renderFormulas = (text: string): string => {
  * 题干、选项、解析均来自用户/模型输出，直接 v-html 存在 XSS 风险。
  * 公式渲染依赖 class 与 style，自定义标签 blank、supplement 属性一并放行。
  */
+/**
+ * 公式段提取正则（与 renderContent 的拆分口径一致）。
+ *
+ * DOMPurify 按 HTML 解析文本：公式内容里的 `<` 轻则被转义成 &lt;
+ * （KaTeX 渲染成乱码，如 \(f'(1)<0\) → f'(1)&lt;0），重则被当成标签
+ * 连内容一起吞掉（如 \(0<x<1\) 净化后只剩 \(0）。因此先把公式段
+ * 摘出为占位符，净化后再原样放回。公式最终由 KaTeX 渲染输出
+ * （自动转义），无需经过 DOM 清洗。
+ */
+const FORMULA_EXTRACT = /\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^\$<]+\$|\\\([\s\S]*?\\\)/g
+
 export const sanitizeHtml = (html: string): string => {
   if (!html) return ''
 
-  return DOMPurify.sanitize(html, {
+  const formulas: string[] = []
+  const protectedHtml = html.replace(FORMULA_EXTRACT, (match) => {
+    formulas.push(match)
+    return `__FORMULA_${formulas.length - 1}__`
+  })
+
+  let clean = DOMPurify.sanitize(protectedHtml, {
     ADD_TAGS: ['blank'],
     ADD_ATTR: ['supplement'],
   })
+
+  // 还原公式段；若对应占位符在净化中丢失则原样保留占位符
+  clean = clean.replace(/__FORMULA_(\d+)__/g, (match, index: string) => formulas[Number(index)] ?? match)
+
+  return clean
 }
+
+/**
+ * 还原公式内容中的 HTML 实体。
+ *
+ * renderContent 链路是先 sanitizeHtml（DOMPurify）再渲染公式，
+ * DOMPurify 序列化文本节点时会把 `<` 转义成 &lt;（`>` 不转义），
+ * 若不还原，KaTeX 会把 &lt; 当普通字符渲染成乱码（如 \(f'(1)<0\) → f'(1)&lt;0）。
+ * &amp; 放在最后还原，避免二次解码。
+ */
+const decodeHtmlEntities = (latex: string): string =>
+  latex
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
 
 /**
  * 渲染 LaTeX 公式
  */
 export const renderLatex = (latex: string, displayMode: boolean = false) => {
   try {
-    return katex.renderToString(latex, {
+    return katex.renderToString(decodeHtmlEntities(latex), {
       displayMode: displayMode,
       throwOnError: false,
       strict: false,
