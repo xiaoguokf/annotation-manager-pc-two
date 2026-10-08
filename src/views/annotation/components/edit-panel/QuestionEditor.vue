@@ -454,6 +454,7 @@ import {
   parseAnswerDraft,
   parseLegacyAnswer,
 } from '@/utils/questionAnswer'
+import { resolveLabelQuestionType } from '@/utils/questionTypeMatcher'
 import SubQuestionPanel from './SubQuestionPanel.vue'
 import AnswerRowsEditor from './AnswerRowsEditor.vue'
 
@@ -1033,6 +1034,32 @@ const handleAnalysisBlur = () => {
   triggerAutoSave()
 }
 
+/**
+ * 智能封装的标签题型判断：仅当用户尚未选择时，按规则表推断并填入。
+ * 已有选择不覆盖，避免智能封装改写用户手选的题型。
+ *
+ * @returns 识别到的题型名（未识别或已有选择时为空），供提示文案使用
+ */
+const applyInferredLabelType = (
+  stemHtml: string,
+  answerText: string,
+  analysisHtml: string,
+): string => {
+  if (questionForm.value.labelQuestionType != null) return ''
+  const result = resolveLabelQuestionType({
+    stem: stemHtml,
+    options: choiceOptions.value,
+    answer: answerText,
+    analysis: analysisHtml,
+    subjectCode: bookSubjectCode.value,
+    candidates: questionTypeOptions.value,
+  })
+  if (result.typeCode == null) return ''
+  questionForm.value.labelQuestionType = result.typeCode
+  updateFieldError('labelQuestionType')
+  return result.typeName ?? ''
+}
+
 // 智能封装
 const handleSmartAssemble = async () => {
   assembling.value = true
@@ -1226,6 +1253,9 @@ const handleSmartAssemble = async () => {
       ensureAnswerRows()
     }
 
+    // 标签题型判断：按规则表推断，仅在用户尚未选择时填入
+    const inferredLabelType = applyInferredLabelType(questionContent, answerContent, analysisContent)
+
     // 检查解析失败的字段并提示
     const failedFields: string[] = []
 
@@ -1252,7 +1282,7 @@ const handleSmartAssemble = async () => {
     if (failedFields.length > 0) {
       ElMessage.warning(`智能封装完成，但以下字段解析失败：${failedFields.join('、')}`)
     } else {
-      ElMessage.success('智能封装成功')
+      ElMessage.success(inferredLabelType ? `智能封装成功，已识别标签题型：${inferredLabelType}` : '智能封装成功')
       // 智能封装成功后自动保存
       await autoSaveQuestion()
     }
