@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -233,10 +233,19 @@ const syncFromStem = () => {
   emit('update:modelValue', rows)
 }
 
-// 题干空位增加时自动补行；减少时不静默删答案，交由用户处理
-watch(stemBlankCount, (count) => {
-  if (props.variant === 'text' && count > props.modelValue.length) syncFromStem()
-})
+/**
+ * 以题干横线数为唯一真源：答案空数不足时补齐（只增不减，已填内容不丢）。
+ *
+ * 覆盖三种时机：编辑期横线增减、加载回显、智能封装后 —— 观察空位数与行数，
+ * 任一变化后只要「空位 > 答案行」就补齐；横线减少时不静默删答案，交由用户处理。
+ */
+const syncBlanksFromStem = () => {
+  if (props.variant === 'text' && stemBlankCount.value > props.modelValue.length) syncFromStem()
+}
+
+// 挂载即补一次：加载回显 / 智能封装后横线数已定，mount 时不会触发 watch
+onMounted(syncBlanksFromStem)
+watch([stemBlankCount, () => props.modelValue.length], syncBlanksFromStem)
 </script>
 
 <style scoped>
