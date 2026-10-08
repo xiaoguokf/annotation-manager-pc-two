@@ -47,11 +47,11 @@
           </el-form-item>
           <el-form-item label="分值">
             <el-input-number v-model="item.questionScore" :min="0" :precision="1" controls-position="right"
-              @change="triggerAutoSave(item, true)" />
+              @change="triggerAutoSave(item, true, true)" />
           </el-form-item>
           <el-form-item label="难度">
             <el-input-number v-model="item.difficulty" :min="0" :max="1" :step="0.1" :precision="1"
-              controls-position="right" placeholder="难度" @change="triggerAutoSave(item, true)" />
+              controls-position="right" placeholder="难度" @change="triggerAutoSave(item, true, true)" />
           </el-form-item>
         </div>
 
@@ -196,6 +196,7 @@ import {
   createAnswerDraft,
   createAnswerRow,
   draftToLegacyAnswer,
+  isAnswerDraftFilled,
   isJudgeLeftover,
   optionLetter,
   parseAnswerDraft,
@@ -340,7 +341,8 @@ const handleKindChange = async (row: SubQuestionRow, mode?: number) => {
   }
   row.answer = draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft)
   initChoiceOptions(row)
-  triggerAutoSave(row, true)
+  // 切换题型/作答方式会重置答案草稿，属结构性变更，force 跳过答案必填拦截
+  triggerAutoSave(row, true, true)
 }
 
 /** 答案至少渲染一行，避免切到单选/多选/填空/解答时列表为空 */
@@ -510,12 +512,20 @@ const buildSavePayload = (row: SubQuestionRow) => {
 
 /**
  * 保存子题。
- * @param silent 自动保存模式：不弹提示、不做"必填"拦截（未填完也先落库），也不整体重载行以免打断输入
+ * @param silent 自动保存模式：不弹提示、不整体重载行以免打断输入
+ * @param force  结构性变更（题型/作答方式）专用：跳过答案必填拦截，避免改了存不进去
  */
-const handleSave = async (row: SubQuestionRow, silent = false) => {
+const handleSave = async (row: SubQuestionRow, silent = false, force = false) => {
   if (!row.id) return
 
-  // 显式保存才做完整性校验；自动保存允许半成品，避免打字过程中反复报错
+  // 答案必填：综合母题的答案写在子题内，不参与校验；其余作答方式空答案一律不保存（自动保存同样拦截）
+  const answerRequired = row.questionAnswerMode !== ANSWER_MODE_COMPREHENSIVE
+  if (!force && answerRequired && !isAnswerDraftFilled(row.questionAnswerMode, row.answerDraft)) {
+    if (!silent) ElMessage.warning('答案不能为空')
+    return
+  }
+
+  // 显式保存才做选项完整性校验；自动保存允许半成品，避免打字过程中反复报错
   if (!silent) {
     if (!row.questionStem.trim()) {
       ElMessage.warning('请先填写题干')
@@ -562,21 +572,24 @@ const handleSave = async (row: SubQuestionRow, silent = false) => {
   }
 }
 
-/** 去抖自动保存；immediate 用于下拉/单选框这类一次性动作 */
-const triggerAutoSave = (row: SubQuestionRow, immediate = false) => {
+/**
+ * 去抖自动保存；immediate 用于下拉/单选框这类一次性动作。
+ * force=true 用于题型/作答方式等结构性变更：跳过答案必填拦截，避免半成品状态下字段改动存不进去。
+ */
+const triggerAutoSave = (row: SubQuestionRow, immediate = false, force = false) => {
   if (!row.id) return
   const prev = saveTimers.get(row.key)
   if (prev) clearTimeout(prev)
   if (immediate) {
     saveTimers.delete(row.key)
-    handleSave(row, true)
+    handleSave(row, true, force)
     return
   }
   saveTimers.set(
     row.key,
     setTimeout(() => {
       saveTimers.delete(row.key)
-      handleSave(row, true)
+      handleSave(row, true, force)
     }, AUTO_SAVE_DELAY),
   )
 }
