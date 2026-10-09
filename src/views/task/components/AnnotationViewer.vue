@@ -29,7 +29,7 @@
               class="annotation-label"
               :style="{ ...getAnnotationLabelStyle(annotation), color: getAnnotationTypeColor(annotation.type, annotation.inputType) }"
             >
-              {{ getAnnotationTypeName(annotation.type, annotation.inputType) }}
+              {{ getAnnotationLabelText(annotation) }}
             </div>
             <div
               class="annotation-box"
@@ -61,7 +61,12 @@
               <Icon :icon="getAnnotationTypeIcon(annotation.type, annotation.inputType)" />
             </div>
             <div class="annotation-bar-info">
-              <div class="annotation-bar-type">{{ getAnnotationTypeName(annotation.type, annotation.inputType) }}</div>
+              <div class="annotation-bar-type">
+                {{ getAnnotationTypeName(annotation.type, annotation.inputType) }}
+                <span v-if="getAnnotationQuestionNo(annotation)" class="annotation-bar-no">
+                  {{ getAnnotationQuestionNo(annotation) }}
+                </span>
+              </div>
               <div class="annotation-bar-page">第 {{ annotation.page }} 页</div>
             </div>
           </div>
@@ -86,9 +91,22 @@ interface Props {
   annotations: AnnotationSimpleVO[]
   fullAnnotations: AnnotationFullVO[]
   pageList: PdfPageVO[]
+  /** 题目ID → 题号（母题 1、子题 1.1）；用于标注框标签显示所属题号 */
+  questionNoMap?: Record<string, string>
 }
 
 const props = defineProps<Props>()
+
+/** 标注所属题号（母题 1、子题 1.2）；无映射时返回空串 */
+const getAnnotationQuestionNo = (annotation: { questionId?: string }) =>
+  annotation.questionId ? props.questionNoMap?.[annotation.questionId] || '' : ''
+
+/** 标注框标签：类型名 + 所属题号（如「题干1.2」），无题号信息时退化为仅类型名 */
+const getAnnotationLabelText = (annotation: { type: number; inputType?: number; questionId?: string }) => {
+  const name = getAnnotationTypeName(annotation.type, annotation.inputType)
+  const no = getAnnotationQuestionNo(annotation)
+  return no ? `${name}${no}` : name
+}
 
 const configStore = useConfigStore()
 
@@ -485,6 +503,12 @@ watch(() => props.annotations, (newAnnotations) => {
   color: var(--el-text-color-primary);
   word-break: break-word;
   line-height: 1.3;
+}
+
+.annotation-bar-no {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--el-text-color-secondary);
 }
 
 .annotation-bar-page {
