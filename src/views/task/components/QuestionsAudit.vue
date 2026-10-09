@@ -142,6 +142,62 @@
                         <el-input v-model="questionEditData[question.id]!.analysis" type="textarea" :rows="3"
                           :autosize="{ minRows: 2, maxRows: 6 }" class="audit-input edit-input" placeholder="请输入解析" />
                       </div>
+
+                      <!-- 子题：与母题同构，可编辑（题目/选项/答案/解析），按层级缩进 -->
+                      <div v-if="getSubPreviewRows(question).length" class="audit-sub-block">
+                        <div class="audit-label">子题（{{ getSubPreviewRows(question).length }}）：</div>
+                        <div v-for="row in getSubPreviewRows(question)" :key="row.id" class="audit-sub-item"
+                          :style="{ marginLeft: `${row.depth * 16}px` }">
+                          <div class="audit-sub-head">
+                            <span class="audit-sub-no">{{ row.no }}</span>
+                            <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
+                              {{ getSubAnswerModeName(row.item.questionAnswerMode) }}
+                            </el-tag>
+                          </div>
+                          <div class="audit-section">
+                            <div class="audit-label">题目：</div>
+                            <el-input v-model="questionEditData[question.id]!.subEdits![row.id]!.question" type="textarea"
+                              :rows="3" :autosize="{ minRows: 2, maxRows: 8 }" class="audit-input edit-input"
+                              placeholder="请输入子题题目内容" />
+                          </div>
+                          <div v-if="row.item.choice && isChoiceType(row.item)" class="audit-section">
+                            <div class="audit-label">
+                              选项：
+                              <el-button type="primary" size="small" @click="addSubChoiceOption(question.id, row.id)"
+                                style="margin-left: 10px;">
+                                <Icon icon="ep:plus" />
+                                新增选项
+                              </el-button>
+                            </div>
+                            <div v-for="(_, index) in questionEditData[question.id]!.subEdits![row.id]!.choice || []"
+                              :key="index" class="choice-edit-item">
+                              <div class="choice-wrapper">
+                                <el-input v-model="questionEditData[question.id]!.subEdits![row.id]!.choice![index]"
+                                  type="textarea" :rows="2" :autosize="{ minRows: 2, maxRows: 6 }"
+                                  class="audit-choice-input edit-input" placeholder="请输入选项内容" />
+                                <el-button type="danger" size="small" circle
+                                  @click="removeSubChoiceOption(question.id, row.id, index)"
+                                  :disabled="questionEditData[question.id]!.subEdits![row.id]!.choice!.length <= 2"
+                                  class="choice-delete-btn">
+                                  <Icon icon="ep:close" />
+                                </el-button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="audit-section">
+                            <div class="audit-label">答案：</div>
+                            <el-input v-model="questionEditData[question.id]!.subEdits![row.id]!.answer" type="textarea"
+                              :rows="2" :autosize="{ minRows: 2, maxRows: 6 }" class="audit-input edit-input"
+                              placeholder="请输入子题答案" />
+                          </div>
+                          <div class="audit-section">
+                            <div class="audit-label">解析：</div>
+                            <el-input v-model="questionEditData[question.id]!.subEdits![row.id]!.analysis" type="textarea"
+                              :rows="2" :autosize="{ minRows: 2, maxRows: 6 }" class="audit-input edit-input"
+                              placeholder="请输入子题解析" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <!-- 非编辑模式 -->
                     <div v-else class="readonly-content">
@@ -167,11 +223,50 @@
                           :autosize="{ minRows: 2, maxRows: 6 }" readonly class="audit-input" />
                       </div>
                     </div>
+
+                    <!-- 子题：与母题同构，按层级缩进展示（题目/选项/答案/解析），供审核区直接查看 -->
+                    <div v-if="getSubPreviewRows(question).length" class="audit-sub-block">
+                      <div class="audit-label">子题（{{ getSubPreviewRows(question).length }}）：</div>
+                      <div v-for="row in getSubPreviewRows(question)" :key="row.id" class="audit-sub-item"
+                        :style="{ marginLeft: `${row.depth * 16}px` }">
+                        <div class="audit-sub-head">
+                          <span class="audit-sub-no">{{ row.no }}</span>
+                          <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
+                            {{ getSubAnswerModeName(row.item.questionAnswerMode) }}
+                          </el-tag>
+                          <span v-if="row.item.questionContent?.questionScore != null" class="audit-sub-score">
+                            {{ row.item.questionContent.questionScore }} 分
+                          </span>
+                        </div>
+                        <div class="audit-section">
+                          <div class="audit-label">题目：</div>
+                          <el-input :model-value="processImageUrls(getSubStem(row.item))" type="textarea" :rows="2"
+                            :autosize="{ minRows: 2, maxRows: 6 }" readonly class="audit-input" />
+                        </div>
+                        <div v-if="getSubOptions(row.item).length" class="audit-section">
+                          <div class="audit-label">选项：</div>
+                          <el-input v-for="(option, oi) in getSubOptions(row.item)" :key="oi"
+                            :model-value="processImageUrls(option)" type="textarea" :rows="1"
+                            :autosize="{ minRows: 1, maxRows: 4 }" readonly class="audit-choice-input" />
+                        </div>
+                        <div v-if="row.item.answer" class="audit-section">
+                          <div class="audit-label">答案：</div>
+                          <el-input :model-value="processImageUrls(row.item.answer)" type="textarea" :rows="2"
+                            :autosize="{ minRows: 2, maxRows: 6 }" readonly class="audit-input" />
+                        </div>
+                        <div v-if="row.item.analysis" class="audit-section">
+                          <div class="audit-label">解析：</div>
+                          <el-input :model-value="processImageUrls(row.item.analysis)" type="textarea" :rows="2"
+                            :autosize="{ minRows: 2, maxRows: 6 }" readonly class="audit-input" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <!-- 标注模式 -->
                   <AnnotationViewer v-else :annotations="questionAnnotations[question.id] || []"
-                    :full-annotations="questionFullAnnotations[question.id] || []" :page-list="pageList" />
+                    :full-annotations="questionFullAnnotations[question.id] || []" :page-list="pageList"
+                    :question-no-map="auditQuestionNoMap" />
                 </div>
               </el-splitter-panel>
 
@@ -192,7 +287,8 @@
                         </div>
                       </div>
                     </div>
-                    <div class="analysis-box">
+                    <div v-if="getQuestionDisplayData(question).answer || getQuestionDisplayData(question).analysis || question.questionComment"
+                      class="analysis-box">
                       <div class="analysis-row" v-if="getQuestionDisplayData(question).answer">
                         <span class="label-tag tag-ans">参考答案</span>
                         <div>
@@ -237,7 +333,7 @@
                             </div>
                           </div>
                         </div>
-                        <div class="analysis-box">
+                        <div v-if="row.item.answer || row.item.analysis" class="analysis-box">
                           <div class="analysis-row" v-if="row.item.answer">
                             <span class="label-tag tag-ans">参考答案</span>
                             <div>
@@ -723,9 +819,22 @@ const questionAnnotationModes = ref<Record<string, boolean>>({})
 const questionAnnotations = ref<Record<string, AnnotationSimpleVO[]>>({})
 const questionFullAnnotations = ref<Record<string, AnnotationFullVO[]>>({})
 
-// 编辑模式相关
+// 编辑模式相关：子题为独立行，编辑状态按「母题ID → 子题ID → 字段」二级存放
+interface AuditSubEditData {
+  question?: string
+  choice?: string[]
+  answer?: string
+  analysis?: string
+}
+interface AuditEditData {
+  question?: string
+  choice?: string[]
+  answer?: string
+  analysis?: string
+  subEdits?: Record<string, AuditSubEditData>
+}
 const questionEditModes = ref<Record<string, boolean>>({})
-const questionEditData = ref<Record<string, { question?: string; choice?: string[]; answer?: string; analysis?: string }>>({})
+const questionEditData = ref<Record<string, AuditEditData>>({})
 const editSubmitting = ref(false)
 
 // 获取题目显示数据(编辑时显示编辑数据,否则显示原始数据)
@@ -1118,6 +1227,27 @@ const subPreviewRowsMap = computed<Record<string, AuditSubRow[]>>(() => {
 const getSubPreviewRows = (question: QuestionDetailsListVO): AuditSubRow[] =>
   subPreviewRowsMap.value[question.id] || []
 
+/**
+ * 题目ID → 题号（母题 1、子题 1.1、1.1.1），供标注框标签显示所属题号。
+ * 与题目列表展示口径一致：母题按当前列表顺序 1..N，子题在其母题号后逐级追加。
+ */
+const auditQuestionNoMap = computed<Record<string, string>>(() => {
+  const map: Record<string, string> = {}
+  const walkSubs = (list: QuestionDetailsVO[] | undefined, prefix: string) => {
+    ;(list || []).forEach((item, index) => {
+      const no = `${prefix}.${index + 1}`
+      map[item.id] = no
+      walkSubs(item.subQuestionList, no)
+    })
+  }
+  questions.value.forEach((question, index) => {
+    const no = String(index + 1)
+    map[question.id] = no
+    walkSubs(question.subQuestionList, no)
+  })
+  return map
+})
+
 const parseKnowledgeTags = (knowledge: string | undefined): string[] => {
   if (!knowledge) return []
 
@@ -1236,30 +1366,47 @@ const toggleAnnotationMode = async (questionId: string) => {
   }
 }
 
-// 加载题目标注数据
-const loadQuestionAnnotations = async (questionId: string) => {
-  try {
-    // 加载简单标注信息（用于底部列表）
-    const simpleRes = await getAnnotationListApi({ questionId })
-    if (simpleRes.data.code === 200 && simpleRes.data.data) {
-      questionAnnotations.value[questionId] = simpleRes.data.data // 显示所有类型的标注
-    } else {
-      questionAnnotations.value[questionId] = []
-    }
-
-    // 加载完整标注信息（包含坐标，用于显示标注框）
-    const fullRes = await getAnnotationListByQuestionApi({ questionId })
-    if (fullRes.data.code === 200 && fullRes.data.data) {
-      questionFullAnnotations.value[questionId] = fullRes.data.data
-    } else {
-      questionFullAnnotations.value[questionId] = []
-    }
-  } catch (error) {
-    console.error('加载标注数据失败:', error)
-    questionAnnotations.value[questionId] = []
-    questionFullAnnotations.value[questionId] = []
-    ElMessage.error('加载标注数据失败')
+// 收集某题下所有子题的 ID（子题为独立行、有各自 questionId，标注挂在子题上）
+const collectSubQuestionIds = (question?: QuestionDetailsListVO): string[] => {
+  const ids: string[] = []
+  const walk = (list?: QuestionDetailsVO[]) => {
+    ;(list || []).forEach((item) => {
+      if (item.id) ids.push(item.id)
+      walk(item.subQuestionList)
+    })
   }
+  walk(question?.subQuestionList)
+  return ids
+}
+
+// 加载题目标注数据（含子题：子题标注要一并显示，否则标注模式看不到子题的标注框）
+const loadQuestionAnnotations = async (questionId: string) => {
+  const question = questions.value.find(q => q.id === questionId)
+  const targetIds = [questionId, ...collectSubQuestionIds(question)]
+
+  const simpleList: AnnotationSimpleVO[] = []
+  const fullList: AnnotationFullVO[] = []
+  await Promise.all(
+    targetIds.map(async (id) => {
+      try {
+        // 简单标注信息（用于底部列表）：显示所有类型的标注
+        const simpleRes = await getAnnotationListApi({ questionId: id })
+        if (simpleRes.data.code === 200 && simpleRes.data.data) {
+          simpleList.push(...simpleRes.data.data)
+        }
+        // 完整标注信息（包含坐标，用于显示标注框）
+        const fullRes = await getAnnotationListByQuestionApi({ questionId: id })
+        if (fullRes.data.code === 200 && fullRes.data.data) {
+          fullList.push(...fullRes.data.data)
+        }
+      } catch (error) {
+        // 单个子题的标注失败不影响其他题
+        console.error('加载子题标注数据失败:', id, error)
+      }
+    })
+  )
+  questionAnnotations.value[questionId] = simpleList
+  questionFullAnnotations.value[questionId] = fullList
 }
 
 // 切换编辑模式
@@ -1270,11 +1417,22 @@ const toggleEditMode = async (questionId: string) => {
     // 进入编辑模式，初始化编辑数据
     const question = questions.value.find(q => q.id === questionId)
     if (question) {
+      // 子题同样可编辑：初始化每个子题的编辑状态
+      const subEdits: Record<string, AuditSubEditData> = {}
+      getSubPreviewRows(question).forEach((row) => {
+        subEdits[row.id] = {
+          question: row.item.question || '',
+          choice: row.item.choice ? parseChoiceOptions(row.item.choice) : [],
+          answer: row.item.answer || '',
+          analysis: row.item.analysis || ''
+        }
+      })
       questionEditData.value[questionId] = {
         question: question.question || '',
         choice: question.choice ? parseChoiceOptions(question.choice) : [],
         answer: question.answer || '',
-        analysis: question.analysis || ''
+        analysis: question.analysis || '',
+        subEdits
       }
     }
     questionEditModes.value[questionId] = true
@@ -1316,6 +1474,24 @@ const removeChoiceOption = (questionId: string, index: number) => {
 
   // 删除指定索引的选项
   editData.choice.splice(index, 1)
+}
+
+// 新增 / 删除子题选项（子题选择型与母题同口径）
+const addSubChoiceOption = (questionId: string, subId: string) => {
+  const sub = questionEditData.value[questionId]?.subEdits?.[subId]
+  if (!sub) return
+  if (!sub.choice) sub.choice = []
+  sub.choice.push('')
+}
+
+const removeSubChoiceOption = (questionId: string, subId: string, index: number) => {
+  const sub = questionEditData.value[questionId]?.subEdits?.[subId]
+  if (!sub || !sub.choice) return
+  if (sub.choice.length <= 2) {
+    ElMessage.warning('至少需要保留2个选项')
+    return
+  }
+  sub.choice.splice(index, 1)
 }
 
 // 保存题目编辑
@@ -1384,6 +1560,32 @@ const saveQuestionEdit = async (questionId: string) => {
           if (displayQuestionIndex !== -1) {
             questions.value[displayQuestionIndex] = updatedQuestion as QuestionDetailsListVO
           }
+        }
+      }
+
+      // 子题保存：子题为独立行，逐条更新（不传 subQuestionList，仅改自身字段，避免误删子题）
+      const subEdits = editData.subEdits || {}
+      const subRows = question ? getSubPreviewRows(question) : []
+      for (const [subId, sub] of Object.entries(subEdits)) {
+        const subRow = subRows.find(r => r.id === subId)
+        const subUpdateData: QuestionUpdateCmd = { question: sub.question }
+        if (subRow && subRow.item.choice && isChoiceType(subRow.item)) {
+          subUpdateData.choice = JSON.stringify((sub.choice || []).filter(c => c?.trim()))
+        }
+        if (sub.answer !== undefined) subUpdateData.answer = sub.answer
+        if (sub.analysis !== undefined) subUpdateData.analysis = sub.analysis
+        try {
+          await putQuestionUpdateApi(subUpdateData, { id: subId })
+        } catch (error) {
+          console.error('保存子题失败:', subId, error)
+          ElMessage.error('部分子题保存失败')
+        }
+        // 同步右侧预览用的子题数据，避免需重新拉取
+        if (subRow) {
+          subRow.item.question = sub.question
+          if (subUpdateData.choice !== undefined) subRow.item.choice = subUpdateData.choice
+          subRow.item.answer = sub.answer
+          subRow.item.analysis = sub.analysis
         }
       }
 
@@ -1896,6 +2098,52 @@ const toggleProgressMinimize = () => {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* 审核区子题：与母题区分，浅底 + 左侧层级线 */
+.audit-sub-block {
+  padding-top: 12px;
+  border-top: 1px dashed #dcdfe6;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.audit-sub-item {
+  padding: 10px 12px;
+  background: #fafafa;
+  border-left: 2px solid #c6e2ff;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audit-sub-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audit-sub-no {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--el-text-color-regular, #606266);
+}
+
+.audit-sub-score {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #909399);
+}
+
+.dark .audit-sub-block {
+  border-top-color: #4c4d4f;
+}
+
+.dark .audit-sub-item {
+  background: #262727;
+  border-left-color: #409eff;
 }
 
 .choice-edit-item {
