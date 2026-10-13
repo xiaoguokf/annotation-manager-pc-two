@@ -158,7 +158,7 @@
         <el-button type="primary" @click="handleOpenMaterialSubmitDialog"
           :loading="materialSubmitting || infoChecking">
           <Icon icon="ep:check" class="mr-1" />
-          提交资料审核
+          保存资料
         </el-button>
       </template>
       <template v-else>
@@ -192,21 +192,21 @@
       </template>
     </el-dialog>
 
-    <!-- 提交资料审核确认对话框 -->
-    <el-dialog v-model="materialSubmitDialogVisible" title="提交资料审核" width="500px" :close-on-click-modal="false">
-      <el-alert title="提交确认" type="info" :closable="false" show-icon class="mb-4">
-        提交资料审核后，审核员将审核您填写的书籍信息和内容页，请确认信息填写完整。
+    <!-- 保存资料确认对话框 -->
+    <el-dialog v-model="materialSubmitDialogVisible" title="保存资料" width="500px" :close-on-click-modal="false">
+      <el-alert title="保存确认" type="info" :closable="false" show-icon class="mb-4">
+        保存后资料将直接提交并进入做题中，请确认书籍信息和内容页填写完整。
       </el-alert>
       <!-- 未处理反馈提示 -->
       <el-alert v-if="unhandledFeedbackCount > 0" title="存在未处理的反馈" type="warning" :closable="false" show-icon
         class="mb-4">
-        还有 {{ unhandledFeedbackCount }} 条反馈未处理，请先处理所有反馈后再提交。
+        还有 {{ unhandledFeedbackCount }} 条反馈未处理，请先处理所有反馈后再保存。
         <el-button type="primary" link size="small" @click="feedbackDialogVisible = true">去处理</el-button>
       </el-alert>
       <template #footer>
         <el-button @click="materialSubmitDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleMaterialSubmit" :loading="materialSubmitting"
-          :disabled="unhandledFeedbackCount > 0 || !infoCompleteness.complete">确认提交</el-button>
+          :disabled="unhandledFeedbackCount > 0 || !infoCompleteness.complete">确认保存</el-button>
       </template>
     </el-dialog>
 
@@ -392,7 +392,7 @@ const problemRules = {
   ]
 }
 
-// 提交资料审核对话框
+// 保存资料对话框
 const materialSubmitDialogVisible = ref(false)
 
 // 书籍/试卷信息完整度校验
@@ -612,7 +612,7 @@ const checkInfoCompleteness = async (): Promise<boolean> => {
     const savedResult = MaterialService.checkProjectInfoComplete(projectType.value, savedInfo)
     if (!savedResult.complete) {
       infoCompleteness.value = savedResult
-      ElMessage.warning(`${typeLabel}信息尚未保存，请先保存${typeLabel}信息后再提交资料审核`)
+      ElMessage.warning(`${typeLabel}信息尚未保存，请先保存${typeLabel}信息后再保存资料`)
       return false
     }
 
@@ -627,7 +627,7 @@ const checkInfoCompleteness = async (): Promise<boolean> => {
   }
 }
 
-// 打开提交资料审核对话框
+// 打开保存资料对话框
 const handleOpenMaterialSubmitDialog = async () => {
   // 先检查是否有未处理的反馈（不自动弹出反馈对话框）
   await checkFeedbackStatus()
@@ -636,7 +636,7 @@ const handleOpenMaterialSubmitDialog = async () => {
   materialSubmitDialogVisible.value = true
 }
 
-// 提交资料审核
+// 保存资料（提交即进入做题中）
 const handleMaterialSubmit = async () => {
   // 打开弹窗后可能又修改了信息，提交前再次校验
   if (!(await checkInfoCompleteness())) {
@@ -649,14 +649,14 @@ const handleMaterialSubmit = async () => {
       projectId: String(projectId.value)
     })
     if (response.data.code === 200) {
-      ElMessage.success('提交资料审核成功')
+      ElMessage.success('保存资料成功')
       materialSubmitDialogVisible.value = false
       router.push('/task/list')
     } else {
-      ElMessage.error(response.data.msg || '提交资料审核失败')
+      ElMessage.error(response.data.msg || '保存资料失败')
     }
   } catch (error) {
-    ElMessage.error('提交资料审核失败')
+    ElMessage.error('保存资料失败')
     console.error(error)
   } finally {
     materialSubmitting.value = false

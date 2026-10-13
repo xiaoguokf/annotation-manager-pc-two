@@ -140,15 +140,6 @@
             @input="triggerAutoSave(item)"
           />
         </el-form-item>
-        <el-form-item label="解析">
-          <el-input
-            v-model="item.analysis"
-            type="textarea"
-            :rows="2"
-            placeholder="请输入解析，支持 Markdown 和 LaTeX 公式"
-            @input="triggerAutoSave(item)"
-          />
-        </el-form-item>
 
         <div class="item-actions">
           <span class="save-hint">

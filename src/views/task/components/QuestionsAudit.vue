@@ -190,12 +190,6 @@
                               :rows="2" :autosize="{ minRows: 2, maxRows: 6 }" class="audit-input edit-input"
                               placeholder="请输入子题答案" />
                           </div>
-                          <div class="audit-section">
-                            <div class="audit-label">解析：</div>
-                            <el-input v-model="questionEditData[question.id]!.subEdits![row.id]!.analysis" type="textarea"
-                              :rows="2" :autosize="{ minRows: 2, maxRows: 6 }" class="audit-input edit-input"
-                              placeholder="请输入子题解析" />
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -252,11 +246,6 @@
                         <div v-if="row.item.answer" class="audit-section">
                           <div class="audit-label">答案：</div>
                           <el-input :model-value="processImageUrls(row.item.answer)" type="textarea" :rows="2"
-                            :autosize="{ minRows: 2, maxRows: 6 }" readonly class="audit-input" />
-                        </div>
-                        <div v-if="row.item.analysis" class="audit-section">
-                          <div class="audit-label">解析：</div>
-                          <el-input :model-value="processImageUrls(row.item.analysis)" type="textarea" :rows="2"
                             :autosize="{ minRows: 2, maxRows: 6 }" readonly class="audit-input" />
                         </div>
                       </div>
@@ -333,17 +322,11 @@
                             </div>
                           </div>
                         </div>
-                        <div v-if="row.item.answer || row.item.analysis" class="analysis-box">
+                        <div v-if="row.item.answer" class="analysis-box">
                           <div class="analysis-row" v-if="row.item.answer">
                             <span class="label-tag tag-ans">参考答案</span>
                             <div>
                               <span v-html="processInlineContent(row.item.answer)"></span>
-                            </div>
-                          </div>
-                          <div class="analysis-row" v-if="row.item.analysis">
-                            <span class="label-tag tag-ana">试题解析</span>
-                            <div>
-                              <span v-html="processInlineContent(row.item.analysis)"></span>
                             </div>
                           </div>
                         </div>

@@ -259,7 +259,7 @@
             @input="() => triggerAutoSave()"
           />
         </el-form-item>
-        <el-form-item label="解析">
+        <el-form-item v-if="!isSubQuestion" label="解析">
           <el-input
             v-model="questionForm.analysis"
             type="textarea"
@@ -362,8 +362,8 @@
             <el-tag type="success" size="small" class="mb-2">答案</el-tag>
             <div class="preview-content" v-html="renderContent(answerDisplayText, true)"></div>
           </div>
-          <!-- 解析 -->
-          <div v-if="questionForm.analysis" class="content-box preview-box mb-4">
+          <!-- 解析（子题不展示） -->
+          <div v-if="questionForm.analysis && !isSubQuestion" class="content-box preview-box mb-4">
             <el-tag type="warning" size="small" class="mb-2">解析</el-tag>
             <div class="preview-content" v-html="renderContent(questionForm.analysis, true)"></div>
           </div>
@@ -403,10 +403,6 @@
               <div v-if="row.item.answer" class="mt-2 pt-2 border-t border-gray-200">
                 <el-tag type="success" size="small" class="mb-1">答案</el-tag>
                 <div class="preview-content" v-html="renderContent(row.item.answer, true)"></div>
-              </div>
-              <div v-if="row.item.analysis" class="mt-2 pt-2 border-t border-gray-200">
-                <el-tag type="warning" size="small" class="mb-1">解析</el-tag>
-                <div class="preview-content" v-html="renderContent(row.item.analysis, true)"></div>
               </div>
             </div>
           </div>
@@ -475,6 +471,9 @@ const choiceOptions = ref<string[]>(['', '', '', ''])
 
 // 当前模式：edit 或 preview
 const currentMode = ref<'edit' | 'preview'>('edit')
+
+/** 当前编辑的是否为子题；子题不展示解析字段（解析仅母题可填） */
+const isSubQuestion = computed(() => (props.selectedQuestion.level ?? 0) > 0)
 
 /** 子题面板（仅编辑模式下渲染），供快捷键快捷新增子题 */
 const subQuestionPanelRef = ref<InstanceType<typeof SubQuestionPanel> | null>(null)
