@@ -132,15 +132,25 @@
     <div class="detail-section mb-4">
       <div class="section-title mb-3">
         <span>题目内容</span>
-        <el-button
-          type="success"
-          size="small"
-          @click="handleSmartAssemble"
-          :loading="assembling"
-        >
-          <Icon icon="ep:magic-stick" class="mr-1" />
-          智能封装
-        </el-button>
+        <div class="flex items-center gap-2">
+          <el-button
+            type="warning"
+            size="small"
+            @click="handlePunctuationCorrect"
+          >
+            <Icon icon="ep:edit-pen" class="mr-1" />
+            标点校正
+          </el-button>
+          <el-button
+            type="success"
+            size="small"
+            @click="handleSmartAssemble"
+            :loading="assembling"
+          >
+            <Icon icon="ep:magic-stick" class="mr-1" />
+            智能封装
+          </el-button>
+        </div>
       </div>
       <el-form :model="questionForm" label-width="80px" size="small">
         <el-form-item label="标题" required :error="formErrors.question">
@@ -425,6 +435,7 @@ import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotat
 import { useConfigStore } from '@/stores/config'
 import { useParseSettingsStore } from '@/stores/parseSettings'
 import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
+import { toChinesePunctuation } from '@/utils/punctuation'
 import {
   ANSWER_MODE_ANSWER,
   ANSWER_MODE_BLANK,
@@ -873,6 +884,41 @@ const autoSaveQuestion = async (force: boolean = false) => {
   }
 }
 
+/**
+ * 标点校正：把题目文本（题干 / 选项 / 答案 / 解析 / 点评）中的半角标点统一为中文标点。
+ * 公式与 HTML 标签内部不改动（见 utils/punctuation）。
+ */
+const handlePunctuationCorrect = () => {
+  let changedFields = 0
+  const fix = (text: string): string => {
+    if (!text) return text
+    const fixed = toChinesePunctuation(text)
+    if (fixed !== text) changedFields++
+    return fixed
+  }
+
+  questionForm.value.question = fix(questionForm.value.question)
+  questionForm.value.analysis = fix(questionForm.value.analysis)
+  questionForm.value.questionComment = fix(questionForm.value.questionComment)
+  choiceOptions.value = choiceOptions.value.map(fix)
+
+  // 答案草稿：逐行校正主答案与备选答案的文本（optionKey 为选项字母，不动）
+  answerDraft.value = {
+    ...answerDraft.value,
+    rows: answerDraft.value.rows.map((row) => ({
+      primary: { ...row.primary, optionVal: fix(row.primary.optionVal) },
+      extends: row.extends.map((cell) => ({ ...cell, optionVal: fix(cell.optionVal) })),
+    })),
+  }
+
+  if (changedFields === 0) {
+    ElMessage.info('未发现需要校正的半角标点')
+    return
+  }
+  ElMessage.success('标点校正完成')
+  triggerAutoSave(true)
+}
+
 // 去抖自动保存
 const triggerAutoSave = (force: boolean = false) => {
   if (saveTimer.value) {
@@ -1304,25 +1350,33 @@ const removeQuestionNumber = (text: string): string => {
     // 样式 span 包裹的题号：数字/中文数字在 span 内，标点在 span 内
     /^<span[^>]*>\s*(?:[0-9０-９]{1,3}|[一二三四五六七八九十百千]+)\s*[、．.]\s*<\/span>\s*/,
     // 样式 span 包裹的编号，标点在 span 外：<span>1</span>.
-    /^<span[^>]*>\s*(?:[0-9０-９]{1,3}|[一二三四五六七八九十百千]+)\s*<\/span>\s*[、．.]\s*/,
+    /^<span[^>]*>\s*(?:[0-9０-９]{1,3}|[一二三四五六七八九十百千]+)\s*<\/span>\s*[、．.](?![0-9０-９])\s*/,
     // 中文大题号：一、 二、
     /^[一二三四五六七八九十百千]+[、．.]\s*/,
     // 半角 / 全角数字题号：4.  12.  ４．
-    /^[0-9０-９]+[、．.]\s*/,
+    // 后接数字时不剥（3.14 / 2.5 这类小数或编号，避免把 2.5 变成 5）
+    /^[0-9０-９]+[、．.](?![0-9０-９])\s*/,
   ]
-  let result = text
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const pattern of patterns) {
-      const next = result.replace(pattern, '')
-      if (next !== result) {
-        result = next
-        changed = true
+  // 逐行剥离：题干、解析、答案常为多行，题号每行各一个（填空答案即典型场景：
+  // 「1.甲\n2.乙」需删掉每行的序号，只删首行会漏掉后面的）
+  return text
+    .split(/\r?\n/)
+    .map((line) => {
+      let result = line
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const pattern of patterns) {
+          const next = result.replace(pattern, '')
+          if (next !== result) {
+            result = next
+            changed = true
+          }
+        }
       }
-    }
-  }
-  return result
+      return result
+    })
+    .join('\n')
 }
 
 // 添加选项
