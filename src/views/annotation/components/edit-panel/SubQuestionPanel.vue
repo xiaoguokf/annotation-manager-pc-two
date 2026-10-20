@@ -384,7 +384,9 @@ const toRow = (detail: QuestionDetailsVO): SubQuestionRow => {
     difficulty: detail.difficulty,
     questionStem: detail.questionContent?.questionStem || detail.question || '',
     answer: detail.answer || '',
-    analysis: detail.analysis || '',
+    // 子题不承载解析（界面无该字段，导出也置空），不要读回历史解析，
+    // 否则每次保存都会把旧内容原样写回，提交审核会一直报旧解析的错。
+    analysis: '',
     choiceOptions: [],
     answerDraft: createAnswerDraft(),
   }
@@ -479,7 +481,8 @@ const buildSavePayload = (row: SubQuestionRow) => {
     question: row.questionStem,
     // 扁平 answer 与结构化 questionAnswer 同源，保证两条口径一致
     answer: draftToLegacyAnswer(row.questionAnswerMode, row.answerDraft),
-    analysis: row.analysis,
+    // 子题不保存解析：显式置空，清掉历史遗留的旧解析（过期图片 / 未成对 $）
+    analysis: '',
     parentId: props.questionId,
     level: childLevel.value,
     questionContent: {
