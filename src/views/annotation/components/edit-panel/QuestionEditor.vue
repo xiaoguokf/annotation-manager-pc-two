@@ -847,7 +847,8 @@ const autoSaveQuestion = async (force: boolean = false) => {
       choice: choiceJson,
       // 扁平 answer 与结构化 questionAnswer 同源，保证两条口径一致
       answer: draftToLegacyAnswer(questionForm.value.questionAnswerMode, answerDraft.value),
-      analysis: questionForm.value.analysis,
+      // 子题保存时强制清空解析（字段已从子题界面移除，避免把历史脏数据一直写回库里）
+      analysis: isSubQuestion.value ? '' : questionForm.value.analysis,
       labelQuestionType: questionForm.value.labelQuestionType,
       questionAnswerMode: questionForm.value.questionAnswerMode,
       questionType: questionForm.value.questionType,
@@ -1287,7 +1288,8 @@ const handleSmartAssemble = async () => {
     if (choiceContent) {
       questionForm.value.choice = choiceContent
     }
-    if (analysisContent) {
+    // 子题不展示、也不保存解析：即使标注里有解析，也不写入子题表单
+    if (analysisContent && !isSubQuestion.value) {
       questionForm.value.analysis = analysisContent
     }
     if (answerContent) {
@@ -1304,8 +1306,8 @@ const handleSmartAssemble = async () => {
     // 检查解析失败的字段并提示
     const failedFields: string[] = []
 
-    // 检查解析
-    if ((typeMap[5] && typeMap[5].length > 0 || typeMap[6] && typeMap[6].length > 0) && !analysisContent) {
+    // 检查解析（子题无解析字段，不参与判断）
+    if (!isSubQuestion.value && (typeMap[5] && typeMap[5].length > 0 || typeMap[6] && typeMap[6].length > 0) && !analysisContent) {
       failedFields.push('解析')
     }
 
@@ -1565,7 +1567,9 @@ const loadQuestionDetails = async (questionId: string) => {
         question: response.data.data.question || '',
         choice: choiceValue,
         answer: response.data.data.answer || '',
-        analysis: response.data.data.analysis || '',
+        // 子题不承载解析：界面已隐藏该字段，若把库里的历史解析读回表单，
+        // 保存时会被原样写回，提交审核就会一直报用户看不到的旧内容。
+        analysis: isSubQuestion.value ? '' : (response.data.data.analysis || ''),
         tishi: tishiValue,
         labelQuestionType: response.data.data.labelQuestionType != null ? response.data.data.labelQuestionType : undefined,
         questionAnswerMode: response.data.data.questionAnswerMode != null ? response.data.data.questionAnswerMode : undefined,
