@@ -15,6 +15,15 @@
         </el-tag>
       </div>
       <div class="flex items-center">
+        <el-tooltip
+          content="在题目区域按 ↑ / ↓ 可跳到上一题 / 下一题，输入框内不生效"
+          placement="bottom">
+          <span class="shortcut-hint mr-3">
+            <kbd>↑</kbd>
+            <kbd>↓</kbd>
+            切换题目
+          </span>
+        </el-tooltip>
         <el-tag v-if="isPreviewMode" type="info" class="mr-2">
           预览模式
         </el-tag>
@@ -691,6 +700,32 @@ onMounted(async () => {
   flex: 1;
   color: var(--el-text-color-primary);
   line-height: 1.6;
+}
+
+.shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  cursor: default;
+  user-select: none;
+}
+
+.shortcut-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .audit-drawer-badge {
