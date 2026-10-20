@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from 'node:url'
 import { readFileSync, rmSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
-import { ConfigEnv, UserConfigExport } from 'vite'
+import { ConfigEnv, UserConfigExport, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
@@ -27,6 +27,9 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
   const sourcemap = isServe || !!process.env.VSCODE_DEBUG
   const lifecycle = process.env.npm_lifecycle_event as string
   const isBrowser = lifecycle && lifecycle.includes('browser')
+  // 接口代理目标：默认线上网关，可在 .env.*.local 中用 VITE_API_PROXY_TARGET 指向本地后端
+  const env = loadEnv(mode, process.cwd(), '')
+  const apiProxyTarget = env.VITE_API_PROXY_TARGET || 'https://bd.xp163.com/api'
   if (!isBrowser) {
     rmSync('dist-electron', { recursive: true, force: true })
   }
@@ -35,7 +38,7 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
       allowedHosts: true,
       proxy: {
         '/api': {
-          target: 'https://bd.xp163.com/api',
+          target: apiProxyTarget,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },

@@ -1686,11 +1686,22 @@ onMounted(() => {
   fetchQuestions()
   fetchPageList()
   initLazyImageLoading()
+  // 上下键切换题目
+  window.addEventListener('keydown', handleQuestionSwitchKeydown)
 })
 
 onUnmounted(() => {
   cleanupLazyImageLoading()
+  window.removeEventListener('keydown', handleQuestionSwitchKeydown)
 })
+
+// 高亮题目卡片，提示当前定位到的题目
+const highlightQuestion = (element: HTMLElement) => {
+  element.classList.add('question-highlight')
+  setTimeout(() => {
+    element.classList.remove('question-highlight')
+  }, 2000)
+}
 
 // 滚动到指定题目
 const scrollToQuestion = (questionId: string) => {
@@ -1708,15 +1719,103 @@ const scrollToQuestion = (questionId: string) => {
       block: 'start'
     })
 
-    // 高亮显示该题目
-    targetElement.classList.add('question-highlight')
-    setTimeout(() => {
-      targetElement.classList.remove('question-highlight')
-    }, 2000)
+    highlightQuestion(targetElement)
 
     return targetElement
   }
   return null
+}
+
+// 判断事件目标是否为输入框/下拉等可交互控件，避免误触发题目切换
+const isInteractiveTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  return !!target.closest(
+    'input, textarea, select, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="option"], [role="separator"], .el-select, .el-cascader'
+  )
+}
+
+// 查找最近的纵向滚动容器，用于计算题目在视口中的位置
+const getScrollContainer = (element: HTMLElement | null): HTMLElement | null => {
+  let parent = element?.parentElement ?? null
+  while (parent) {
+    const { overflowY } = window.getComputedStyle(parent)
+    if (
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      parent.scrollHeight > parent.clientHeight
+    ) {
+      return parent
+    }
+    parent = parent.parentElement
+  }
+  return null
+}
+
+// 当前视口顶部对应的题目下标（-1 表示还在第一题之前）
+const getCurrentQuestionIndex = (): number => {
+  const refs = questionRefs.value
+  const count = Math.min(refs.length, questions.value.length)
+  if (count === 0) return -1
+
+  const container = getScrollContainer(refs[0] ?? null)
+  const viewportTop = container ? container.getBoundingClientRect().top : 0
+  let current = -1
+  for (let index = 0; index < count; index++) {
+    const element = refs[index]
+    if (!element || !element.isConnected) continue
+    if (element.getBoundingClientRect().top <= viewportTop + 4) {
+      current = index
+    }
+  }
+  return current
+}
+
+// 切换题目：以当前视口顶部所在题目为基准，滚动到上一题/下一题
+const switchQuestion = (offset: number) => {
+  const total = questions.value.length
+  if (total === 0) return
+
+  const targetIndex = Math.min(Math.max(getCurrentQuestionIndex() + offset, 0), total - 1)
+  const targetElement = questionRefs.value[targetIndex]
+  if (!targetElement) return
+
+  targetElement.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
+  highlightQuestion(targetElement)
+}
+
+// 是否存在可见的弹窗/抽屉，打开时禁用页面滚动切换
+const hasVisibleOverlay = (): boolean => {
+  return Array.from(document.querySelectorAll<HTMLElement>('.el-overlay')).some(
+    overlay => window.getComputedStyle(overlay).display !== 'none'
+  )
+}
+
+// 题目区域是否已在视口内：未滚动到题目时保留浏览器默认的方向键滚动
+const hasVisibleQuestion = (): boolean => {
+  const count = Math.min(questionRefs.value.length, questions.value.length)
+  const viewportHeight = window.innerHeight
+  for (let index = 0; index < count; index++) {
+    const element = questionRefs.value[index]
+    if (!element || !element.isConnected) continue
+    const rect = element.getBoundingClientRect()
+    if (rect.bottom > 0 && rect.top < viewportHeight) return true
+  }
+  return false
+}
+
+// 上下方向键切换题目
+const handleQuestionSwitchKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+  if (event.defaultPrevented) return
+  if (isInteractiveTarget(event.target)) return
+  if (questions.value.length === 0 || hasVisibleOverlay() || !hasVisibleQuestion()) return
+
+  event.preventDefault()
+  switchQuestion(event.key === 'ArrowDown' ? 1 : -1)
 }
 
 // 暴露方法供父组件调用
