@@ -841,7 +841,7 @@ const getQuestionDisplayData = (question: QuestionDetailsListVO) => {
     }
   }
   return {
-    question: question.question || '',
+    question: question.questionContent?.questionStem || question.question || '',
     choice: question.choice || '',
     answer: question.answer || '',
     analysis: question.analysis || ''
@@ -1413,14 +1413,14 @@ const toggleEditMode = async (questionId: string) => {
       const subEdits: Record<string, AuditSubEditData> = {}
       getSubPreviewRows(question).forEach((row) => {
         subEdits[row.id] = {
-          question: row.item.question || '',
+          question: getSubStem(row.item),
           choice: row.item.choice ? parseChoiceOptions(row.item.choice) : [],
           answer: row.item.answer || '',
           analysis: row.item.analysis || ''
         }
       })
       questionEditData.value[questionId] = {
-        question: question.question || '',
+        question: question.questionContent?.questionStem || question.question || '',
         choice: question.choice ? parseChoiceOptions(question.choice) : [],
         answer: question.answer || '',
         analysis: question.analysis || '',
@@ -1538,7 +1538,13 @@ const saveQuestionEdit = async (questionId: string) => {
         // 更新 allQuestions 中的数据
         const originalQuestion = allQuestions.value[questionIndex]
         const updatedQuestion = { ...originalQuestion }
-        if (updateData.question) updatedQuestion.question = updateData.question
+        if (updateData.question) {
+          updatedQuestion.question = updateData.question
+          // 导出以结构化题干为准：本地同步一份，避免保存后页面与导出还是旧内容
+          if (updatedQuestion.questionContent) {
+            updatedQuestion.questionContent = { ...updatedQuestion.questionContent, questionStem: updateData.question }
+          }
+        }
         if (updateData.choice) updatedQuestion.choice = updateData.choice
         if (updateData.answer) updatedQuestion.answer = updateData.answer
         if (updateData.analysis) updatedQuestion.analysis = updateData.analysis
@@ -1575,6 +1581,9 @@ const saveQuestionEdit = async (questionId: string) => {
         // 同步右侧预览用的子题数据，避免需重新拉取
         if (subRow) {
           subRow.item.question = sub.question
+          if (subRow.item.questionContent) {
+            subRow.item.questionContent = { ...subRow.item.questionContent, questionStem: sub.question }
+          }
           if (subUpdateData.choice !== undefined) subRow.item.choice = subUpdateData.choice
           subRow.item.answer = sub.answer
           subRow.item.analysis = sub.analysis
