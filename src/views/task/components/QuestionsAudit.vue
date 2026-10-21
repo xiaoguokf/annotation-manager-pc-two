@@ -150,6 +150,9 @@
                           :style="{ marginLeft: `${row.depth * 16}px` }">
                           <div class="audit-sub-head">
                             <span class="audit-sub-no">{{ row.no }}</span>
+                            <el-tag v-if="getLabelQuestionTypeName(row.item)" size="small" type="info">
+                              标签题型: {{ getLabelQuestionTypeName(row.item) }}
+                            </el-tag>
                             <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
                               {{ getSubAnswerModeName(row.item.questionAnswerMode) }}
                             </el-tag>
@@ -225,6 +228,9 @@
                         :style="{ marginLeft: `${row.depth * 16}px` }">
                         <div class="audit-sub-head">
                           <span class="audit-sub-no">{{ row.no }}</span>
+                          <el-tag v-if="getLabelQuestionTypeName(row.item)" size="small" type="info">
+                            标签题型: {{ getLabelQuestionTypeName(row.item) }}
+                          </el-tag>
                           <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
                             {{ getSubAnswerModeName(row.item.questionAnswerMode) }}
                           </el-tag>
@@ -303,6 +309,9 @@
                         :style="{ marginLeft: `${row.depth * 16}px` }">
                         <div class="sub-preview-head">
                           <span class="sub-preview-no">{{ row.no }}</span>
+                          <el-tag v-if="getLabelQuestionTypeName(row.item)" size="small" type="info">
+                            标签题型: {{ getLabelQuestionTypeName(row.item) }}
+                          </el-tag>
                           <el-tag v-if="row.item.questionAnswerMode != null" size="small" type="info">
                             {{ getSubAnswerModeName(row.item.questionAnswerMode) }}
                           </el-tag>
