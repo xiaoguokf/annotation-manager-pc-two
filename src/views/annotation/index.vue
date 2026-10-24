@@ -209,6 +209,7 @@ import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import {
   ANSWER_MODE_ANSWER,
   ANSWER_MODE_BLANK,
+  ANSWER_MODE_COMPREHENSIVE,
   ANSWER_MODE_JUDGE,
   ANSWER_MODE_MULTI,
   ANSWER_MODE_SINGLE,
@@ -241,13 +242,14 @@ const projectTitle = ref('标注工作台')
 // 学科名称（用于OCR识别时注入学科相关提示词）
 const subjectName = ref<string | undefined>(undefined)
 const { ensureLoaded } = useQuestionTypeDict()
-// 数字键 1-5 → 作答方式（1 单选 / 2 多选 / 3 填空 / 4 判断 / 5 解答）
+// 数字键 1-6 → 作答方式（1 单选 / 2 多选 / 3 填空 / 4 判断 / 5 解答 / 6 综合母题）
 const answerModeShortcuts: Record<string, number> = {
   '1': ANSWER_MODE_SINGLE,
   '2': ANSWER_MODE_MULTI,
   '3': ANSWER_MODE_BLANK,
   '4': ANSWER_MODE_JUDGE,
   '5': ANSWER_MODE_ANSWER,
+  '6': ANSWER_MODE_COMPREHENSIVE,
 }
 
 // 题目总数
@@ -748,7 +750,7 @@ const handleKeyDown = async (event: KeyboardEvent) => {
     questionsListRef.value?.handleAddQuestion()
   }
 
-  // 数字键 1-5 - 切换当前选中题目的作答方式
+  // 数字键 1-6 - 切换当前选中题目的作答方式
   const shortcutAnswerMode = hasModifier ? undefined : answerModeShortcuts[event.key]
   if (shortcutAnswerMode != null) {
     event.preventDefault()

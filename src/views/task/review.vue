@@ -116,6 +116,11 @@
               {{ formatTime(row.reviewClaimTime) }}
             </template>
           </el-table-column>
+          <el-table-column prop="reviewTime" label="审核完成时间" width="180">
+            <template #default="{ row }">
+              {{ formatReviewTime(row) }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="340" fixed="right">
             <template #default="{ row }">
               <el-button
@@ -292,6 +297,11 @@ import ViewLayout from '@/layout/components/lay-view.vue'
 
 const router = useRouter()
 
+// 扩展 ProjectReviewListVO，后端补充审核完成时间（取 update_time）
+interface ExtendedReviewListVO extends ProjectReviewListVO {
+  reviewTime?: string
+}
+
 // 对话框相关
 const dialogVisible = ref(false)
 const currentProject = ref<ProjectReviewListVO | null>(null)
@@ -312,7 +322,7 @@ const searchForm = reactive<ProjectReviewQuery>({
 const onlyReturned = ref(false)
 
 // 表格数据
-const tableData = ref<ProjectReviewListVO[]>([])
+const tableData = ref<ExtendedReviewListVO[]>([])
 const loading = ref(false)
 const claiming = ref(false)
 const currentPage = ref(1)
@@ -575,6 +585,14 @@ const formatTime = (time: string | undefined) => {
     minute: '2-digit',
     second: '2-digit',
   })
+}
+
+// 审核完成时间：仅审核成功状态展示，其余状态不显示
+const formatReviewTime = (row: ExtendedReviewListVO) => {
+  if (row.status !== ProjectStatus.REVIEW_SUCCESS) {
+    return '-'
+  }
+  return formatTime(row.reviewTime)
 }
 
 // 判断是否可以开始审核（待审核状态和管理员打回状态可以开始审核）
