@@ -1304,17 +1304,8 @@ const handleAddQuestion = async () => {
     if (props.type === 'book' && props.catalogueId) {
       data.catalogueId = props.catalogueId
     }
-    // 继承「上一道一级题」的题型：新增的是母题，不能拿列表最后一条（可能是子题）做参照，
-    // 否则会把子题的题型带到新母题上
-    const lastParent = [...questions.value].reverse().find(q => (q.level ?? 0) === 0)
-    if (lastParent) {
-      if (lastParent.tishi) {
-        data.tishi = lastParent.tishi
-      }
-      if (lastParent.labelQuestionType != null) {
-        data.labelQuestionType = lastParent.labelQuestionType
-      }
-    }
+    // 新增的母题不继承上一题的题型 / 作答方式：题与题之间题型不同很常见，
+    // 继承会把上一题的「填空」之类带到新题上，反而要逐题改回，因此一律留空由用户选择
     const response = await postQuestionCreateApi(data)
     if (response.data.code === 200) {
       ElMessage.success('新增题目成功')
