@@ -2,12 +2,12 @@
   <div class="answer-rows">
     <div v-for="(row, idx) in modelValue" :key="idx" class="answer-row">
       <div class="answer-row-main">
-        <!-- 选择题：主答案是一个选项字母 -->
+        <!-- 选择题：原样保留「字母 + 序号」，如 A.⑤ -->
         <el-input
           v-if="variant === 'choice'"
-          :model-value="row.primary.optionKey"
-          placeholder="请输入正确选项字母，如 A"
-          style="width: 200px"
+          :model-value="choiceCellText(row.primary)"
+          placeholder="请输入正确选项，如 A 或 A.⑤"
+          style="width: 220px"
           @update:model-value="(val: string) => updateKey(idx, val)"
           @blur="emit('blur')"
         />
@@ -51,9 +51,9 @@
           <span class="answer-ext-tag">备选</span>
           <el-input
             v-if="variant === 'choice'"
-            :model-value="ext.optionKey"
-            placeholder="备选选项字母"
-            style="width: 160px"
+            :model-value="choiceCellText(ext)"
+            placeholder="备选选项，如 A 或 A.⑤"
+            style="width: 200px"
             @update:model-value="(val: string) => updateExtKey(idx, extIdx, val)"
             @blur="emit('blur')"
           />
@@ -104,9 +104,10 @@ import { Icon } from '@iconify/vue'
 import { ElMessage } from 'element-plus'
 import {
   type AnswerRow,
+  choiceCellText,
   countBlanks,
   createAnswerRow,
-  normalizeChoiceKeys,
+  parseChoiceCell,
 } from '@/utils/questionAnswer'
 
 const props = defineProps<{
@@ -136,10 +137,9 @@ const showInsert = computed(() => props.variant === 'text' && !!props.addRowLabe
 const showSplit = computed(() => props.variant === 'text' && !!props.addRowLabel)
 
 const updateKey = (index: number, value: string) => {
+  const cell = parseChoiceCell(value)
   const rows = props.modelValue.map((row, i) =>
-    i === index
-      ? { ...row, primary: { ...row.primary, optionKey: normalizeChoiceKeys(value)[0] ?? '' } }
-      : row,
+    i === index ? { ...row, primary: { ...row.primary, ...cell } } : row,
   )
   emit('update:modelValue', rows)
 }
@@ -152,11 +152,10 @@ const updateVal = (index: number, value: string) => {
 }
 
 const updateExtKey = (rowIndex: number, extIndex: number, value: string) => {
+  const cell = parseChoiceCell(value)
   const rows = props.modelValue.map((row, i) => {
     if (i !== rowIndex) return row
-    const next = row.extends.map((cell, j) =>
-      j === extIndex ? { ...cell, optionKey: normalizeChoiceKeys(value)[0] ?? '' } : cell,
-    )
+    const next = row.extends.map((ext, j) => (j === extIndex ? { ...ext, ...cell } : ext))
     return { ...row, extends: next }
   })
   emit('update:modelValue', rows)
