@@ -2059,7 +2059,7 @@ const parseAnnotation = async (
       if (inputType === 3) {
         response = await callDouBaoTable(currentModel.value, `data:image/png;base64,${imageBase64}`, props.subject)
       } else {
-        response = await callDouBaoText(currentModel.value, `data:image/png;base64,${imageBase64}`, props.subject)
+        response = await callDouBaoText(currentModel.value, `data:image/png;base64,${imageBase64}`, props.subject, annotationData.type)
       }
 
       // 4. 成功,提取识别结果
@@ -2250,7 +2250,7 @@ const retryParseAnnotation = async (annotation: AnnotationVO | AnnotationSimpleV
         // 3. 调用豆包API
         let response
         if (inputType === 2) {
-          response = await callDouBaoText(currentModel.value, imageBase64, props.subject)
+          response = await callDouBaoText(currentModel.value, imageBase64, props.subject, targetAnnotation.type)
         } else {
           response = await callDouBaoTable(currentModel.value, imageBase64, props.subject)
         }
@@ -2589,7 +2589,7 @@ const handleConfirmUpdateType = async (annotation: AnnotationVO) => {
       } else {
         // 文本OCR
         console.log('调用豆包文本识别API...')
-        response = await callDouBaoText(currentModel.value, `data:image/png;base64,${imageBase64}`, props.subject)
+        response = await callDouBaoText(currentModel.value, `data:image/png;base64,${imageBase64}`, props.subject, newType)
       }
 
       // 6. 成功,提取识别结果

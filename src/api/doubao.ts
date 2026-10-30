@@ -366,6 +366,16 @@ function fillEmptyBrackets(text: string | null): string | null {
     })
 }
 
+/** 选项类标注类型：3-选项、4-选项图 */
+const OPTION_ANNOTATION_TYPES: readonly number[] = [3, 4]
+
+/** 选项类标注追加给模型的提示词：OCR 会按版面横读把选项并排成一行，要求它一行一个 */
+const OPTION_OCR_PROMPT = '当前识别内容是选项，尽可能按顺序换行输出，一行一个选项。'
+
+/** 是否为选项类标注（用于决定是否追加选项提示词） */
+const isOptionAnnotation = (annotationType?: number): boolean =>
+    annotationType != null && OPTION_ANNOTATION_TYPES.includes(annotationType)
+
 /** 选项标号的两种写法：括号包裹（（A）／［A］）与字母加分隔符（A. ／ A、／ A）／A：） */
 const OPTION_MARKER = /[（(［[【]\s*([A-Z])\s*[）)］\]】]|([A-Z])\s*[.、．,)）:：]/g
 
@@ -497,10 +507,19 @@ function getSubjectPromptFromModel(model: ModelVO | null, subject?: string): str
     return subjectArg?.context || ''
 }
 
+/**
+ * 文本识别
+ *
+ * @param model 模型配置
+ * @param imageBase64 图片 base64
+ * @param subject 学科名称（取学科提示词）
+ * @param annotationType 标注类型；选项类（3-选项 / 4-选项图）会追加「一行一个选项」的提示词
+ */
 export async function callDouBaoText(
     model: ModelVO,
     imageBase64: string,
-    subject?: string
+    subject?: string,
+    annotationType?: number
 ): Promise<{ data: DouBaoResponse }> {
     // 检查并调整图片尺寸
     const resizedImage = await checkAndResizeImage(imageBase64)
@@ -526,6 +545,11 @@ export async function callDouBaoText(
         ...(subjectPrompt ? [{
             role: 'system',
             content: subjectPrompt
+        }] : []),
+        // 选项类标注：源图里选项常并排成两栏，要求模型按标号顺序一行一个输出
+        ...(isOptionAnnotation(annotationType) ? [{
+            role: 'system',
+            content: OPTION_OCR_PROMPT
         }] : []),
         {
             role: 'user',
