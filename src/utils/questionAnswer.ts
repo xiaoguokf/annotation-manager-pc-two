@@ -213,6 +213,53 @@ export const splitChoiceKeys = (raw: string): string[] => {
   return Array.from(new Set(keys))
 }
 
+/** 是否为 ASCII 字母（选项键的合法字符） */
+const isLetterChar = (ch: string): boolean => (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+
+/** 序号与字母之间的分隔符（两侧剥离）：A. / A、 / A：/ A) 等 */
+const CELL_EDGE_SEPARATOR = /^[\s.、．,，;；:：·()（）\[\]［］【】]+|[\s.、．,，;；:：·()（）\[\]［］【】]+$/g
+
+/**
+ * 选择题答案文本 → 每项的字母 + 序号。
+ *
+ * 与 {@link splitChoiceKeys} 的差别：答案写成「A. ⑤ / B. ⑥」这类「字母 + 序号」时，
+ * 序号是答案内容（配对题的对应关系），必须跟着字母一起保留；只取字母会把 ⑤ 丢掉。
+ * 纯字母答案（如 "AD"）解析出的序号为空串，与旧口径一致。
+ */
+const splitChoicePairs = (raw?: string | null): AnswerCell[] => {
+  const value = stripAnswerPrefix(raw ?? '').replace(/<[^>]*>/g, '')
+  const cells: AnswerCell[] = []
+  const seen = new Set<string>()
+  let index = 0
+  while (index < value.length) {
+    const ch = value[index]!
+    if (!isLetterChar(ch)) {
+      index += 1
+      continue
+    }
+    const optionKey = ch.toUpperCase()
+    let end = index + 1
+    while (end < value.length && !isLetterChar(value[end]!)) end += 1
+    const optionVal = value.slice(index + 1, end).replace(CELL_EDGE_SEPARATOR, '').trim()
+    if (!seen.has(optionKey)) {
+      seen.add(optionKey)
+      cells.push({ optionKey, optionVal })
+    }
+    index = end
+  }
+  return cells
+}
+
+/** 答案项 → 文本：有序号时拼成「A.⑤」，无序号时只有字母 */
+export const choiceCellText = (cell: AnswerCell): string =>
+  cell.optionVal ? `${cell.optionKey}.${cell.optionVal}` : cell.optionKey
+
+/** 文本 → 答案项：兼容「A」「A.⑤」「A、⑤」 */
+export const parseChoiceCell = (raw?: string | null): AnswerCell => {
+  const [first] = splitChoicePairs(raw)
+  return first ?? { optionKey: normalizeChoiceKeys(raw)[0] ?? '', optionVal: '' }
+}
+
 /** 填空答案文本 → 各空答案：按 ①②③ / (1)(2) / 换行 切分 */
 export const splitBlankAnswers = (raw: string): string[] => {
   const value = stripAnswerPrefix(raw)
@@ -232,10 +279,10 @@ export const parseLegacyAnswer = (mode: number | undefined, legacyAnswer?: strin
   if (!value) return draft
   switch (mode) {
     case ANSWER_MODE_SINGLE:
-      draft.rows = splitChoiceKeys(value).slice(0, 1).map((key) => rowOfKey(key))
+      draft.rows = choiceCellsOf(value).slice(0, 1).map(rowOfCell)
       break
     case ANSWER_MODE_MULTI:
-      draft.rows = splitChoiceKeys(value).map((key) => rowOfKey(key))
+      draft.rows = choiceCellsOf(value).map(rowOfCell)
       break
     case ANSWER_MODE_JUDGE:
       draft.judge = toJudgeKey(value)
@@ -252,9 +299,17 @@ export const parseLegacyAnswer = (mode: number | undefined, legacyAnswer?: strin
   return draft
 }
 
+/** 选择题答案文本 → 答案项；纯圈序号（如 ⑤⑥）仍按旧口径映射成字母 */
+const choiceCellsOf = (value: string): AnswerCell[] => {
+  const cells = splitChoicePairs(value)
+  return cells.length > 0
+    ? cells
+    : splitChoiceKeys(value).map((key) => ({ optionKey: key, optionVal: '' }))
+}
+
 /** 选择题答案行 */
-const rowOfKey = (optionKey: string): AnswerRow => ({
-  primary: { optionKey, optionVal: '' },
+const rowOfCell = (cell: AnswerCell): AnswerRow => ({
+  primary: { ...cell },
   extends: [],
 })
 
@@ -322,10 +377,15 @@ export const parseAnswerDraft = (
 /** 草稿 → 旧扁平 answer（提交时同步写入 answer 列，保证两条口径一致） */
 export const draftToLegacyAnswer = (mode: number | undefined, draft: AnswerDraft): string => {
   switch (mode) {
-    case ANSWER_MODE_SINGLE:
-      return draft.rows[0]?.primary.optionKey ?? ''
-    case ANSWER_MODE_MULTI:
-      return draft.rows.map((row) => row.primary.optionKey).join('')
+    case ANSWER_MODE_SINGLE: {
+      const first = draft.rows[0]
+      return first ? choiceCellText(first.primary) : ''
+    }
+    case ANSWER_MODE_MULTI: {
+      // 带序号时用空格分隔各项，避免「A. ⑤B. ⑥」粘在一起；纯字母答案保持旧口径（AB）
+      const hasVal = draft.rows.some((row) => row.primary.optionVal.trim())
+      return draft.rows.map((row) => choiceCellText(row.primary)).join(hasVal ? ' ' : '')
+    }
     case ANSWER_MODE_JUDGE:
       return draft.judge
     case ANSWER_MODE_BLANK:

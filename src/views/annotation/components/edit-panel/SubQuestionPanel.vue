@@ -437,14 +437,18 @@ const handleAdd = async () => {
 
   creating.value = true
   try {
+    // 继承「上一道子题」的题型与作答方式：同一母题下的子题通常同构，
+    // 逐个重选既慢又容易漏；本层还没有子题时才退回中性的「综合母题」，
+    // 避免默认单选却无选项导致的保存拦截
+    const previous = children.value[children.value.length - 1]
     const response = await postQuestionCreateApi({
       projectId: props.projectId,
       catalogueId: props.catalogueId,
       type: props.type ?? 0,
       parentId: props.questionId,
       level: childLevel.value,
-      // 新建时用中性的「综合母题」，避免默认单选却无选项导致的保存拦截
-      questionAnswerMode: ANSWER_MODE_COMPREHENSIVE,
+      labelQuestionType: previous?.labelQuestionType,
+      questionAnswerMode: previous?.questionAnswerMode ?? ANSWER_MODE_COMPREHENSIVE,
     })
     if (response.data.code === 200) {
       await loadChildren()
