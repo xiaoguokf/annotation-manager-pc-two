@@ -1304,14 +1304,15 @@ const handleAddQuestion = async () => {
     if (props.type === 'book' && props.catalogueId) {
       data.catalogueId = props.catalogueId
     }
-    // 如果有题目，使用最后一个题目的类型
-    if (questions.value.length > 0) {
-      const lastQuestion = questions.value[questions.value.length - 1]
-      if (lastQuestion && lastQuestion.tishi) {
-        data.tishi = lastQuestion.tishi
+    // 继承「上一道一级题」的题型：新增的是母题，不能拿列表最后一条（可能是子题）做参照，
+    // 否则会把子题的题型带到新母题上
+    const lastParent = [...questions.value].reverse().find(q => (q.level ?? 0) === 0)
+    if (lastParent) {
+      if (lastParent.tishi) {
+        data.tishi = lastParent.tishi
       }
-      if (lastQuestion && lastQuestion.labelQuestionType != null) {
-        data.labelQuestionType = lastQuestion.labelQuestionType
+      if (lastParent.labelQuestionType != null) {
+        data.labelQuestionType = lastParent.labelQuestionType
       }
     }
     const response = await postQuestionCreateApi(data)
