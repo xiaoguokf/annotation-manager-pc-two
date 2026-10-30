@@ -366,6 +366,112 @@ function fillEmptyBrackets(text: string | null): string | null {
     })
 }
 
+/** 选项标号的两种写法：括号包裹（（A）／［A］）与字母加分隔符（A. ／ A、／ A）／A：） */
+const OPTION_MARKER = /[（(［[【]\s*([A-Z])\s*[）)］\]】]|([A-Z])\s*[.、．,)）:：]/g
+
+/** 一行里识别到的一个选项标号 */
+interface OptionMark {
+    /** 标号字母（大写） */
+    letter: string
+    /** 标号在行内的起始下标 */
+    start: number
+}
+
+/**
+ * 扫描一行里的选项标号。
+ *
+ * 只认「字母 + 分隔符」或「括号包裹字母」，避免把行内的普通大写字母当成标号。
+ */
+function scanOptionMarks(line: string): OptionMark[] {
+    const marks: OptionMark[] = []
+    OPTION_MARKER.lastIndex = 0
+    let matched: RegExpExecArray | null
+    while ((matched = OPTION_MARKER.exec(line)) !== null) {
+        marks.push({ letter: (matched[1] ?? matched[2])!, start: matched.index })
+    }
+    return marks
+}
+
+/** 从一行里切出的一个选项 */
+interface OptionPiece {
+    letter: string
+    text: string
+}
+
+/**
+ * 把一行切成若干个选项；不是选项行时返回 null。
+ *
+ * 判定条件：行首（忽略缩进）就是选项标号 —— 说明整行是选项内容，而不是句子中间的引用。
+ * 单标号的行也算选项行（多栏排版的选项常被 OCR 拆成多行）。
+ */
+function splitOptionLine(line: string): OptionPiece[] | null {
+    const marks = scanOptionMarks(line)
+    if (marks.length === 0) return null
+    if (line.slice(0, marks[0]!.start).trim() !== '') return null
+    return marks.map((mark, index) => ({
+        letter: mark.letter,
+        text: line.slice(mark.start, marks[index + 1]?.start ?? line.length).trim(),
+    }))
+}
+
+/** 字母是否恰好构成 A、B、C… 这样连续的一段（用于判断能否按标号排序） */
+function isContiguousLetters(letters: string[]): boolean {
+    const sorted = [...letters].sort()
+    return sorted.every(
+        (letter, index) =>
+            index === 0 || letter.charCodeAt(0) - sorted[index - 1]!.charCodeAt(0) === 1
+    )
+}
+
+/**
+ * 选项行格式化：把挤在一行里的多个选项拆成一行一个，并按标号顺序排列。
+ *
+ * OCR 会按版面横向扫描，两栏排版常被识别成「A.⑤ B.⑥」一行、「C.④ D.①」下一行，
+ * 甚至四个选项挤在一行；智能封装按行拆选项时就会整组错位。这里把连续的选项行
+ * 收成一块，拆开、去重后按 A、B、C… 顺序输出。
+ *
+ * 只处理选项行（行首即选项标号），题干、解析等正文行原样保留；
+ * 字母重复（如下一题又从 A 开始）即视为另一块的开始，不会跨题串行。
+ *
+ * @param text OCR 返回的文本
+ * @return 每个选项各占一行的文本；无选项行时原样返回
+ */
+export function formatChoiceOptions(text: string | null): string | null {
+    if (!text) return text
+    const output: string[] = []
+    let block: OptionPiece[] = []
+    let blockLetters = new Set<string>()
+
+    const flush = () => {
+        if (block.length === 0) return
+        const letters = block.map(piece => piece.letter)
+        const ordered =
+            blockLetters.size === block.length && isContiguousLetters(letters)
+                ? [...block].sort((a, b) => a.letter.localeCompare(b.letter))
+                : block
+        output.push(...ordered.map(piece => piece.text))
+        block = []
+        blockLetters = new Set()
+    }
+
+    for (const line of text.split(/\r?\n/)) {
+        const pieces = splitOptionLine(line)
+        if (!pieces) {
+            flush()
+            output.push(line)
+            continue
+        }
+        // 同一块内标号不应重复：重复说明是新的一题，先把上一块输出
+        if (pieces.some(piece => blockLetters.has(piece.letter))) {
+            flush()
+        }
+        block.push(...pieces)
+        pieces.forEach(piece => blockLetters.add(piece.letter))
+    }
+    flush()
+    return output.join('\n')
+}
+
 /**
  * 根据类型获取模型参数列表
  * @param model 模型配置
@@ -455,8 +561,10 @@ export async function callDouBaoText(
             console.log('[Doubao] 原始内容:', content)
             const normalized = normalizeFormulaFormat(content)
             const filled = fillEmptyBrackets(normalized)
-            console.log('[Doubao] 格式化后:', filled)
-            response.data.choices[0].message.content = filled
+            // 文本识别才可能整排返回选项：拆成一行一个，避免智能封装按行拆分时整组错位
+            const optionized = formatChoiceOptions(filled)
+            console.log('[Doubao] 格式化后:', optionized)
+            response.data.choices[0].message.content = optionized
         }
     }
 
