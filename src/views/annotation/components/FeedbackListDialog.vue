@@ -47,8 +47,9 @@
             <div class="feedback-text">{{ feedback.content }}</div>
           </div>
 
-          <div v-if="feedback.type === 3 && feedback.cataloguePath" class="feedback-catalogue">
-            <div class="feedback-label">目录路径：</div>
+          <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
+          <div v-if="feedback.cataloguePath" class="feedback-catalogue">
+            <div class="feedback-label">章节：</div>
             <div class="feedback-text">{{ feedback.cataloguePath }}</div>
           </div>
 
@@ -179,12 +180,12 @@ const loadFeedbackList = async () => {
       // 更新未处理反馈数量
       unhandledCount.value = feedbackList.value.filter(item => !item.passed).length
 
-      // 为目录类型的反馈构建目录路径（仅书籍类型）
+      // 后端已返回章节路径时直接使用；未返回的目录审核再用目录树兜底
       if (props.type === 'book' && props.catalogueTreeRef) {
         const buildCataloguePath = props.catalogueTreeRef.buildCataloguePath
         if (typeof buildCataloguePath === 'function') {
           feedbackList.value.forEach(feedback => {
-            if (feedback.type === 3 && feedback.objectId) {
+            if (!feedback.cataloguePath && feedback.type === 3 && feedback.objectId) {
               feedback.cataloguePath = buildCataloguePath(feedback.objectId)
             }
           })

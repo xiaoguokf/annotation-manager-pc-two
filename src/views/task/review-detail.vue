@@ -105,6 +105,10 @@
             <span class="text-xs text-gray-400">{{ formatTime(record.createTime) }}</span>
           </div>
           <div class="text-sm text-gray-700 mb-2">{{ record.content }}</div>
+          <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
+          <div v-if="record.cataloguePath" class="audit-catalogue" :title="record.cataloguePath">
+            <span class="catalogue-label">章节：</span>{{ record.cataloguePath }}
+          </div>
           <!-- 处理内容 -->
           <div v-if="record.handContent" class="audit-hand-content">
             <div class="hand-label">处理内容：</div>
@@ -278,7 +282,10 @@ const catalogues = ref<CatalogueVO[]>([])
 const auditDrawerVisible = ref(false)
 
 // 审核记录列表
-const auditRecords = ref<ProjectAuditVO[]>([])
+// 审核记录（附带后端返回的目录章节路径）
+type AuditRecord = ProjectAuditVO & { cataloguePath?: string }
+
+const auditRecords = ref<AuditRecord[]>([])
 
 // 审核确认对话框显示状态
 const reviewConfirmDialogVisible = ref(false)
@@ -657,6 +664,23 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.audit-catalogue {
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #409eff;
+  word-break: break-word;
+  /* 章节路径可能很长，最多显示两行，完整内容见 title 提示 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.catalogue-label {
+  color: #909399;
+}
+
 .review-container {
   height: 100vh;
 }
