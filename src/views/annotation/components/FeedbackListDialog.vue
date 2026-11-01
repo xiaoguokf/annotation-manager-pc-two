@@ -19,10 +19,14 @@
         >
           <div class="feedback-header">
             <div class="feedback-type">
-              <el-tag :type="getTypeTagType(feedback.type)" size="small">
+              <el-tag :type="getTypeTagType(feedback.type)" size="small" class="flex-shrink-0">
                 {{ getTypeName(feedback.type) }}
               </el-tag>
-              <span v-if="feedback.nickname" class="feedback-auditor">
+              <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
+              <span v-if="feedback.cataloguePath" class="feedback-catalogue-inline" :title="feedback.cataloguePath">
+                {{ feedback.cataloguePath }}
+              </span>
+              <span v-if="feedback.nickname" class="feedback-auditor flex-shrink-0">
                 处理人：{{ feedback.nickname }}
               </span>
               <el-button
@@ -45,12 +49,6 @@
           <div class="feedback-content">
             <div class="feedback-label">反馈内容：</div>
             <div class="feedback-text">{{ feedback.content }}</div>
-          </div>
-
-          <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
-          <div v-if="feedback.cataloguePath" class="feedback-catalogue">
-            <div class="feedback-label">章节：</div>
-            <div class="feedback-text">{{ feedback.cataloguePath }}</div>
           </div>
 
           <div v-if="feedback.handContent" class="feedback-hand">
@@ -346,6 +344,18 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
+  /* 章节路径过长时省略，不挤压右侧处理状态 */
+  min-width: 0;
+  flex: 1;
+}
+
+.feedback-catalogue-inline {
+  font-size: 12px;
+  color: #409eff;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .feedback-auditor {
@@ -354,8 +364,7 @@ defineExpose({
 }
 
 .feedback-content,
-.feedback-hand,
-.feedback-catalogue {
+.feedback-hand {
   margin-bottom: 8px;
 }
 

@@ -98,17 +98,19 @@
       <div class="audit-list">
         <div v-for="record in auditRecords" :key="record.id"
           class="audit-item p-4 border-b border-gray-200 cursor-pointer" @click="handleAuditItemClick(record)">
-          <div class="flex items-start justify-between mb-2">
-            <el-tag :type="getAuditTypeTag(record.type)" size="small">
-              {{ getAuditTypeName(record.type) }}
-            </el-tag>
-            <span class="text-xs text-gray-400">{{ formatTime(record.createTime) }}</span>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="audit-heading">
+              <el-tag :type="getAuditTypeTag(record.type)" size="small" class="flex-shrink-0">
+                {{ getAuditTypeName(record.type) }}
+              </el-tag>
+              <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
+              <span v-if="record.cataloguePath" class="audit-catalogue" :title="record.cataloguePath">
+                {{ record.cataloguePath }}
+              </span>
+            </div>
+            <span class="text-xs text-gray-400 flex-shrink-0">{{ formatTime(record.createTime) }}</span>
           </div>
           <div class="text-sm text-gray-700 mb-2">{{ record.content }}</div>
-          <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
-          <div v-if="record.cataloguePath" class="audit-catalogue" :title="record.cataloguePath">
-            <span class="catalogue-label">章节：</span>{{ record.cataloguePath }}
-          </div>
           <!-- 处理内容 -->
           <div v-if="record.handContent" class="audit-hand-content">
             <div class="hand-label">处理内容：</div>
@@ -664,21 +666,24 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.audit-catalogue {
-  margin-bottom: 8px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #409eff;
-  word-break: break-word;
-  /* 章节路径可能很长，最多显示两行，完整内容见 title 提示 */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.audit-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 章节路径过长时省略，不挤压右侧时间 */
+  min-width: 0;
+  flex: 1;
 }
 
-.catalogue-label {
-  color: #909399;
+.audit-catalogue {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #409eff;
+  /* 抽屉宽度有限，单行省略，完整路径见 title 提示 */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .review-container {
