@@ -99,7 +99,7 @@
       <div class="audit-list">
         <div v-for="record in auditRecords" :key="record.id"
           class="audit-item p-4 border-b border-gray-200 cursor-pointer" @click="handleAuditItemClick(record)">
-          <!-- 类型标签、章节、时间同一行；章节过长时省略，不换行挤压右侧 -->
+          <!-- 类型标签、章节、时间同一行；章节过长时只在自身区域换行，不挤动标签和时间 -->
           <div class="audit-item-header">
             <el-tag :type="getAuditTypeTag(record.type)" size="small" class="audit-type-tag">
               {{ getAuditTypeName(record.type) }}
@@ -665,39 +665,39 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 类型标签、章节、时间排在同一行，避免章节单独换行 */
+/* 类型标签、章节、时间排在同一行；章节超长时只在自己那一列折行，
+   标签固定在左、时间固定在右，都不会被挤到下一行 */
 .audit-item-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
-  /* 防止长章节路径撑破抽屉 */
-  overflow: hidden;
 }
 
 .audit-type-tag {
   flex-shrink: 0;
+  /* 与章节首行对齐 */
+  margin-top: 1px;
 }
 
 .audit-catalogue {
-  /* 占满剩余宽度，过长时省略而不是换行 */
+  /* 占满剩余宽度，超长时在自身区域内换行，不省略 */
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.6;
   color: #409eff;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 
 .audit-time {
-  /* 章节缺失时靠右对齐，保持在最右侧 */
+  /* 章节缺失时靠右；有章节时保持在首行右侧 */
   margin-left: auto;
   flex-shrink: 0;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.6;
   color: #9ca3af;
+  white-space: nowrap;
 }
 
 .review-container {

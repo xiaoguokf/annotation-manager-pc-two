@@ -343,19 +343,21 @@ defineExpose({
 .feedback-type {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  /* 章节路径过长时省略，不挤压右侧处理状态 */
+  /* 章节路径过长时在自身区域内折行，不挤压右侧处理状态 */
   min-width: 0;
   flex: 1;
 }
 
 .feedback-catalogue-inline {
-  font-size: 12px;
-  color: #409eff;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  /* 与审核反馈抽屉一致：不省略，超长时换行 */
+  flex: 1;
   min-width: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #409eff;
+  overflow-wrap: break-word;
 }
 
 .feedback-auditor {
