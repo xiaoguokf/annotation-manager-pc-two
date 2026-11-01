@@ -85,7 +85,8 @@
     </div>
 
     <!-- 审核记录抽屉 -->
-    <el-drawer v-model="auditDrawerVisible" title="审核反馈" size="400px" direction="rtl">
+    <!-- resizable：拖拽左侧边缘可调宽度，章节路径较长时可拖宽查看 -->
+    <el-drawer v-model="auditDrawerVisible" title="审核反馈" size="400px" direction="rtl" resizable>
       <template #header>
         <div class="flex items-center justify-between">
           <span>审核反馈 ({{ auditRecords.length }})</span>
@@ -98,7 +99,7 @@
       <div class="audit-list">
         <div v-for="record in auditRecords" :key="record.id"
           class="audit-item p-4 border-b border-gray-200 cursor-pointer" @click="handleAuditItemClick(record)">
-          <div class="flex items-center justify-between gap-2 mb-2">
+          <div class="audit-item-header">
             <div class="audit-heading">
               <el-tag :type="getAuditTypeTag(record.type)" size="small" class="flex-shrink-0">
                 {{ getAuditTypeName(record.type) }}
@@ -666,6 +667,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.audit-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  /* 防止长章节路径撑破抽屉，导致右侧时间被挤出去 */
+  overflow: hidden;
+}
+
 .audit-heading {
   display: flex;
   align-items: center;
