@@ -85,7 +85,8 @@
     </div>
 
     <!-- 审核记录抽屉 -->
-    <el-drawer v-model="auditDrawerVisible" title="审核反馈" size="400px" direction="rtl">
+    <!-- resizable：拖拽左侧边缘可调宽度，章节路径较长时可拖宽查看 -->
+    <el-drawer v-model="auditDrawerVisible" title="审核反馈" size="400px" direction="rtl" resizable>
       <template #header>
         <div class="flex items-center justify-between">
           <span>审核反馈 ({{ auditRecords.length }})</span>
@@ -98,11 +99,15 @@
       <div class="audit-list">
         <div v-for="record in auditRecords" :key="record.id"
           class="audit-item p-4 border-b border-gray-200 cursor-pointer" @click="handleAuditItemClick(record)">
-          <div class="flex items-start justify-between mb-2">
-            <el-tag :type="getAuditTypeTag(record.type)" size="small">
+          <!-- 类型标签、章节、时间同一行；章节过长时只在自身区域换行，不挤动标签和时间 -->
+          <div class="audit-item-header">
+            <el-tag :type="getAuditTypeTag(record.type)" size="small" class="audit-type-tag">
               {{ getAuditTypeName(record.type) }}
             </el-tag>
-            <span class="text-xs text-gray-400">{{ formatTime(record.createTime) }}</span>
+            <span v-if="record.cataloguePath" class="audit-catalogue" :title="record.cataloguePath">
+              {{ record.cataloguePath }}
+            </span>
+            <span class="audit-time">{{ formatTime(record.createTime) }}</span>
           </div>
           <div class="text-sm text-gray-700 mb-2">{{ record.content }}</div>
           <!-- 处理内容 -->
@@ -278,7 +283,10 @@ const catalogues = ref<CatalogueVO[]>([])
 const auditDrawerVisible = ref(false)
 
 // 审核记录列表
-const auditRecords = ref<ProjectAuditVO[]>([])
+// 审核记录（附带后端返回的目录章节路径）
+type AuditRecord = ProjectAuditVO & { cataloguePath?: string }
+
+const auditRecords = ref<AuditRecord[]>([])
 
 // 审核确认对话框显示状态
 const reviewConfirmDialogVisible = ref(false)
@@ -657,6 +665,41 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 类型标签、章节、时间排在同一行；章节超长时只在自己那一列折行，
+   标签固定在左、时间固定在右，都不会被挤到下一行 */
+.audit-item-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.audit-type-tag {
+  flex-shrink: 0;
+  /* 与章节首行对齐 */
+  margin-top: 1px;
+}
+
+.audit-catalogue {
+  /* 占满剩余宽度，超长时在自身区域内换行，不省略 */
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #409eff;
+  overflow-wrap: break-word;
+}
+
+.audit-time {
+  /* 章节缺失时靠右；有章节时保持在首行右侧 */
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
 .review-container {
   height: 100vh;
 }

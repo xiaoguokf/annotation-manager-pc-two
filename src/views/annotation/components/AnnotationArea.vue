@@ -101,7 +101,7 @@
                   <!-- 标注框 -->
                   <div class="annotation-box"
                     :class="{ selected: selectedAnnotationId === annotation.id, highlighted: highlightedAnnotationId === annotation.id, resizing: resizingAnnotation?.id === annotation.id, dragging: draggingAnnotation?.id === annotation.id, 'show-drag-handle': annotationShowingDragHandle === annotation.id, 'show-label': hoveredLabelId === annotation.id }"
-                    :style="{ ...getAnnotationStyle(annotation, 'left'), borderColor: getAnnotationTypeColor(annotation.type, annotation.inputType), cursor: resizingAnnotation?.id === annotation.id ? getResizeCursor(resizingDirection) : '', '--zoom-scale': leftZoom }"
+                    :style="{ ...getAnnotationStyle(annotation, 'left'), '--box-color': getAnnotationTypeColor(annotation.type, annotation.inputType), cursor: resizingAnnotation?.id === annotation.id ? getResizeCursor(resizingDirection) : '', '--zoom-scale': leftZoom }"
                     @click.stop="handleAnnotationClick(annotation)"
                     @mouseenter="handleAnnotationBoxMouseEnter(annotation.id)"
                     @mouseleave="handleAnnotationBoxMouseLeave(annotation.id)"
@@ -180,7 +180,7 @@
                   <!-- 标注框 -->
                   <div class="annotation-box"
                     :class="{ selected: selectedAnnotationId === annotation.id, highlighted: highlightedAnnotationId === annotation.id, resizing: resizingAnnotation?.id === annotation.id, dragging: draggingAnnotation?.id === annotation.id, 'show-drag-handle': annotationShowingDragHandle === annotation.id, 'show-label': hoveredLabelId === annotation.id }"
-                    :style="{ ...getAnnotationStyle(annotation, 'right'), borderColor: getAnnotationTypeColor(annotation.type, annotation.inputType), cursor: resizingAnnotation?.id === annotation.id ? getResizeCursor(resizingDirection) : '', '--zoom-scale': rightZoom }"
+                    :style="{ ...getAnnotationStyle(annotation, 'right'), '--box-color': getAnnotationTypeColor(annotation.type, annotation.inputType), cursor: resizingAnnotation?.id === annotation.id ? getResizeCursor(resizingDirection) : '', '--zoom-scale': rightZoom }"
                     @click.stop="handleAnnotationClick(annotation)"
                     @mouseenter="handleAnnotationBoxMouseEnter(annotation.id)"
                     @mouseleave="handleAnnotationBoxMouseLeave(annotation.id)"
@@ -394,6 +394,9 @@ interface AnnotationTypeConfig {
   icon: string
   color: string
 }
+
+// 标注标签在屏幕上的字号（px），不随页面缩放变化
+const LABEL_FONT_SIZE = 14
 
 const annotationTypeConfigs: AnnotationTypeConfig[] = [
   { value: 1, name: '题干', icon: 'ep:document', color: '#3b82f6' },
@@ -1006,12 +1009,14 @@ const getAnnotationStyle = (annotation: AnnotationVO, side: 'left' | 'right') =>
 // 获取标注标签样式（左上角外显示）
 const getAnnotationLabelStyle = (annotation: AnnotationVO, side: 'left' | 'right') => {
   // 标签会自动跟随父元素 image-item 的缩放
-  // 但字体大小需要反向调整以保持可读性
+  // 字体和偏移都按缩放比反向取值，保证屏幕上的字号恒为 LABEL_FONT_SIZE：
+  // 放大时标签不会跟着放大压住答案，缩小时也不会小到看不清
   const scale = side === 'left' ? leftZoom.value : rightZoom.value
   return {
     left: `${annotation.topLeftX}px`,
-    top: `calc(${annotation.topLeftY}px - 10px)`,
-    fontSize: `${Math.max(10, 11 / scale)}px`
+    top: `calc(${annotation.topLeftY}px - ${LABEL_FONT_SIZE / scale}px)`,
+    fontSize: `${LABEL_FONT_SIZE / scale}px`,
+    '--zoom-scale': scale
   }
 }
 
@@ -1023,10 +1028,12 @@ const shouldHideLabel = (annotation: AnnotationVO, side: 'left' | 'right') => {
   }
 
   const annotationsList = side === 'left' ? leftAnnotations.value : rightAnnotations.value
-  const labelTop = annotation.topLeftY - 20
+  // 标签在屏幕上的尺寸恒定，换算回未缩放的坐标系要除以缩放比
+  const scale = side === 'left' ? leftZoom.value : rightZoom.value
+  const labelTop = annotation.topLeftY - (LABEL_FONT_SIZE + 9) / scale
   const labelBottom = annotation.topLeftY
   const labelLeft = annotation.topLeftX
-  const labelRight = annotation.topLeftX + 40 // 假设标签宽度约40px
+  const labelRight = annotation.topLeftX + LABEL_FONT_SIZE * 3.6 / scale // 假设标签屏幕宽度约为字号的 3.6 倍
 
   // 检查是否与其他标注框重叠
   for (const other of annotationsList) {
@@ -1076,12 +1083,13 @@ const handleAnnotationBoxMouseLeave = (annotationId: string) => {
 const getSelectionRectStyle = (side: 'left' | 'right') => {
   if (!currentAnnotationRect.value) return {}
   // 选框会自动跟随父元素 image-item 的缩放
-  // 所以直接使用原始坐标即可
+  // 所以直接使用原始坐标即可；同时传入缩放比例供线宽反向缩放使用
   return {
     left: `${currentAnnotationRect.value.x}px`,
     top: `${currentAnnotationRect.value.y}px`,
     width: `${currentAnnotationRect.value.width}px`,
-    height: `${currentAnnotationRect.value.height}px`
+    height: `${currentAnnotationRect.value.height}px`,
+    '--zoom-scale': side === 'left' ? leftZoom.value : rightZoom.value
   }
 }
 
@@ -3211,11 +3219,14 @@ onUnmounted(() => {
 /* 标注框样式 */
 .annotation-box {
   position: absolute;
-  border: 1px solid #ff6b6b;
+  /* 用 inset 阴影画框线：border-width 会被浏览器钳制到最小 1 物理像素，
+     再被父容器的 scale 放大回去，无法真正变细；box-shadow 的 spread 不受此钳制，
+     配合 calc(1px / 缩放比) 可让屏幕上的线宽恒为 1 物理像素 */
+  border: 0;
+  box-shadow: inset 0 0 0 calc(1px / var(--zoom-scale, 1)) var(--box-color, #ff6b6b);
   background-color: rgba(255, 107, 107, 0.05);
   cursor: pointer;
   transition: all 0.2s;
-  /* 边框宽度需要反向缩放以保持视觉一致 */
 }
 
 .annotation-box:hover {
@@ -3390,13 +3401,15 @@ onUnmounted(() => {
 
 .resize-handle:hover {
   background-color: #2563eb;
-  transform: scale(1.2);
+  /* 保持反向缩放，悬停放大时不会在高倍缩放下突然变大 */
+  transform: scale(calc(1.2 / var(--zoom-scale, 1)));
 }
 
 .annotation-box.highlighted {
-  border-color: #22c55e;
+  --box-color: #22c55e;
   background-color: rgba(34, 197, 94, 0.15);
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+  box-shadow: inset 0 0 0 calc(1px / var(--zoom-scale, 1)) var(--box-color, #22c55e),
+    0 0 10px rgba(34, 197, 94, 0.5);
   animation: pulse 0.15s ease-in-out;
 }
 
@@ -3415,7 +3428,9 @@ onUnmounted(() => {
 /* 标注选框样式 */
 .selection-rect {
   position: absolute;
-  border: 2px dashed #3b82f6;
+  /* 与标注框同样的做法：inset 阴影线宽不受 1 物理像素钳制限制 */
+  border: 0;
+  box-shadow: inset 0 0 0 calc(1px / var(--zoom-scale, 1)) #3b82f6;
   background-color: rgba(59, 130, 246, 0.1);
   pointer-events: none;
 }
@@ -3511,7 +3526,8 @@ onUnmounted(() => {
   font-size: 11px;
   white-space: nowrap;
   font-weight: 500;
-  text-shadow: 0 0 2px white, 0 0 2px white;
+  /* 描边宽度同样反向缩放，否则高倍放大后会糊成一片 */
+  text-shadow: 0 0 calc(2px / var(--zoom-scale, 1)) white, 0 0 calc(2px / var(--zoom-scale, 1)) white;
   pointer-events: auto;
   line-height: 1;
   opacity: 0.6;

@@ -19,10 +19,14 @@
         >
           <div class="feedback-header">
             <div class="feedback-type">
-              <el-tag :type="getTypeTagType(feedback.type)" size="small">
+              <el-tag :type="getTypeTagType(feedback.type)" size="small" class="flex-shrink-0">
                 {{ getTypeName(feedback.type) }}
               </el-tag>
-              <span v-if="feedback.nickname" class="feedback-auditor">
+              <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
+              <span v-if="feedback.cataloguePath" class="feedback-catalogue-inline" :title="feedback.cataloguePath">
+                {{ feedback.cataloguePath }}
+              </span>
+              <span v-if="feedback.nickname" class="feedback-auditor flex-shrink-0">
                 处理人：{{ feedback.nickname }}
               </span>
               <el-button
@@ -45,11 +49,6 @@
           <div class="feedback-content">
             <div class="feedback-label">反馈内容：</div>
             <div class="feedback-text">{{ feedback.content }}</div>
-          </div>
-
-          <div v-if="feedback.type === 3 && feedback.cataloguePath" class="feedback-catalogue">
-            <div class="feedback-label">目录路径：</div>
-            <div class="feedback-text">{{ feedback.cataloguePath }}</div>
           </div>
 
           <div v-if="feedback.handContent" class="feedback-hand">
@@ -179,12 +178,12 @@ const loadFeedbackList = async () => {
       // 更新未处理反馈数量
       unhandledCount.value = feedbackList.value.filter(item => !item.passed).length
 
-      // 为目录类型的反馈构建目录路径（仅书籍类型）
+      // 后端已返回章节路径时直接使用；未返回的目录审核再用目录树兜底
       if (props.type === 'book' && props.catalogueTreeRef) {
         const buildCataloguePath = props.catalogueTreeRef.buildCataloguePath
         if (typeof buildCataloguePath === 'function') {
           feedbackList.value.forEach(feedback => {
-            if (feedback.type === 3 && feedback.objectId) {
+            if (!feedback.cataloguePath && feedback.type === 3 && feedback.objectId) {
               feedback.cataloguePath = buildCataloguePath(feedback.objectId)
             }
           })
@@ -344,7 +343,21 @@ defineExpose({
 .feedback-type {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  /* 章节路径过长时在自身区域内折行，不挤压右侧处理状态 */
+  min-width: 0;
+  flex: 1;
+}
+
+.feedback-catalogue-inline {
+  /* 与审核反馈抽屉一致：不省略，超长时换行 */
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #409eff;
+  overflow-wrap: break-word;
 }
 
 .feedback-auditor {
@@ -353,8 +366,7 @@ defineExpose({
 }
 
 .feedback-content,
-.feedback-hand,
-.feedback-catalogue {
+.feedback-hand {
   margin-bottom: 8px;
 }
 
