@@ -99,17 +99,15 @@
       <div class="audit-list">
         <div v-for="record in auditRecords" :key="record.id"
           class="audit-item p-4 border-b border-gray-200 cursor-pointer" @click="handleAuditItemClick(record)">
+          <!-- 类型标签、章节、时间同一行；章节过长时省略，不换行挤压右侧 -->
           <div class="audit-item-header">
-            <div class="audit-heading">
-              <el-tag :type="getAuditTypeTag(record.type)" size="small" class="flex-shrink-0">
-                {{ getAuditTypeName(record.type) }}
-              </el-tag>
-              <!-- 目录章节：不跳转题目也能知道问题出在哪一节 -->
-              <span v-if="record.cataloguePath" class="audit-catalogue" :title="record.cataloguePath">
-                {{ record.cataloguePath }}
-              </span>
-            </div>
-            <span class="text-xs text-gray-400 flex-shrink-0">{{ formatTime(record.createTime) }}</span>
+            <el-tag :type="getAuditTypeTag(record.type)" size="small" class="audit-type-tag">
+              {{ getAuditTypeName(record.type) }}
+            </el-tag>
+            <span v-if="record.cataloguePath" class="audit-catalogue" :title="record.cataloguePath">
+              {{ record.cataloguePath }}
+            </span>
+            <span class="audit-time">{{ formatTime(record.createTime) }}</span>
           </div>
           <div class="text-sm text-gray-700 mb-2">{{ record.content }}</div>
           <!-- 处理内容 -->
@@ -667,34 +665,39 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 类型标签、章节、时间排在同一行，避免章节单独换行 */
 .audit-item-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
-  /* 防止长章节路径撑破抽屉，导致右侧时间被挤出去 */
+  /* 防止长章节路径撑破抽屉 */
   overflow: hidden;
 }
 
-.audit-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  /* 章节路径过长时省略，不挤压右侧时间 */
-  min-width: 0;
-  flex: 1;
+.audit-type-tag {
+  flex-shrink: 0;
 }
 
 .audit-catalogue {
+  /* 占满剩余宽度，过长时省略而不是换行 */
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   line-height: 1.4;
   color: #409eff;
-  /* 抽屉宽度有限，单行省略，完整路径见 title 提示 */
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  min-width: 0;
+}
+
+.audit-time {
+  /* 章节缺失时靠右对齐，保持在最右侧 */
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #9ca3af;
 }
 
 .review-container {
