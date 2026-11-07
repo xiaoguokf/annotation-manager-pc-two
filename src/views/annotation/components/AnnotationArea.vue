@@ -1,73 +1,81 @@
 <template>
   <div class="annotation-area-container h-full flex flex-col overflow-hidden">
     <!-- 顶部导航栏 -->
-    <div class="nav-bar h-12 border-b border-gray-200 bg-white flex items-center px-4 flex-shrink-0">
+    <div class="nav-bar border-b border-gray-200 bg-white flex items-center px-3 flex-shrink-0">
       <!-- 左图控制区域 -->
-      <div class="nav-section left-nav flex items-center gap-3 flex-1">
-        <span class="text-sm text-gray-600 font-medium">左图</span>
-        <!-- 页码导航 -->
-        <div class="flex items-center gap-1">
+      <div class="nav-section left-nav flex items-center flex-1">
+        <span class="nav-title">左图</span>
+        <!-- 页码导航 + 重新加载 -->
+        <div class="nav-group">
           <el-button size="small" circle @click="handlePreviousLeftPage" :disabled="leftPageIndex <= 1">
             <Icon icon="ep:arrow-left" />
           </el-button>
-          <el-input v-model.number="leftPageIndex" :min="1" :max="leftPdf?.size || 1" size="small" class="w-14"
+          <el-input v-model.number="leftPageIndex" :min="1" :max="leftPdf?.size || 1" size="small"
             @change="handleLeftPageJump" />
-          <span class="text-sm text-gray-500">/ {{ leftPdf?.size || 0 }}</span>
+          <span class="nav-page-total">/ {{ leftPdf?.size || 0 }}</span>
           <el-button size="small" circle @click="handleNextLeftPage"
             :disabled="!leftPdf || leftPageIndex >= leftPdf.size">
             <Icon icon="ep:arrow-right" />
           </el-button>
+          <el-button size="small" circle title="重新加载当前图片" :disabled="!leftPageUrl"
+            :loading="leftImageState === 'loading'" @click="reloadImage('left')">
+            <Icon v-if="leftImageState !== 'loading'" icon="ep:refresh" />
+          </el-button>
         </div>
-        <el-divider direction="vertical" />
+        <el-divider direction="vertical" class="nav-divider" />
         <!-- 缩放控制 -->
-        <div class="flex items-center gap-1">
+        <div class="nav-group">
           <el-button size="small" circle @click="handleZoomIn('left')" :disabled="leftZoom >= 3">
             <Icon icon="ep:zoom-in" />
           </el-button>
-          <span class="text-sm text-gray-500 w-12 text-center">{{ Math.round(leftZoom * 100) }}%</span>
+          <span class="nav-zoom-value">{{ Math.round(leftZoom * 100) }}%</span>
           <el-button size="small" circle @click="handleZoomOut('left')" :disabled="leftZoom <= 0.5">
             <Icon icon="ep:zoom-out" />
           </el-button>
-          <el-button size="small" @click="handleResetZoom('left')">重置</el-button>
+          <el-button size="small" class="nav-reset-btn" @click="handleResetZoom('left')">重置</el-button>
         </div>
       </div>
 
       <!-- 布局切换按钮 -->
-      <div class="layout-switcher flex items-center gap-2 px-4">
-        <el-button size="small" @click="toggleLayout" title="切换布局">
+      <div class="layout-switcher flex items-center flex-shrink-0">
+        <el-button size="small" class="nav-reset-btn" @click="toggleLayout" title="切换布局">
           <Icon :icon="imageLayout === 'horizontal' ? 'ep:rank' : 'ep:bottom'" />
-          <span class="ml-1">{{ imageLayout === 'horizontal' ? '左右布局' : '上下布局' }}</span>
+          <span class="ml-1 whitespace-nowrap">{{ imageLayout === 'horizontal' ? '左右布局' : '上下布局' }}</span>
         </el-button>
       </div>
 
       <!-- 右图控制区域 -->
-      <div class="nav-section right-nav flex items-center gap-3 flex-1 justify-end">
+      <div class="nav-section right-nav flex items-center flex-1 justify-end">
         <!-- 缩放控制 -->
-        <div class="flex items-center gap-1">
+        <div class="nav-group">
           <el-button size="small" circle @click="handleZoomIn('right')" :disabled="rightZoom >= 3">
             <Icon icon="ep:zoom-in" />
           </el-button>
-          <span class="text-sm text-gray-500 w-12 text-center">{{ Math.round(rightZoom * 100) }}%</span>
+          <span class="nav-zoom-value">{{ Math.round(rightZoom * 100) }}%</span>
           <el-button size="small" circle @click="handleZoomOut('right')" :disabled="rightZoom <= 0.5">
             <Icon icon="ep:zoom-out" />
           </el-button>
-          <el-button size="small" @click="handleResetZoom('right')">重置</el-button>
+          <el-button size="small" class="nav-reset-btn" @click="handleResetZoom('right')">重置</el-button>
         </div>
-        <el-divider direction="vertical" />
-        <!-- 页码导航 -->
-        <div class="flex items-center gap-1">
+        <el-divider direction="vertical" class="nav-divider" />
+        <!-- 页码导航 + 重新加载 -->
+        <div class="nav-group">
           <el-button size="small" circle @click="handlePreviousRightPage" :disabled="rightPageIndex <= 1">
             <Icon icon="ep:arrow-left" />
           </el-button>
-          <el-input v-model.number="rightPageIndex" :min="1" :max="rightPdf?.size || 1" size="small" class="w-14"
+          <el-input v-model.number="rightPageIndex" :min="1" :max="rightPdf?.size || 1" size="small"
             @change="handleRightPageJump" />
-          <span class="text-sm text-gray-500">/ {{ rightPdf?.size || 0 }}</span>
+          <span class="nav-page-total">/ {{ rightPdf?.size || 0 }}</span>
           <el-button size="small" circle @click="handleNextRightPage"
             :disabled="!rightPdf || rightPageIndex >= rightPdf.size">
             <Icon icon="ep:arrow-right" />
           </el-button>
+          <el-button size="small" circle title="重新加载当前图片" :disabled="!rightPageUrl"
+            :loading="rightImageState === 'loading'" @click="reloadImage('right')">
+            <Icon v-if="rightImageState !== 'loading'" icon="ep:refresh" />
+          </el-button>
         </div>
-        <span class="text-sm text-gray-600 font-medium ml-2">右图</span>
+        <span class="nav-title ml-2">右图</span>
       </div>
     </div>
 
@@ -87,8 +95,8 @@
                 :style="leftImageStyle" @contextmenu.prevent="handleImageRightClick($event, 'left')"
                 @wheel.prevent="(e) => handleWheel(e, 'left')">
                 <div class="page-info">{{ leftPdf?.pdfName }} - 第 {{ leftPage?.realPage || leftPageIndex }} 页</div>
-                <img v-if="leftPageUrl" ref="leftImageRef" :src="leftPageUrl" alt="左侧图片" class="pdf-page"
-                  draggable="false" crossorigin="anonymous" />
+                <img v-if="leftImageSrc" ref="leftImageRef" :src="leftImageSrc" alt="左侧图片" class="pdf-page"
+                  draggable="false" @load="handleImageLoad('left')" @error="handleImageError('left')" />
                 <!-- 标注框和标签 -->
                 <template v-for="annotation in leftAnnotations" :key="annotation.id">
                   <!-- 标注标签 -->
@@ -150,6 +158,35 @@
               <Icon icon="ep:picture" :width="64" :height="64" class="text-gray-400" />
               <p class="text-gray-400 mt-2">暂无图片</p>
             </div>
+            <!-- 左侧图片加载中 -->
+            <div v-if="leftPageUrl && leftImageState === 'loading' && leftShowLoading" class="image-loading"
+              @mousedown.stop @click.stop>
+              <Icon icon="ep:loading" :width="32" :height="32" class="loading-spinner" />
+              <p class="image-loading-tip">{{ IMAGE_LOADING_TIPS[leftLoadingTipIndex] }}</p>
+              <p class="image-loading-text">
+                {{ formatBytes(leftImageReceived) }}
+                <template v-if="leftImageTotal > 0"> / {{ formatBytes(leftImageTotal) }}</template>
+                <span v-if="leftImageTotal > 0" class="image-loading-percent-inline">
+                  （{{ leftImagePercent }}%）
+                </span>
+              </p>
+              <div class="image-loading-bar">
+                <div class="image-loading-bar-fill"
+                  :class="{ indeterminate: leftImageTotal === 0 }"
+                  :style="leftImageTotal > 0 ? { width: leftImagePercent + '%' } : {}">
+                </div>
+              </div>
+              <p class="image-loading-hint">网络较慢时可以先去忙别的，图片到齐会自动显示</p>
+            </div>
+            <!-- 左侧图片加载失败提示 -->
+            <div v-if="leftPageUrl && leftImageState === 'error'" class="image-load-error" @mousedown.stop
+              @click.stop>
+              <Icon icon="ep:warn-triangle-filled" :width="48" :height="48" class="text-red-400" />
+              <p class="text-gray-500 mt-2">图片加载失败或加载超时</p>
+              <el-button type="primary" size="small" class="mt-3" @click="reloadImage('left')">
+                重新加载
+              </el-button>
+            </div>
           </div>
         </el-splitter-panel>
 
@@ -166,8 +203,8 @@
                 :style="rightImageStyle" @contextmenu.prevent="handleImageRightClick($event, 'right')"
                 @wheel.prevent="(e) => handleWheel(e, 'right')">
                 <div class="page-info">{{ rightPdf?.pdfName }} - 第 {{ rightPage?.realPage || rightPageIndex }} 页</div>
-                <img v-if="rightPageUrl" ref="rightImageRef" :src="rightPageUrl" alt="右侧图片" class="pdf-page"
-                  draggable="false" crossorigin="anonymous" />
+                <img v-if="rightImageSrc" ref="rightImageRef" :src="rightImageSrc" alt="右侧图片" class="pdf-page"
+                  draggable="false" @load="handleImageLoad('right')" @error="handleImageError('right')" />
                 <!-- 标注框和标签 -->
                 <template v-for="annotation in rightAnnotations" :key="annotation.id">
                   <!-- 标注标签 -->
@@ -228,6 +265,35 @@
             <div v-if="!rightPageUrl" class="empty-state">
               <Icon icon="ep:picture" :width="64" :height="64" class="text-gray-400" />
               <p class="text-gray-400 mt-2">暂无图片</p>
+            </div>
+            <!-- 右侧图片加载中 -->
+            <div v-if="rightPageUrl && rightImageState === 'loading' && rightShowLoading" class="image-loading"
+              @mousedown.stop @click.stop>
+              <Icon icon="ep:loading" :width="32" :height="32" class="loading-spinner" />
+              <p class="image-loading-tip">{{ IMAGE_LOADING_TIPS[rightLoadingTipIndex] }}</p>
+              <p class="image-loading-text">
+                {{ formatBytes(rightImageReceived) }}
+                <template v-if="rightImageTotal > 0"> / {{ formatBytes(rightImageTotal) }}</template>
+                <span v-if="rightImageTotal > 0" class="image-loading-percent-inline">
+                  （{{ rightImagePercent }}%）
+                </span>
+              </p>
+              <div class="image-loading-bar">
+                <div class="image-loading-bar-fill"
+                  :class="{ indeterminate: rightImageTotal === 0 }"
+                  :style="rightImageTotal > 0 ? { width: rightImagePercent + '%' } : {}">
+                </div>
+              </div>
+              <p class="image-loading-hint">网络较慢时可以先去忙别的，图片到齐会自动显示</p>
+            </div>
+            <!-- 右侧图片加载失败提示 -->
+            <div v-if="rightPageUrl && rightImageState === 'error'" class="image-load-error" @mousedown.stop
+              @click.stop>
+              <Icon icon="ep:warn-triangle-filled" :width="48" :height="48" class="text-red-400" />
+              <p class="text-gray-500 mt-2">图片加载失败或加载超时</p>
+              <el-button type="primary" size="small" class="mt-3" @click="reloadImage('right')">
+                重新加载
+              </el-button>
             </div>
           </div>
         </el-splitter-panel>
@@ -578,6 +644,45 @@ const rightImageWrapperRef = ref<HTMLElement | null>(null)
 const leftImageRef = ref<HTMLImageElement | null>(null)
 const rightImageRef = ref<HTMLImageElement | null>(null)
 
+// 页面图片加载状态与重载控制
+type ImageLoadState = 'idle' | 'loading' | 'loaded' | 'error'
+// 连续多久没有收到新字节就判定为连接僵死（弱网下只要字节还在流动就不算卡死）
+const IMAGE_STALL_TIMEOUT_MS = 10000
+// 加载提示延迟出现，避免快网络下一闪而过
+const IMAGE_LOADING_OVERLAY_DELAY_MS = 300
+const leftImageState = ref<ImageLoadState>('idle')
+const rightImageState = ref<ImageLoadState>('idle')
+// 实际给 <img> 使用的地址（下载完成后是 blob URL）
+const leftImageSrc = ref('')
+const rightImageSrc = ref('')
+// 下载进度
+const leftImageReceived = ref(0)
+const leftImageTotal = ref(0)
+const rightImageReceived = ref(0)
+const rightImageTotal = ref(0)
+// 加载提示是否可见
+const leftShowLoading = ref(false)
+const rightShowLoading = ref(false)
+// 等待时的轮播提示语，缓解弱网下的等待焦虑
+const IMAGE_LOADING_TIPS = [
+  '正在翻开书页…',
+  '图片有点大，正在慢慢送达',
+  '网络慢一点也没关系，马上就好',
+  '已经收到一部分了，请稍等',
+  '正在把纸张铺平，很快就好了'
+]
+const IMAGE_LOADING_TIP_INTERVAL_MS = 4000
+const leftLoadingTipIndex = ref(0)
+const rightLoadingTipIndex = ref(0)
+const imageTipTimers: { left: ReturnType<typeof setInterval> | null, right: ReturnType<typeof setInterval> | null } = { left: null, right: null }
+
+// 每次加载的世代号，用于丢弃过期响应
+const imageGeneration = { left: 0, right: 0 }
+const imageControllers: { left: AbortController | null, right: AbortController | null } = { left: null, right: null }
+const imageBlobUrls = { left: '', right: '' }
+const imageStallTimers: { left: ReturnType<typeof setTimeout> | null, right: ReturnType<typeof setTimeout> | null } = { left: null, right: null }
+const imageOverlayTimers: { left: ReturnType<typeof setTimeout> | null, right: ReturnType<typeof setTimeout> | null } = { left: null, right: null }
+
 // 缩放相关 - 左右图分别缩放
 const leftZoom = ref(1)
 const rightZoom = ref(1)
@@ -833,11 +938,241 @@ const leftPage = computed(() => leftPages.value[leftPageIndex.value - 1])
 // 右侧当前页面（使用索引）
 const rightPage = computed(() => rightPages.value[rightPageIndex.value - 1])
 
-// 左侧图片 URL
-const leftPageUrl = computed(() => leftPage.value?.url || '')
+// 页面图片原始 URL
+const leftPageBaseUrl = computed(() => leftPage.value?.url || '')
+const rightPageBaseUrl = computed(() => rightPage.value?.url || '')
 
-// 右侧图片 URL
-const rightPageUrl = computed(() => rightPage.value?.url || '')
+// 左侧图片占位标记（用于空状态判断，与图片是否已下载完成无关）
+const leftPageUrl = computed(() => leftPageBaseUrl.value)
+const rightPageUrl = computed(() => rightPageBaseUrl.value)
+
+// 加载进度百分比
+const getImagePercent = (received: number, total: number) => {
+  if (!total) return 0
+  return Math.min(100, Math.round((received / total) * 100))
+}
+
+const leftImagePercent = computed(() => getImagePercent(leftImageReceived.value, leftImageTotal.value))
+const rightImagePercent = computed(() => getImagePercent(rightImageReceived.value, rightImageTotal.value))
+
+// 字节数格式化
+const formatBytes = (bytes: number) => {
+  if (bytes <= 0) return '0 KB'
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+// 清理僵死检测定时器
+const clearStallTimer = (side: 'left' | 'right') => {
+  const timer = imageStallTimers[side]
+  if (timer) {
+    clearTimeout(timer)
+    imageStallTimers[side] = null
+  }
+}
+
+// 重置僵死检测：只要还在收到新字节就说明连接活着
+const armStallTimer = (side: 'left' | 'right', controller: AbortController) => {
+  clearStallTimer(side)
+  imageStallTimers[side] = setTimeout(() => {
+    // 超过阈值没有新字节，主动中断，避免请求永久挂起占用连接
+    controller.abort()
+  }, IMAGE_STALL_TIMEOUT_MS)
+}
+
+// 清理加载提示延迟定时器
+const clearOverlayTimer = (side: 'left' | 'right') => {
+  const timer = imageOverlayTimers[side]
+  if (timer) {
+    clearTimeout(timer)
+    imageOverlayTimers[side] = null
+  }
+  clearTipRotation(side)
+}
+
+// 停止提示语轮播
+const clearTipRotation = (side: 'left' | 'right') => {
+  const timer = imageTipTimers[side]
+  if (timer) {
+    clearInterval(timer)
+    imageTipTimers[side] = null
+  }
+}
+
+// 开始轮播提示语，只在加载层真正显示后启动
+const startTipRotation = (side: 'left' | 'right') => {
+  clearTipRotation(side)
+  const tipIndex = side === 'left' ? leftLoadingTipIndex : rightLoadingTipIndex
+  tipIndex.value = 0
+  imageTipTimers[side] = setInterval(() => {
+    tipIndex.value = (tipIndex.value + 1) % IMAGE_LOADING_TIPS.length
+  }, IMAGE_LOADING_TIP_INTERVAL_MS)
+}
+
+// 释放上一张图片的 blob，避免内存常驻
+const revokeImageBlob = (side: 'left' | 'right') => {
+  const oldUrl = imageBlobUrls[side]
+  if (oldUrl) {
+    URL.revokeObjectURL(oldUrl)
+    imageBlobUrls[side] = ''
+  }
+}
+
+// 中断当前加载
+const abortImageLoad = (side: 'left' | 'right') => {
+  const controller = imageControllers[side]
+  if (controller) {
+    controller.abort()
+    imageControllers[side] = null
+  }
+  clearStallTimer(side)
+  clearOverlayTimer(side)
+  // 中断后立即收起加载层，避免切页瞬间闪一下上一页的加载提示
+  const showLoading = side === 'left' ? leftShowLoading : rightShowLoading
+  showLoading.value = false
+}
+
+// 加载页面图片：可读取真实下载进度，支持主动中断与卡死判定
+// forceReload 为 true 时绕过缓存重新下载（用于手动重载），否则走浏览器 HTTP 缓存
+const loadPageImage = async (side: 'left' | 'right', forceReload = false) => {
+  const baseUrl = side === 'left' ? leftPageBaseUrl.value : rightPageBaseUrl.value
+  const state = side === 'left' ? leftImageState : rightImageState
+  const src = side === 'left' ? leftImageSrc : rightImageSrc
+  const received = side === 'left' ? leftImageReceived : rightImageReceived
+  const total = side === 'left' ? leftImageTotal : rightImageTotal
+  const showLoading = side === 'left' ? leftShowLoading : rightShowLoading
+
+  // 先换代再中断：否则旧请求的 abort 回调会通过世代校验，把新一次加载误标为失败
+  const generation = ++imageGeneration[side]
+  abortImageLoad(side)
+
+  if (!baseUrl) {
+    state.value = 'idle'
+    src.value = ''
+    showLoading.value = false
+    received.value = 0
+    total.value = 0
+    return
+  }
+
+  const controller = new AbortController()
+  imageControllers[side] = controller
+
+  state.value = 'loading'
+  received.value = 0
+  total.value = 0
+
+  // 加载提示延迟出现：下载足够快时用户不会看到闪烁
+  clearOverlayTimer(side)
+  imageOverlayTimers[side] = setTimeout(() => {
+    if (generation === imageGeneration[side] && state.value === 'loading') {
+      showLoading.value = true
+      startTipRotation(side)
+    }
+  }, IMAGE_LOADING_OVERLAY_DELAY_MS)
+
+  armStallTimer(side, controller)
+
+  try {
+    // reload：本次强制重新下载并写回缓存；default：正常翻页优先命中 HTTP 缓存
+    const response = await fetch(baseUrl, {
+      signal: controller.signal,
+      cache: forceReload ? 'reload' : 'default'
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const contentLength = Number(response.headers.get('content-length')) || 0
+    total.value = contentLength
+
+    let blob: Blob
+    if (response.body) {
+      const reader = response.body.getReader()
+      const chunks: Uint8Array[] = []
+      let loaded = 0
+      let lastPercent = -1
+      let lastUpdate = Date.now()
+
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (generation !== imageGeneration[side]) {
+          controller.abort()
+          return
+        }
+        chunks.push(value)
+        loaded += value.length
+        // 收到新字节说明连接还活着，重置僵死检测
+        armStallTimer(side, controller)
+        // 百分比变化或超过 300ms 才更新 UI，避免频繁触发大组件重渲染
+        if (contentLength > 0) {
+          const percent = Math.floor((loaded / contentLength) * 100)
+          if (percent !== lastPercent) {
+            lastPercent = percent
+            received.value = loaded
+          }
+        } else if (Date.now() - lastUpdate > 300) {
+          lastUpdate = Date.now()
+          received.value = loaded
+        }
+      }
+
+      received.value = loaded
+      blob = new Blob(chunks as BlobPart[], {
+        type: response.headers.get('content-type') || 'image/jpeg'
+      })
+    } else {
+      // 极端环境拿不到流时退化为一次性读取，此时没有进度
+      blob = await response.blob()
+      received.value = blob.size
+      total.value = blob.size
+    }
+
+    if (generation !== imageGeneration[side]) return
+
+    clearStallTimer(side)
+    clearOverlayTimer(side)
+    showLoading.value = false
+    revokeImageBlob(side)
+    const objectUrl = URL.createObjectURL(blob)
+    imageBlobUrls[side] = objectUrl
+    src.value = objectUrl
+  } catch (error) {
+    if (generation !== imageGeneration[side]) return
+    clearStallTimer(side)
+    clearOverlayTimer(side)
+    showLoading.value = false
+    state.value = 'error'
+    console.warn('[AnnotationArea] 图片加载失败:', side, error)
+  }
+}
+
+// 图片解码完成
+const handleImageLoad = (side: 'left' | 'right') => {
+  const state = side === 'left' ? leftImageState : rightImageState
+  const showLoading = side === 'left' ? leftShowLoading : rightShowLoading
+  clearOverlayTimer(side)
+  clearStallTimer(side)
+  showLoading.value = false
+  state.value = 'loaded'
+}
+
+// 图片解码失败
+const handleImageError = (side: 'left' | 'right') => {
+  const state = side === 'left' ? leftImageState : rightImageState
+  const showLoading = side === 'left' ? leftShowLoading : rightShowLoading
+  clearOverlayTimer(side)
+  showLoading.value = false
+  state.value = 'error'
+}
+
+// 重新加载图片（绕过缓存）
+const reloadImage = (side: 'left' | 'right') => {
+  const baseUrl = side === 'left' ? leftPageBaseUrl.value : rightPageBaseUrl.value
+  if (!baseUrl) return
+  loadPageImage(side, true)
+}
 
 
 // 总页数
@@ -1145,29 +1480,34 @@ const loadAnnotations = async (immediate = false) => {
   await loadAnnotationsInternal()
 }
 
+// 标注加载世代号：切页后丢弃过期响应，避免旧页标注覆盖新页
+let annotationGeneration = 0
+
 // 内部加载标注列表方法
 const loadAnnotationsInternal = async () => {
   if (!props.projectId) return
-  try {
-    console.log('加载标注列表，左侧页码:', leftPage.value?.realPage || leftPageIndex.value, '右侧页码:', rightPage.value?.realPage || rightPageIndex.value)
 
-    // 加载左侧页的标注
-    const leftPageNum = leftPage.value?.realPage || leftPageIndex.value
-    const leftRes = await getAnnotationListByProjectAndPageApi({ projectId: props.projectId, page: leftPageNum })
-    console.log('左侧标注响应:', leftRes.data)
-    if (leftRes.data.code === 200) {
-      const leftData = leftRes.data.data || []
-      // 加载右侧页的标注
-      const rightPageNum = rightPage.value?.realPage || rightPageIndex.value
-      const rightRes = await getAnnotationListByProjectAndPageApi({ projectId: props.projectId, page: rightPageNum })
-      console.log('右侧标注响应:', rightRes.data)
-      if (rightRes.data.code === 200) {
-        const rightData = rightRes.data.data || []
-        annotations.value = [...leftData, ...rightData]
-        console.log('所有标注:', annotations.value)
-      }
-    }
+  const generation = ++annotationGeneration
+  const projectId = props.projectId
+  // 页码必须在 await 之前取定，否则中途切页会让左右两侧取到不同时刻的页码
+  const leftPageNum = leftPage.value?.realPage || leftPageIndex.value
+  const rightPageNum = rightPage.value?.realPage || rightPageIndex.value
+
+  try {
+    const leftRes = await getAnnotationListByProjectAndPageApi({ projectId, page: leftPageNum })
+    // 期间已切页，本次结果作废
+    if (generation !== annotationGeneration) return
+    if (leftRes.data.code !== 200) return
+    const leftData = leftRes.data.data || []
+
+    const rightRes = await getAnnotationListByProjectAndPageApi({ projectId, page: rightPageNum })
+    if (generation !== annotationGeneration) return
+    if (rightRes.data.code !== 200) return
+    const rightData = rightRes.data.data || []
+
+    annotations.value = [...leftData, ...rightData]
   } catch (error) {
+    if (generation !== annotationGeneration) return
     console.error('加载标注列表失败:', error)
   }
 }
@@ -3093,6 +3433,29 @@ watch([leftPageIndex, rightPageIndex], () => {
   loadAnnotations(false) // 使用节流模式
 })
 
+// 页面切换时清掉旧图并重新加载，避免上一页的图和新页的标注叠在一起
+watch(leftPageBaseUrl, () => {
+  leftImageSrc.value = ''
+  revokeImageBlob('left')
+  loadPageImage('left')
+})
+
+watch(rightPageBaseUrl, () => {
+  rightImageSrc.value = ''
+  revokeImageBlob('right')
+  loadPageImage('right')
+})
+
+// 网络恢复时自动重新加载未完成的图片
+const handleNetworkOnline = () => {
+  if (leftPageBaseUrl.value && leftImageState.value !== 'loaded') {
+    reloadImage('left')
+  }
+  if (rightPageBaseUrl.value && rightImageState.value !== 'loaded') {
+    reloadImage('right')
+  }
+}
+
 onMounted(() => {
   loadPdfList()
   loadModelList()
@@ -3101,6 +3464,7 @@ onMounted(() => {
   document.addEventListener('keydown', handleDeleteAnnotationKeyDown)
   document.addEventListener('keydown', handleGlobalKeyDown)
   document.addEventListener('keyup', handleGlobalKeyUp)
+  window.addEventListener('online', handleNetworkOnline)
   // 初始化图片位置左上角对齐
   setTimeout(() => {
     // 左侧图片左上角对齐
@@ -3125,6 +3489,12 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleDeleteAnnotationKeyDown)
   document.removeEventListener('keydown', handleGlobalKeyDown)
   document.removeEventListener('keyup', handleGlobalKeyUp)
+  window.removeEventListener('online', handleNetworkOnline)
+  // 中断进行中的图片加载并释放 blob
+  abortImageLoad('left')
+  abortImageLoad('right')
+  revokeImageBlob('left')
+  revokeImageBlob('right')
   // 清理节流定时器
   if (loadAnnotationsTimer) {
     clearTimeout(loadAnnotationsTimer)
@@ -3140,11 +3510,16 @@ onUnmounted(() => {
 
 .nav-bar {
   height: 48px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .nav-section {
   display: flex;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .left-nav {
@@ -3155,16 +3530,56 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-.nav-divider {
-  width: 1px;
-  height: 24px;
-  background-color: #e5e7eb;
+/* 标题与页码总数：不换行、不参与收缩，避免宽度不足时挤成两行 */
+.nav-title,
+.nav-page-total,
+.nav-zoom-value {
+  white-space: nowrap;
   flex-shrink: 0;
+}
+
+.nav-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.nav-page-total {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.nav-zoom-value {
+  width: 44px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* 同类控件成组，间距比组间更小 */
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.nav-divider {
+  height: 20px;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.nav-reset-btn {
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .layout-switcher {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+  padding: 0 8px;
 }
 
 .image-area {
@@ -3443,13 +3858,115 @@ onUnmounted(() => {
   text-align: center;
 }
 
+.image-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(245, 245, 245, 0.9);
+  text-align: center;
+}
+
+.loading-spinner {
+  animation: image-loading-spin 1s linear infinite;
+  color: #409eff;
+}
+
+@keyframes image-loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.image-loading-tip {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.image-loading-text {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.image-loading-percent-inline {
+  color: #b0b3b8;
+}
+
+.image-loading-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #b0b3b8;
+}
+
+.image-loading-bar {
+  width: 240px;
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 2px;
+  background-color: #e5e7eb;
+  overflow: hidden;
+}
+
+.image-loading-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background-color: #409eff;
+  transition: width 0.2s linear;
+}
+
+.image-loading-bar-fill.indeterminate {
+  width: 40%;
+  animation: image-loading-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes image-loading-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.image-load-error {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(245, 245, 245, 0.9);
+  text-align: center;
+}
+
 /* 页码输入框样式 */
 .nav-bar :deep(.el-input) {
-  width: 56px !important;
+  width: 52px !important;
 }
 
 .nav-bar :deep(.el-input__wrapper) {
-  padding: 1px 8px !important;
+  padding: 1px 6px !important;
+}
+
+/* 缩放前后按钮之间不要默认外边距，由 .nav-group 统一控制间距 */
+.nav-bar :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.nav-bar :deep(.el-divider--vertical) {
+  margin: 0 4px;
 }
 
 /* el-splitter 分割条样式 */
