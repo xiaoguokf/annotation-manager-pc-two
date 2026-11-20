@@ -33,7 +33,7 @@
               </el-descriptions-item>
               <el-descriptions-item label="学科">
                 <el-select v-model="editForm.subjectId" placeholder="请选择学科" style="width: 100%" filterable>
-                  <el-option v-for="item in subjectList.filter(i => i.id)" :key="item.id" :label="item.subjectName" :value="item.id!" />
+                  <el-option v-for="item in subjectOptions" :key="item.docxCode" :label="item.subjectName" :value="item.id" />
                 </el-select>
               </el-descriptions-item>
               <el-descriptions-item label="册别">
@@ -50,7 +50,7 @@
             <!-- 只读模式（非编辑状态时才显示） -->
             <template v-else>
               <el-descriptions-item label="书籍名称">{{ rawImportData?.bookname || projectInfo.title }}</el-descriptions-item>
-            <el-descriptions-item label="学科">{{ rawImportData?.subject || getSubjectName(projectInfo.subjectId)
+            <el-descriptions-item label="学科">{{ rawImportData?.subject || getSubjectName(projectInfo.subjectId, projectInfo.phase)
               }}</el-descriptions-item>
             <el-descriptions-item label="册别">{{ rawImportData?.volume || getVolumeName(projectInfo.volumeId)
               }}</el-descriptions-item>
@@ -63,7 +63,7 @@
             <el-descriptions-item label="试卷名称">{{ docInfo.title }}</el-descriptions-item>
             <el-descriptions-item label="学段">{{ getStepName(docInfo.stepId) }}</el-descriptions-item>
             <el-descriptions-item label="年级">{{ getGradeName(docInfo.gradeId) }}</el-descriptions-item>
-            <el-descriptions-item label="学科">{{ getSubjectName(docInfo.subjectId) }}</el-descriptions-item>
+            <el-descriptions-item label="学科">{{ getSubjectName(docInfo.subjectId, docInfo.stepId) }}</el-descriptions-item>
             <el-descriptions-item label="所属省/市">{{ getProvinceName(docInfo.provinceId) }}</el-descriptions-item>
             <el-descriptions-item label="所属市/区">{{ getCityName(docInfo.cityId) }}</el-descriptions-item>
             <el-descriptions-item label="年份">{{ docInfo.year || '-' }}</el-descriptions-item>
@@ -135,13 +135,14 @@ import { Icon } from '@iconify/vue'
 import { getBookInfoDetailsApi, putBookInfoUpdateApi, type BookVO, type BookUpdateCmd } from '@/api/gen/bookController'
 import { getDocInfoDetailsApi, type DocVO } from '@/api/gen/docController'
 import type { ProjectAuditVO } from '@/api/gen/projectAuditController'
+import { buildSubjectOptions, subjectNameById } from '@/constants/phaseSubject'
 
 const props = defineProps<{
   projectId: string
   type: 'book' | 'doc'
   auditRecords: ProjectAuditVO[]
   gradeList?: { id?: string; gradeName?: string }[]
-  subjectList?: { id?: string; subjectName?: string }[]
+  subjectList?: { id?: string; subjectName?: string; docxCode?: number }[]
   volumeList?: { id?: string; name?: string }[]
   versionList?: { id?: string; name?: string }[]
   provinceList?: { id?: string; name?: string; code?: string; level?: number; parentCode?: string }[]
@@ -190,11 +191,16 @@ const getGradeName = (id: string | undefined) => {
   return item?.gradeName || id
 }
 
-// 获取学科名称
-const getSubjectName = (id: string | undefined) => {
+// 学科下拉：按学段过滤 + 同 docx 枚举去重，名称按学段取（小学思想品德 / 高中思想政治）
+const subjectOptions = computed(() =>
+  buildSubjectOptions(subjectList.value, projectInfo.value?.phase ?? undefined, editForm.subjectId)
+)
+
+// 获取学科名称（名称随学段变化）
+const getSubjectName = (id: string | undefined, phase?: number | string | null) => {
   if (!id) return '-'
-  const item = subjectList.value.find(s => s.id === id)
-  return item?.subjectName || id
+  const name = subjectNameById(subjectList.value, id, phase == null ? undefined : Number(phase))
+  return name || id
 }
 
 // 获取册别名称
