@@ -21,7 +21,7 @@
 
       <el-form-item label="学科" prop="subjectId">
         <el-select v-model="form.subjectId" placeholder="请选择学科" style="width: 100%" filterable>
-          <el-option v-for="item in subjectList.filter(i => i.id)" :key="item.id" :label="item.subjectName" :value="item.id!" />
+          <el-option v-for="item in subjectOptions" :key="item.docxCode" :label="item.subjectName" :value="item.id" />
         </el-select>
       </el-form-item>
 
@@ -86,6 +86,7 @@ import {
   getDicSubjectListApi,
   getDicAdministrativeDivisionListApi
 } from '@/api/gen/dicController'
+import { buildSubjectOptions, isSubjectAllowed } from '@/constants/phaseSubject'
 
 interface Props {
   docId: string
@@ -103,7 +104,7 @@ const submitting = ref(false)
 const currentYear = new Date().getFullYear()
 
 const gradeList = ref<{ id?: string; gradeName?: string }[]>([])
-const subjectList = ref<{ id?: string; subjectName?: string }[]>([])
+const subjectList = ref<{ id?: string; subjectName?: string; docxCode?: number }[]>([])
 const provinceList = ref<{ id?: string; name?: string; code?: string; level?: number; parentCode?: string }[]>([])
 const dictDataLoaded = ref(false)
 
@@ -121,6 +122,19 @@ const form = reactive<DocUpdateCmd & { cityDistrict: (string | number)[] }>({
 })
 
 const isUpdatingFromFetch = ref(false)
+
+// 学科下拉：按学段过滤 + 同 docx 枚举去重，名称按学段取（小学思想品德 / 高中思想政治）
+const subjectOptions = computed(() =>
+  buildSubjectOptions(subjectList.value, Number(form.stepId) || undefined, form.subjectId)
+)
+
+// 切换学段时，清空该学段不允许的已选学科
+watch(() => form.stepId, (stepId) => {
+  const subject = subjectList.value.find(s => s.id === form.subjectId)
+  if (subject && !isSubjectAllowed(subject.docxCode, Number(stepId) || undefined)) {
+    form.subjectId = undefined
+  }
+})
 
 const cityCascaderOptions = computed(() => {
   if (!form.provinceId) return []

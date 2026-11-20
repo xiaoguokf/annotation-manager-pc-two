@@ -205,6 +205,7 @@ import { getQuestionListApi } from '@/api/gen/questionController'
 import { getBookInfoDetailsApi } from '@/api/gen/bookController'
 import { getDocInfoDetailsApi } from '@/api/gen/docController'
 import { getDicSubjectListApi, type DicSubjectVO } from '@/api/gen/dicController'
+import { subjectName as resolveSubjectName } from '@/constants/phaseSubject'
 import { useQuestionTypeDict } from '@/composables/useQuestionTypeDict'
 import {
   ANSWER_MODE_ANSWER,
@@ -278,24 +279,27 @@ const fetchSubjectName = async () => {
     const subjectListRes = await getDicSubjectListApi({ type: type.value === 'book' ? 1 : 2 })
     const subjectList: DicSubjectVO[] = subjectListRes.data.data || []
 
-    // 根据类型获取书籍/试卷信息中的subjectId
+    // 根据类型获取书籍/试卷信息中的subjectId与学段
     let subjectId: string | undefined
+    let phase: number | undefined
     if (type.value === 'book') {
       const res = await getBookInfoDetailsApi({ id: String(projectId.value) })
       if (res.data.code === 200 && res.data.data) {
         subjectId = res.data.data.subjectId
+        phase = res.data.data.phase ?? undefined
       }
     } else {
       const res = await getDocInfoDetailsApi({ id: String(projectId.value) })
       if (res.data.code === 200 && res.data.data) {
         subjectId = res.data.data.subjectId
+        phase = res.data.data.stepId != null ? Number(res.data.data.stepId) : undefined
       }
     }
 
-    // 根据subjectId查找学科名称
+    // 根据subjectId查找学科名称（名称随学段变化：小学思想品德 / 初中道德与法治 / 高中思想政治）
     if (subjectId) {
       const subject = subjectList.find(s => s.id === subjectId)
-      subjectName.value = subject?.subjectName || undefined
+      subjectName.value = resolveSubjectName(subject?.docxCode, phase) || undefined
     }
   } catch (error) {
     console.error('[AnnotationSystem] 获取学科信息失败:', error)

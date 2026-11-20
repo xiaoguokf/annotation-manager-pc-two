@@ -7,7 +7,7 @@
 
       <el-form-item label="学科" prop="subjectId">
         <el-select v-model="form.subjectId" placeholder="请选择学科" style="width: 100%" filterable @change="handleSubjectChange">
-          <el-option v-for="item in subjectList.filter(i => i.id)" :key="item.id" :label="item.subjectName" :value="item.id!" />
+          <el-option v-for="item in subjectOptions" :key="item.docxCode" :label="item.subjectName" :value="item.id" />
         </el-select>
       </el-form-item>
 
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getBookInfoDetailsApi, putBookInfoUpdateApi, type BookUpdateCmd } from '@/api/gen/bookController'
 import {
@@ -56,6 +56,7 @@ import {
   getDicVolumeListApi,
   getDicVersionListApi
 } from '@/api/gen/dicController'
+import { buildSubjectOptions, isSubjectAllowed } from '@/constants/phaseSubject'
 
 interface Props {
   bookId: string
@@ -85,6 +86,18 @@ const form = reactive<BookUpdateCmd>({
   edition: undefined,
   supTreeVersion: '',
   originSchoolName: ''
+})
+
+// 学科下拉：按学段过滤 + 同 docx 枚举去重，名称按学段取（小学思想品德 / 高中思想政治）
+const subjectOptions = computed(() => buildSubjectOptions(subjectList.value, form.phase, form.subjectId))
+
+// 切换学段时，清空该学段不允许的已选学科
+watch(() => form.phase, (phase) => {
+  const subject = subjectList.value.find(s => s.id === form.subjectId)
+  if (subject && !isSubjectAllowed(subject.docxCode, phase)) {
+    form.subjectId = undefined
+    form.subjectCode = undefined
+  }
 })
 
 // 学科选择 → 双写 docx 学科枚举（subjectCode），后端组装器可直接使用

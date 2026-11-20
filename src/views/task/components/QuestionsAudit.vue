@@ -57,7 +57,7 @@
               <div v-if="projectInfo" class="meta-right">
                 <span v-if="projectInfo.subjectId" class="meta-info-item">
                   <span class="info-label">学科:</span>
-                  <span class="info-value">{{ getSubjectName(projectInfo.subjectId) }}</span>
+                  <span class="info-value">{{ getSubjectName(projectInfo.subjectId, (projectInfo as BookVO).phase ?? (projectInfo as DocVO).stepId) }}</span>
                 </span>
                 <span v-if="type === 'doc' && (projectInfo as DocVO).stepId" class="meta-info-item">
                   <span class="info-label">学段:</span>
@@ -493,6 +493,7 @@ import { useConfigStore } from '@/stores/config'
 import type { ProjectAuditVO } from '@/api/gen/projectAuditController'
 import type { DicGradeVO, DicSubjectVO } from '@/api/gen/dicController'
 import type { CatalogueVO } from '@/api/gen/catalogueController'
+import { subjectNameById } from '@/constants/phaseSubject'
 import { getAnnotationListApi, type AnnotationSimpleVO } from '@/api/gen/annotationController'
 import { getAnnotationListByQuestionApi, type AnnotationVO as AnnotationFullVO } from '@/api/gen/annotationController'
 import { renderContent as renderContentUtil, sanitizeHtml } from '@/utils/contentRenderer'
@@ -855,11 +856,11 @@ const getGradeName = (id: string | undefined) => {
   return item?.gradeName || id
 }
 
-// 获取学科名称
-const getSubjectName = (id: string | undefined) => {
+// 获取学科名称（名称随学段变化：小学思想品德 / 初中道德与法治 / 高中思想政治）
+const getSubjectName = (id: string | undefined, phase?: number | string | null) => {
   if (!id) return '-'
-  const item = subjectList.value.find(s => s.id === id)
-  return item?.subjectName || id
+  const name = subjectNameById(subjectList.value, id, phase == null ? undefined : Number(phase))
+  return name || id
 }
 
 // 获取目录层级路径
