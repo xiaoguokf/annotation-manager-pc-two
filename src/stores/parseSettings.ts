@@ -11,7 +11,7 @@ export const useParseSettingsStore = defineStore('parseSettings', () => {
   const autoParse = ref<boolean>(true)
   // 是否自动去除题号
   const autoRemoveQuestionNum = ref<boolean>(true)
-  // 补题模式开关：仅补充答案和解析，题目内容不更新
+  // 补题模式开关：仅补充答案和解析，题目内容不更新（功能已停用，恒为 false）
   const supplementMode = ref<boolean>(false)
   // 用户选择的模型ID（永久保存）
   const selectedModelId = ref<string | null>(null)
@@ -20,17 +20,15 @@ export const useParseSettingsStore = defineStore('parseSettings', () => {
   const initSettings = () => {
     const storedAutoParse = localStorage.getItem(AUTO_PARSE_KEY)
     const storedAutoRemoveQuestionNum = localStorage.getItem(AUTO_REMOVE_QUESTION_NUM_KEY)
-    const storedSupplementMode = localStorage.getItem(SUPPLEMENT_MODE_KEY)
     const storedSelectedModelId = localStorage.getItem(SELECTED_MODEL_ID_KEY)
+    // 补题模式已停用：不恢复历史开启状态，并清掉本地残留，避免仍按旧配置包裹 supplement 标签
+    localStorage.removeItem(SUPPLEMENT_MODE_KEY)
 
     if (storedAutoParse !== null) {
       autoParse.value = storedAutoParse === 'true'
     }
     if (storedAutoRemoveQuestionNum !== null) {
       autoRemoveQuestionNum.value = storedAutoRemoveQuestionNum === 'true'
-    }
-    if (storedSupplementMode !== null) {
-      supplementMode.value = storedSupplementMode === 'true'
     }
     if (storedSelectedModelId && storedSelectedModelId !== 'null') {
       selectedModelId.value = storedSelectedModelId
