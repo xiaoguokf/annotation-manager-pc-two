@@ -58,13 +58,13 @@
         </el-tooltip>
       </el-form-item>
 
-      <!-- 补题模式 -->
+      <!-- 补题模式（已停用，仅保留展示） -->
       <el-form-item label="补题模式">
         <el-tooltip
-          content="用于补充答案和解析（题目内容不更新），保存答案、解析、选项时自动包裹 supplement 标记"
+          content="补题模式已停用"
           placement="top"
         >
-          <el-switch v-model="form.supplementMode" />
+          <el-switch v-model="form.supplementMode" disabled />
         </el-tooltip>
       </el-form-item>
     </el-form>
@@ -198,7 +198,8 @@ watch(() => props.visible, (val) => {
     form.value = {
       autoParse: parseSettingsStore.getAutoParse(),
       autoRemoveQuestionNum: parseSettingsStore.getAutoRemoveQuestionNum(),
-      supplementMode: parseSettingsStore.getSupplementMode(),
+      // 补题模式已停用，始终关闭
+      supplementMode: false,
       selectedModelId: parseSettingsStore.getSelectedModelId()
     }
     // 清空模型列表，以便重新加载
@@ -223,7 +224,6 @@ const hasChanges = () => {
   return (
     form.value.autoParse !== parseSettingsStore.getAutoParse()
     || form.value.autoRemoveQuestionNum !== parseSettingsStore.getAutoRemoveQuestionNum()
-    || form.value.supplementMode !== parseSettingsStore.getSupplementMode()
     || formModelId !== savedModelId
   )
 }
